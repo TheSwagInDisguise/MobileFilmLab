@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.6] - 2026-10-25
+
+### Added
+- **Full-Resolution Sensor Output**: Enabled `SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION` and `SENSOR_PIXEL_MODE_MAXIMUM_RESOLUTION` on Android 12+ (Oppo Find X9 Ultra) to capture full Quad-Bayer remosaic sensor resolution (28MP / 50MP) instead of 12.5MP binned mode.
+- **Hardware ISP High-Quality Pipeline**: Configured Camera2 capture requests with `EDGE_MODE_HIGH_QUALITY`, `NOISE_REDUCTION_MODE_HIGH_QUALITY`, `COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY`, `SHADING_MODE_HIGH_QUALITY`, and `DISTORTION_CORRECTION_MODE_HIGH_QUALITY`.
+- **Photographic Unsharp Mask Engine**: Implemented fast photographic unsharp mask convolution in `ImageProcessor.kt` directly wired to the recipe's sharpness parameter (`recipe.sharp`), restoring crisp edge definition and tile/texture micro-contrast.
+- **Lossless Quality 100 JPEG Encoding**: Disabled secondary lossy Skia chroma quantization tables, preserving fine high-frequency sensor detail.
+
 ## [0.1.0-alpha.5] - 2026-10-25
 
 ### Added

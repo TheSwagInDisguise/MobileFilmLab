@@ -227,11 +227,20 @@ class CameraEngine(private val context: Context) {
     private fun setupImageReader(cameraId: String) {
         try {
             val characteristics = cameraManager.getCameraCharacteristics(cameraId)
-            val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-            val jpegSizes = map?.getOutputSizes(ImageFormat.JPEG) ?: emptyArray()
+            val defaultMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            val defaultSizes = defaultMap?.getOutputSizes(ImageFormat.JPEG) ?: emptyArray()
 
-            val optimalSize = jpegSizes
-                .filter { it.width * it.height <= 50_000_000 }
+            val maxResSizes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                val maxMap = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
+                maxMap?.getOutputSizes(ImageFormat.JPEG) ?: emptyArray()
+            } else {
+                emptyArray()
+            }
+
+            val allSizes = (maxResSizes.toList() + defaultSizes.toList()).distinct()
+
+            val optimalSize = allSizes
+                .filter { it.width * it.height <= 55_000_000 }
                 .maxByOrNull { it.width * it.height }
                 ?: Size(4000, 3000)
 
@@ -478,8 +487,20 @@ class CameraEngine(private val context: Context) {
                 addTarget(reader.surface)
                 set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-                set(CaptureRequest.JPEG_QUALITY, 98.toByte())
+                set(CaptureRequest.JPEG_QUALITY, 100.toByte())
                 set(CaptureRequest.JPEG_ORIENTATION, 90)
+
+                // Maximum Hardware ISP Processing Pass
+                set(CaptureRequest.EDGE_MODE, CaptureRequest.EDGE_MODE_HIGH_QUALITY)
+                set(CaptureRequest.NOISE_REDUCTION_MODE, CaptureRequest.NOISE_REDUCTION_MODE_HIGH_QUALITY)
+                set(CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE, CaptureRequest.COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY)
+                set(CaptureRequest.SHADING_MODE, CaptureRequest.SHADING_MODE_HIGH_QUALITY)
+                set(CaptureRequest.HOT_PIXEL_MODE, CaptureRequest.HOT_PIXEL_MODE_HIGH_QUALITY)
+                set(CaptureRequest.DISTORTION_CORRECTION_MODE, CaptureRequest.DISTORTION_CORRECTION_MODE_HIGH_QUALITY)
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    set(CaptureRequest.SENSOR_PIXEL_MODE, CaptureRequest.SENSOR_PIXEL_MODE_MAXIMUM_RESOLUTION)
+                }
 
                 val characteristics = cameraManager.getCameraCharacteristics(currentCameraId)
                 applyZoomAndCrop(this, characteristics)
