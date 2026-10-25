@@ -20,12 +20,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.StarOutline
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -61,7 +64,9 @@ fun RecipeBottomSheet(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var selectedGroup by remember { mutableStateOf(activeRecipe.group) }
+    var selectedCategory by remember { mutableStateOf<String>(activeRecipe.group.displayName) }
+    var showSaveDialog by remember { mutableStateOf(false) }
+    var customRecipeName by remember { mutableStateOf("${activeRecipe.name} Custom") }
 
     Box(
         modifier = modifier
@@ -116,22 +121,23 @@ fun RecipeBottomSheet(
 
             Spacer(modifier = Modifier.height(14.dp))
 
-            // Category Filter Pills
+            // Category Filter Pills: Favourites + 12 Groups
+            val categoryList = listOf("★ Favourites") + RecipeGroup.values().map { it.displayName }
             LazyRow(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(RecipeGroup.values()) { group ->
-                    val isSelected = group == selectedGroup
+                items(categoryList) { category ->
+                    val isSelected = category == selectedCategory
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(10.dp))
                             .background(if (isSelected) AccentGold else SurfaceCard)
-                            .clickable { selectedGroup = group }
+                            .clickable { selectedCategory = category }
                             .padding(horizontal = 10.dp, vertical = 5.dp)
                     ) {
                         Text(
-                            text = group.displayName,
+                            text = category,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             color = if (isSelected) Color.Black else TextSecondary
@@ -142,43 +148,63 @@ fun RecipeBottomSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Horizontal Recipe Swatch Strip for the selected group
-            val groupRecipes = recipes.filter { it.group == selectedGroup }
-            LazyRow(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                items(groupRecipes) { r ->
-                    val isActive = r.id == activeRecipe.id
-                    Box(
-                        modifier = Modifier
-                            .width(88.dp)
-                            .clip(RoundedCornerShape(10.dp))
-                            .background(SurfaceCard)
-                            .border(
-                                width = if (isActive) 2.dp else 1.dp,
-                                color = if (isActive) AccentGold else BorderDark,
-                                shape = RoundedCornerShape(10.dp)
-                            )
-                            .clickable { onRecipeSelected(r) }
-                            .padding(8.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Box(
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clip(CircleShape)
-                                    .background(if (r.isMonochrome) Color.LightGray else AccentGold)
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = r.name,
-                                fontSize = 9.sp,
-                                fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
-                                color = if (isActive) Color.White else TextSecondary,
-                                maxLines = 1
-                            )
+            // Filter recipes for selected category
+            val filteredRecipes = if (selectedCategory == "★ Favourites") {
+                recipes.filter { it.isFavourite }
+            } else {
+                recipes.filter { it.group.displayName == selectedCategory }
+            }
+
+            if (filteredRecipes.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = if (selectedCategory == "★ Favourites") "No favourite recipes yet. Tap the star on any recipe to add it here." else "No presets in this group.",
+                        fontSize = 11.sp,
+                        color = TextMuted
+                    )
+                }
+            } else {
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(filteredRecipes) { r ->
+                        val isActive = r.id == activeRecipe.id
+                        Box(
+                            modifier = Modifier
+                                .width(92.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(SurfaceCard)
+                                .border(
+                                    width = if (isActive) 2.dp else 1.dp,
+                                    color = if (isActive) AccentGold else BorderDark,
+                                    shape = RoundedCornerShape(10.dp)
+                                )
+                                .clickable { onRecipeSelected(r) }
+                                .padding(8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(16.dp)
+                                        .clip(CircleShape)
+                                        .background(if (r.isMonochrome) Color.LightGray else AccentGold)
+                                )
+                                Spacer(modifier = Modifier.height(4.dp))
+                                Text(
+                                    text = r.name,
+                                    fontSize = 9.sp,
+                                    fontWeight = if (isActive) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isActive) Color.White else TextSecondary,
+                                    maxLines = 1
+                                )
+                            }
                         }
                     }
                 }
@@ -222,8 +248,8 @@ fun RecipeBottomSheet(
             // Save As Custom Recipe Button
             Button(
                 onClick = {
-                    val customName = "${activeRecipe.name} Custom"
-                    onSaveCustomRecipe(customName)
+                    customRecipeName = "${activeRecipe.name} Custom"
+                    showSaveDialog = true
                 },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(containerColor = AccentGold)
@@ -236,5 +262,53 @@ fun RecipeBottomSheet(
                 )
             }
         }
+    }
+
+    // Name Prompt Dialog for Custom Recipe
+    if (showSaveDialog) {
+        AlertDialog(
+            onDismissRequest = { showSaveDialog = false },
+            title = { Text("Save Custom Preset", color = Color.White, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text(
+                        "Enter a name for this customized film preset (based on ${activeRecipe.name}):",
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(10.dp))
+                    OutlinedTextField(
+                        value = customRecipeName,
+                        onValueChange = { customRecipeName = it },
+                        singleLine = true,
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = SurfaceDark,
+                            unfocusedContainerColor = SurfaceDark,
+                            focusedTextColor = Color.White,
+                            unfocusedTextColor = Color.White
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (customRecipeName.isNotBlank()) {
+                            onSaveCustomRecipe(customRecipeName.trim())
+                            showSaveDialog = false
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentGold)
+                ) {
+                    Text("SAVE", color = Color.Black, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { showSaveDialog = false }) {
+                    Text("CANCEL", color = Color.White)
+                }
+            },
+            containerColor = SurfaceDark
+        )
     }
 }

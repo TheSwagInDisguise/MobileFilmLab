@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.5] - 2026-10-25
+
+### Added
+- **Full Interactive Pro Controls**: Added interactive parameter chips in `ManualControlStrip.kt` allowing users to tap and cycle EV compensation, ISO, Shutter Speed, White Balance Kelvin, and Autofocus mode (AF-C, AF-S, Macro) in real time.
+- **Interactive Flash & Torch Mode**: Added multi-state flash toggle (Off / Auto / Torch) in `MainCameraScreen.kt` commanding Camera2 HAL.
+- **Real Photo Gallery Thumbnail**: Integrated dynamic thumbnail preview in bottom-left capture deck that updates with the latest captured photo and launches the system gallery viewer on tap.
+- **Live Viewfinder Film Simulation**: Added real-time non-destructive tone and warmth grading overlay in `CameraViewfinder.kt` matching active recipe parameters.
+- **Tactile Shutter Flash**: Added visual shutter pulse feedback animation upon photo capture.
+- **Stationary Ergonomic Lens Bar**: Positioned `UW`, `W`, `3x`, `10x` in fixed stationary slots with a dedicated `2×` toggle pill to prevent button jumping.
+- **Favourites Category & Custom Name Dialog**: Added `★ Favourites` filter category and a custom name input dialog when saving recipes in `RecipeBottomSheet.kt`.
+
 ## [0.1.0-alpha.4] - 2026-10-25
 
 ### Fixed

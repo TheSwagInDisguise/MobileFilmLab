@@ -21,7 +21,6 @@ import androidx.compose.ui.unit.sp
 import com.mobilefilmlab.camera.ui.theme.AccentGold
 import com.mobilefilmlab.camera.ui.theme.BorderDark
 import com.mobilefilmlab.camera.ui.theme.SurfaceDark
-import com.mobilefilmlab.camera.ui.theme.TextMuted
 
 @Composable
 fun ManualControlStrip(
@@ -29,6 +28,12 @@ fun ManualControlStrip(
     iso: String,
     shutter: String,
     kelvin: Int,
+    focusMode: String,
+    onEvClick: () -> Unit,
+    onIsoClick: () -> Unit,
+    onShutterClick: () -> Unit,
+    onWbClick: () -> Unit,
+    onFocusClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -37,15 +42,40 @@ fun ManualControlStrip(
             .clip(RoundedCornerShape(12.dp))
             .background(SurfaceDark.copy(alpha = 0.85f))
             .border(1.dp, BorderDark, RoundedCornerShape(12.dp))
-            .padding(horizontal = 8.dp, vertical = 6.dp),
+            .padding(horizontal = 6.dp, vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceAround,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        ManualParamChip(label = "EV", value = String.format("%+.1f", evCompensation), isHighlighted = true)
-        ManualParamChip(label = "ISO", value = iso, isHighlighted = false)
-        ManualParamChip(label = "SEC", value = shutter, isHighlighted = false)
-        ManualParamChip(label = "WB", value = "${kelvin}K", isHighlighted = false)
-        ManualParamChip(label = "FOCUS", value = "AF-C", isHighlighted = false)
+        ManualParamChip(
+            label = "EV",
+            value = String.format("%+.1f", evCompensation),
+            isHighlighted = evCompensation != 0.0f,
+            onClick = onEvClick
+        )
+        ManualParamChip(
+            label = "ISO",
+            value = iso,
+            isHighlighted = iso != "AUTO",
+            onClick = onIsoClick
+        )
+        ManualParamChip(
+            label = "SEC",
+            value = shutter,
+            isHighlighted = shutter != "AUTO",
+            onClick = onShutterClick
+        )
+        ManualParamChip(
+            label = "WB",
+            value = "${kelvin}K",
+            isHighlighted = kelvin != 5600,
+            onClick = onWbClick
+        )
+        ManualParamChip(
+            label = "FOCUS",
+            value = focusMode,
+            isHighlighted = focusMode != "AF-C",
+            onClick = onFocusClick
+        )
     }
 }
 
@@ -53,13 +83,15 @@ fun ManualControlStrip(
 private fun ManualParamChip(
     label: String,
     value: String,
-    isHighlighted: Boolean
+    isHighlighted: Boolean,
+    onClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(8.dp))
-            .background(if (isHighlighted) AccentGold else Color.White.copy(alpha = 0.08f))
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .background(if (isHighlighted) AccentGold else Color.White.copy(alpha = 0.09f))
+            .clickable(onClick = onClick)
+            .padding(horizontal = 7.dp, vertical = 5.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(

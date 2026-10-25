@@ -183,7 +183,7 @@ object ImageProcessor {
             val exif = ExifInterface(tempFile.absolutePath)
             exif.setAttribute(ExifInterface.TAG_MAKE, "OPPO")
             exif.setAttribute(ExifInterface.TAG_MODEL, cameraModel)
-            exif.setAttribute(ExifInterface.TAG_SOFTWARE, "MobileFilmLab v0.1.0-alpha.1")
+            exif.setAttribute(ExifInterface.TAG_SOFTWARE, "MobileFilmLab v0.1.0-alpha.5")
             exif.setAttribute(
                 ExifInterface.TAG_USER_COMMENT,
                 "Recipe: ${recipe.name} [${recipe.group.displayName}] | ${recipe.summary()}"

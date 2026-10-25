@@ -7,6 +7,9 @@ import android.util.Size
 import android.view.Surface
 import android.view.TextureView
 import android.view.ViewGroup
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,11 +26,16 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.mobilefilmlab.camera.camera.CameraEngine
+import com.mobilefilmlab.camera.data.model.Recipe
 import com.mobilefilmlab.camera.ui.theme.AccentGreen
 
 @Composable
 fun CameraViewfinder(
     cameraEngine: CameraEngine,
+    activeRecipe: Recipe,
+    puckTone: Float,
+    puckColor: Float,
+    isShutterFlashing: Boolean,
     modifier: Modifier = Modifier
 ) {
     Box(
@@ -37,7 +45,7 @@ fun CameraViewfinder(
             .background(Color.Black)
             .border(1.dp, Color(0xFF2A2E3D), RoundedCornerShape(20.dp))
     ) {
-        // Native Camera2 Preview TextureView
+        // 1. Native Camera2 Preview TextureView
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { context ->
@@ -51,7 +59,7 @@ fun CameraViewfinder(
                             val previewSize = cameraEngine.getOptimalPreviewSize(width, height)
                             surfaceTexture.setDefaultBufferSize(previewSize.width, previewSize.height)
                             configureTransform(this@apply, width, height, previewSize, cameraEngine.getSensorOrientation())
-                            
+
                             val surface = Surface(surfaceTexture)
                             cameraEngine.bindPreviewSurface(surface, previewSize.width, previewSize.height)
                         }
@@ -89,7 +97,49 @@ fun CameraViewfinder(
             }
         )
 
-        // Rule of Thirds Grid & Electronic Horizon Level Canvas
+        // 2. Real-Time Recipe Tone & Warmth Simulation Layer
+        if (puckColor > 2f) {
+            // Warm Amber Film Tint
+            val alpha = (puckColor / 100f * 0.16f).coerceIn(0f, 0.22f)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFFFA000).copy(alpha = alpha))
+            )
+        } else if (puckColor < -2f) {
+            // Cool Blue Film Tint
+            val alpha = (-puckColor / 100f * 0.16f).coerceIn(0f, 0.22f)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF29B6F6).copy(alpha = alpha))
+            )
+        }
+
+        if (activeRecipe.isMonochrome) {
+            // Monochrome film density tint
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF1E222D).copy(alpha = 0.25f))
+            )
+        }
+
+        // 3. Shutter Flash Feedback Animation
+        AnimatedVisibility(
+            visible = isShutterFlashing,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.fillMaxSize()
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.White.copy(alpha = 0.85f))
+            )
+        }
+
+        // 4. Rule of Thirds Grid & Electronic Horizon Level Canvas
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height

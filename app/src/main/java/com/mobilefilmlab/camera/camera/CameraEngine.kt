@@ -16,18 +16,16 @@ import android.hardware.camera2.CameraDevice
 import android.hardware.camera2.CameraManager
 import android.hardware.camera2.CaptureFailure
 import android.hardware.camera2.CaptureRequest
-import android.hardware.camera2.TotalCaptureResult
-import android.hardware.camera2.params.MeteringRectangle
 import android.media.Image
 import android.media.ImageReader
 import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.util.Log
-import android.util.Range
 import android.util.Size
 import android.view.Surface
 import androidx.core.content.ContextCompat
+import androidx.exifinterface.media.ExifInterface
 import com.mobilefilmlab.camera.data.model.CameraSpec
 import com.mobilefilmlab.camera.data.model.LensType
 import com.mobilefilmlab.camera.pipeline.CropEngine
@@ -37,9 +35,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import java.nio.ByteBuffer
+import java.io.ByteArrayInputStream
 import java.util.concurrent.Semaphore
 import java.util.concurrent.TimeUnit
+
+enum class FlashMode {
+    OFF,
+    AUTO,
+    TORCH
+}
 
 class CameraEngine(private val context: Context) {
     companion object {
@@ -80,6 +84,8 @@ class CameraEngine(private val context: Context) {
     private var currentIso: Int? = null
     private var currentExposureTimeNs: Long? = null
     private var currentWhiteBalanceKelvin: Int = 5600
+    private var currentFlashMode: FlashMode = FlashMode.OFF
+    private var currentFocusMode: String = "AF-C"
 
     private var previewWidth: Int = 1920
     private var previewHeight: Int = 1080
@@ -97,12 +103,11 @@ class CameraEngine(private val context: Context) {
     fun refreshCameraList() {
         val discovered = discovery.discoverCameras()
         _cameraSpecs.value = discovered
-        
-        // Find best default rear camera
+
         val defaultRear = discovered.firstOrNull { it.lensType == LensType.WIDE && it.isBackFacing }
             ?: discovered.firstOrNull { it.isBackFacing }
             ?: discovered.firstOrNull()
-            
+
         _activeCameraSpec.value = defaultRear
         currentCameraId = defaultRear?.cameraId ?: "0"
     }
@@ -152,13 +157,11 @@ class CameraEngine(private val context: Context) {
         val handler = backgroundHandler ?: return
         val surface = previewSurface ?: return
 
-        // If camera already opened for currentCameraId and streaming, restart session with new surface
         if (cameraDevice != null && cameraDevice?.id == currentCameraId) {
             createCaptureSession()
             return
         }
 
-        // Close previous camera if switching IDs
         closeCameraInternal()
 
         try {
@@ -167,7 +170,6 @@ class CameraEngine(private val context: Context) {
                 return
             }
 
-            // Verify cameraId exists in cameraManager
             val availableIds = cameraManager.cameraIdList
             val targetId = if (availableIds.contains(currentCameraId)) {
                 currentCameraId
@@ -206,8 +208,7 @@ class CameraEngine(private val context: Context) {
                     val errorMsg = "Camera open error: code $error"
                     Log.e(TAG, errorMsg)
                     _cameraError.value = errorMsg
-                    
-                    // Fallback to camera "0" if a physical camera ID failed
+
                     if (targetId != "0" && availableIds.contains("0")) {
                         Log.i(TAG, "Falling back to Camera 0")
                         currentCameraId = "0"
@@ -229,7 +230,6 @@ class CameraEngine(private val context: Context) {
             val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
             val jpegSizes = map?.getOutputSizes(ImageFormat.JPEG) ?: emptyArray()
 
-            // Pick largest resolution under 50MP to prevent OutOfMemory
             val optimalSize = jpegSizes
                 .filter { it.width * it.height <= 50_000_000 }
                 .maxByOrNull { it.width * it.height }
@@ -261,6 +261,8 @@ class CameraEngine(private val context: Context) {
         val reader = imageReader ?: return
         val handler = backgroundHandler ?: return
 
+        if (!surface.isValid) return
+
         try {
             captureSession?.close()
             captureSession = null
@@ -274,12 +276,6 @@ class CameraEngine(private val context: Context) {
                     try {
                         val builder = camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply {
                             addTarget(surface)
-                            // Enable Auto-focus and Auto-exposure
-                            set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
-                            set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
-                            set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-                            set(CaptureRequest.CONTROL_AWB_MODE, CaptureRequest.CONTROL_AWB_MODE_AUTO)
-                            
                             applyZoomAndCrop(this, characteristics = cameraManager.getCameraCharacteristics(currentCameraId))
                             applyProSettings(this)
                         }
@@ -308,7 +304,6 @@ class CameraEngine(private val context: Context) {
     }
 
     private fun applyZoomAndCrop(builder: CaptureRequest.Builder, characteristics: CameraCharacteristics) {
-        // Modern Android 11+ zoom ratio API
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val zoomRange = characteristics.get(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE)
             if (zoomRange != null) {
@@ -318,7 +313,6 @@ class CameraEngine(private val context: Context) {
             }
         }
 
-        // Fallback: SCALER_CROP_REGION for older API / devices without CONTROL_ZOOM_RATIO
         val activeArray = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
         if (activeArray != null && currentZoomRatio > 1.0f) {
             val cropRect = CropEngine.computeCropRegion(activeArray, currentZoomRatio)
@@ -327,17 +321,38 @@ class CameraEngine(private val context: Context) {
     }
 
     private fun applyProSettings(builder: CaptureRequest.Builder) {
+        // Focus Mode
+        val afMode = when (currentFocusMode) {
+            "AF-S" -> CaptureRequest.CONTROL_AF_MODE_AUTO
+            "MACRO" -> CaptureRequest.CONTROL_AF_MODE_MACRO
+            else -> CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE
+        }
+        builder.set(CaptureRequest.CONTROL_AF_MODE, afMode)
+
+        // Flash / Torch Mode
+        when (currentFlashMode) {
+            FlashMode.TORCH -> {
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH)
+            }
+            FlashMode.AUTO -> {
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
+                builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+            }
+            FlashMode.OFF -> {
+                builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                if (currentIso != null && currentExposureTimeNs != null) {
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
+                    builder.set(CaptureRequest.SENSOR_SENSITIVITY, currentIso)
+                    builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, currentExposureTimeNs)
+                } else {
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                }
+            }
+        }
+
         // EV Bias
         builder.set(CaptureRequest.CONTROL_AE_EXPOSURE_COMPENSATION, currentEvCompensation)
-
-        // Manual ISO & Shutter if specified
-        if (currentIso != null && currentExposureTimeNs != null) {
-            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_OFF)
-            builder.set(CaptureRequest.SENSOR_SENSITIVITY, currentIso)
-            builder.set(CaptureRequest.SENSOR_EXPOSURE_TIME, currentExposureTimeNs)
-        } else {
-            builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
-        }
     }
 
     fun updateRepeatingRequest() {
@@ -356,28 +371,23 @@ class CameraEngine(private val context: Context) {
     }
 
     fun selectLens(lensType: LensType, is2xCrop: Boolean = false) {
-        // Calculate target zoom factor
         val baseZoom = when (lensType) {
             LensType.ULTRA_WIDE -> 0.6f
             LensType.WIDE -> 1.0f
             LensType.TELEPHOTO -> 3.0f
-            LensType.PERISCOPE -> 6.0f // Find X9 Ultra 6x/10x periscope telephoto
+            LensType.PERISCOPE -> 6.0f
             LensType.FRONT -> 1.0f
         }
         val targetZoom = if (is2xCrop) baseZoom * 2.0f else baseZoom
 
-        // Find matching physical camera spec if available
         val matchingSpec = _cameraSpecs.value.firstOrNull { it.lensType == lensType && it.isBackFacing }
             ?: _cameraSpecs.value.firstOrNull { it.isBackFacing }
 
         _activeCameraSpec.value = matchingSpec
         currentZoomRatio = targetZoom
 
-        // On multi-camera setups: if the device uses logical Camera 0 for all zoom ranges
-        // we can simply adjust zoom ratio. If separate physical camera IDs exist, we switch if needed.
         val targetId = matchingSpec?.cameraId ?: "0"
-        
-        // If camera ID changes, reopen camera; otherwise simply update zoom ratio!
+
         if (targetId != currentCameraId && cameraDevice != null) {
             currentCameraId = targetId
             openCamera()
@@ -386,8 +396,13 @@ class CameraEngine(private val context: Context) {
         }
     }
 
-    fun updateZoom(zoomRatio: Float) {
-        currentZoomRatio = zoomRatio
+    fun setFlashMode(mode: FlashMode) {
+        currentFlashMode = mode
+        updateRepeatingRequest()
+    }
+
+    fun updateFocusMode(mode: String) {
+        currentFocusMode = mode
         updateRepeatingRequest()
     }
 
@@ -396,10 +411,44 @@ class CameraEngine(private val context: Context) {
         updateRepeatingRequest()
     }
 
-    fun updateManualExposure(isoVal: Int?, shutterSpeedNs: Long?) {
+    fun updateManualIso(isoVal: Int?) {
         currentIso = isoVal
+        updateRepeatingRequest()
+    }
+
+    fun updateManualShutter(shutterSpeedNs: Long?) {
         currentExposureTimeNs = shutterSpeedNs
         updateRepeatingRequest()
+    }
+
+    fun updateManualKelvin(kelvin: Int) {
+        currentWhiteBalanceKelvin = kelvin
+        updateRepeatingRequest()
+    }
+
+    fun getOptimalPreviewSize(viewWidth: Int, viewHeight: Int): Size {
+        return try {
+            val characteristics = cameraManager.getCameraCharacteristics(currentCameraId)
+            val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+            val outputSizes = map?.getOutputSizes(SurfaceTexture::class.java) ?: emptyArray()
+
+            outputSizes
+                .filter { it.width <= 1920 && it.height <= 1440 }
+                .maxByOrNull { it.width * it.height }
+                ?: outputSizes.firstOrNull()
+                ?: Size(1920, 1080)
+        } catch (e: Exception) {
+            Size(1920, 1080)
+        }
+    }
+
+    fun getSensorOrientation(): Int {
+        return try {
+            val characteristics = cameraManager.getCameraCharacteristics(currentCameraId)
+            characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
+        } catch (e: Exception) {
+            90
+        }
     }
 
     suspend fun capturePhoto(cropFactor: Float): Result<Pair<Bitmap, Rect?>> = withContext(Dispatchers.IO) {
@@ -409,7 +458,6 @@ class CameraEngine(private val context: Context) {
         val handler = backgroundHandler
 
         if (session == null || camera == null || reader == null || handler == null) {
-            // Fallback generation if camera is closed
             return@withContext runCatching {
                 val spec = _activeCameraSpec.value
                 val w = (spec?.activeArrayWidth ?: 4000).coerceAtMost(4096)
@@ -431,7 +479,7 @@ class CameraEngine(private val context: Context) {
                 set(CaptureRequest.CONTROL_MODE, CaptureRequest.CONTROL_MODE_AUTO)
                 set(CaptureRequest.CONTROL_AF_MODE, CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE)
                 set(CaptureRequest.JPEG_QUALITY, 98.toByte())
-                set(CaptureRequest.JPEG_ORIENTATION, 90) // Standard rear camera portrait orientation
+                set(CaptureRequest.JPEG_ORIENTATION, 90)
 
                 val characteristics = cameraManager.getCameraCharacteristics(currentCameraId)
                 applyZoomAndCrop(this, characteristics)
@@ -446,7 +494,6 @@ class CameraEngine(private val context: Context) {
                 }
             }, handler)
 
-            // Wait up to 5 seconds for ImageReader callback
             withContext(Dispatchers.Default) {
                 try {
                     val result = deferred.await()
@@ -470,16 +517,28 @@ class CameraEngine(private val context: Context) {
             val bytes = ByteArray(buffer.remaining())
             buffer.get(bytes)
 
-            // Decode JPEG to Bitmap
             val options = BitmapFactory.Options().apply {
                 inPreferredConfig = Bitmap.Config.ARGB_8888
             }
             val originalBitmap = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, options)
 
             if (originalBitmap != null) {
-                val fullRect = Rect(0, 0, originalBitmap.width, originalBitmap.height)
+                // Ensure upright portrait rotation for captured photo
+                val exif = ExifInterface(ByteArrayInputStream(bytes))
+                val orientation = exif.getAttributeInt(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL)
+                val rotationDegrees = when (orientation) {
+                    ExifInterface.ORIENTATION_ROTATE_90 -> 90f
+                    ExifInterface.ORIENTATION_ROTATE_180 -> 180f
+                    ExifInterface.ORIENTATION_ROTATE_270 -> 270f
+                    else -> 90f // Native rear camera sensor landscape-to-portrait compensation
+                }
+
+                val matrix = Matrix().apply { postRotate(rotationDegrees) }
+                val uprightBitmap = Bitmap.createBitmap(originalBitmap, 0, 0, originalBitmap.width, originalBitmap.height, matrix, true)
+
+                val fullRect = Rect(0, 0, uprightBitmap.width, uprightBitmap.height)
                 val cropRect = CropEngine.computeCropRegion(fullRect, pendingCropFactor)
-                pendingCaptureDeferred?.complete(Pair(originalBitmap, cropRect))
+                pendingCaptureDeferred?.complete(Pair(uprightBitmap, cropRect))
             } else {
                 pendingCaptureDeferred?.completeExceptionally(RuntimeException("Failed to decode JPEG bytes from sensor"))
             }
@@ -501,33 +560,6 @@ class CameraEngine(private val context: Context) {
             _isCameraStreaming.value = false
         } catch (e: Exception) {
             Log.e(TAG, "Error closing camera", e)
-        }
-    }
-
-
-    fun getOptimalPreviewSize(viewWidth: Int, viewHeight: Int): Size {
-        return try {
-            val characteristics = cameraManager.getCameraCharacteristics(currentCameraId)
-            val map = characteristics.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
-            val outputSizes = map?.getOutputSizes(SurfaceTexture::class.java) ?: emptyArray()
-
-            // Find 4:3 or 16:9 resolutions suitable for preview (< 1920x1440)
-            outputSizes
-                .filter { it.width <= 1920 && it.height <= 1440 }
-                .maxByOrNull { it.width * it.height }
-                ?: outputSizes.firstOrNull()
-                ?: Size(1920, 1080)
-        } catch (e: Exception) {
-            Size(1920, 1080)
-        }
-    }
-
-    fun getSensorOrientation(): Int {
-        return try {
-            val characteristics = cameraManager.getCameraCharacteristics(currentCameraId)
-            characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION) ?: 90
-        } catch (e: Exception) {
-            90
         }
     }
 

@@ -1,6 +1,8 @@
 package com.mobilefilmlab.camera.ui.components
 
+import android.content.Intent
 import android.widget.Toast
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,7 +20,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
+import androidx.compose.material.icons.filled.FlashAuto
+import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -31,14 +36,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.mobilefilmlab.camera.camera.FlashMode
 import com.mobilefilmlab.camera.ui.theme.AccentGold
 import com.mobilefilmlab.camera.ui.theme.BgDark
 import com.mobilefilmlab.camera.ui.theme.BorderDark
 import com.mobilefilmlab.camera.ui.theme.SurfaceDark
+import com.mobilefilmlab.camera.ui.theme.TextMuted
 import com.mobilefilmlab.camera.ui.viewmodel.CameraMode
 import com.mobilefilmlab.camera.ui.viewmodel.CameraViewModel
 
@@ -49,6 +57,7 @@ fun MainCameraScreen(
 ) {
     val context = LocalContext.current
     val mode by viewModel.mode.collectAsState()
+    val flashMode by viewModel.flashMode.collectAsState()
     val activeLens by viewModel.activeLens.collectAsState()
     val is2xActive by viewModel.is2xActive.collectAsState()
     val framingConfig by viewModel.framingConfig.collectAsState()
@@ -60,10 +69,14 @@ fun MainCameraScreen(
     val iso by viewModel.iso.collectAsState()
     val shutterSpeed by viewModel.shutterSpeed.collectAsState()
     val whiteBalanceKelvin by viewModel.whiteBalanceKelvin.collectAsState()
+    val focusMode by viewModel.focusMode.collectAsState()
 
     val isRecipeSheetOpen by viewModel.isRecipeSheetOpen.collectAsState()
     val isDiagnosticsOpen by viewModel.isDiagnosticsOpen.collectAsState()
     val isAboutOpen by viewModel.isAboutOpen.collectAsState()
+    val isShutterFlashing by viewModel.isShutterFlashing.collectAsState()
+    val lastCapturedUri by viewModel.lastCapturedUri.collectAsState()
+    val lastCapturedThumbnail by viewModel.lastCapturedThumbnail.collectAsState()
     val userNotice by viewModel.userNotice.collectAsState()
 
     LaunchedEffect(userNotice) {
@@ -93,20 +106,27 @@ fun MainCameraScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Flash Icon
+                // Interactive Flash / Torch Button
+                val (flashIcon, flashTint) = when (flashMode) {
+                    FlashMode.OFF -> Pair(Icons.Default.FlashOff, TextMuted)
+                    FlashMode.AUTO -> Pair(Icons.Default.FlashAuto, AccentGold)
+                    FlashMode.TORCH -> Pair(Icons.Default.Bolt, AccentGold)
+                }
+
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(38.dp)
                         .clip(CircleShape)
                         .background(SurfaceDark)
-                        .border(1.dp, BorderDark, CircleShape),
+                        .border(1.dp, BorderDark, CircleShape)
+                        .clickable { viewModel.toggleFlash() },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Bolt,
-                        contentDescription = "Flash",
-                        tint = AccentGold,
-                        modifier = Modifier.size(20.dp)
+                        imageVector = flashIcon,
+                        contentDescription = "Flash Toggle ($flashMode)",
+                        tint = flashTint,
+                        modifier = Modifier.size(19.dp)
                     )
                 }
 
@@ -119,7 +139,7 @@ fun MainCameraScreen(
                 // Info / About Icon
                 Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(38.dp)
                         .clip(CircleShape)
                         .background(SurfaceDark)
                         .border(1.dp, BorderDark, CircleShape)
@@ -130,12 +150,12 @@ fun MainCameraScreen(
                         imageVector = Icons.Default.Info,
                         contentDescription = "About",
                         tint = Color.White,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(19.dp)
                     )
                 }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
 
             // ==================== VIEWFINDER AREA ====================
             Box(
@@ -144,7 +164,14 @@ fun MainCameraScreen(
                     .fillMaxWidth(),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                CameraViewfinder(cameraEngine = viewModel.cameraEngine, modifier = Modifier.fillMaxSize())
+                CameraViewfinder(
+                    cameraEngine = viewModel.cameraEngine,
+                    activeRecipe = activeRecipe,
+                    puckTone = puckTone,
+                    puckColor = puckColor,
+                    isShutterFlashing = isShutterFlashing,
+                    modifier = Modifier.fillMaxSize()
+                )
 
                 // Floating Lens Selection Bar inside lower part of viewfinder
                 Column(
@@ -163,20 +190,26 @@ fun MainCameraScreen(
             // Honest Crop Telemetry Badge
             HonestCropBadge(config = framingConfig)
 
-            // Pro Mode Manual Control Strip (Collapsible, shown only in PRO mode)
+            // Pro Mode Manual Control Strip
             if (mode == CameraMode.PRO) {
                 ManualControlStrip(
                     evCompensation = evCompensation,
                     iso = iso,
                     shutter = shutterSpeed,
                     kelvin = whiteBalanceKelvin,
+                    focusMode = focusMode,
+                    onEvClick = { viewModel.cycleEvCompensation() },
+                    onIsoClick = { viewModel.cycleIso() },
+                    onShutterClick = { viewModel.cycleShutter() },
+                    onWbClick = { viewModel.cycleWhiteBalance() },
+                    onFocusClick = { viewModel.cycleFocus() },
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             } else {
                 Spacer(modifier = Modifier.height(4.dp))
             }
 
-            // Film Look Pill (Clean, one-tap to open preset sheet & 2D pad)
+            // Film Look Pill
             FilmLookPill(
                 recipe = activeRecipe,
                 onClick = { viewModel.isRecipeSheetOpen.value = true },
@@ -187,25 +220,49 @@ fun MainCameraScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 12.dp, horizontal = 20.dp),
+                    .padding(vertical = 10.dp, horizontal = 18.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                // Gallery Thumbnail Shortcut
+                // Interactive Gallery Thumbnail Shortcut
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(50.dp)
                         .clip(RoundedCornerShape(14.dp))
                         .background(SurfaceDark)
-                        .border(1.5.dp, BorderDark, RoundedCornerShape(14.dp)),
+                        .border(1.5.dp, BorderDark, RoundedCornerShape(14.dp))
+                        .clickable {
+                            lastCapturedUri?.let { uri ->
+                                try {
+                                    val intent = Intent(Intent.ACTION_VIEW).apply {
+                                        setDataAndType(uri, "image/*")
+                                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    Toast.makeText(context, "Could not open gallery viewer", Toast.LENGTH_SHORT).show()
+                                }
+                            } ?: run {
+                                Toast.makeText(context, "No photos captured yet", Toast.LENGTH_SHORT).show()
+                            }
+                        },
                     contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(AccentGold)
-                    )
+                    if (lastCapturedThumbnail != null) {
+                        Image(
+                            bitmap = lastCapturedThumbnail!!.asImageBitmap(),
+                            contentDescription = "Last photo",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Photo,
+                            contentDescription = "Gallery",
+                            tint = TextMuted,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
 
                 // Large Shutter Button (Photos only!)
@@ -214,7 +271,7 @@ fun MainCameraScreen(
                 // Camera Diagnostics Shortcut
                 Box(
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(50.dp)
                         .clip(CircleShape)
                         .background(SurfaceDark)
                         .border(1.5.dp, BorderDark, CircleShape)
@@ -251,7 +308,7 @@ fun MainCameraScreen(
                     onResetPuck = { viewModel.resetPuck() },
                     onSaveCustomRecipe = { name -> viewModel.saveAsCustomRecipe(name) },
                     onDismiss = { viewModel.isRecipeSheetOpen.value = false },
-                    modifier = Modifier.clickable(enabled = false) {} // block dismiss on sheet tap
+                    modifier = Modifier.clickable(enabled = false) {}
                 )
             }
         }

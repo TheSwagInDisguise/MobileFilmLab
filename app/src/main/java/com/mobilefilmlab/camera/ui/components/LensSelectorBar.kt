@@ -7,8 +7,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -33,19 +35,25 @@ fun LensSelectorBar(
     onToggle2xCrop: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val lenses = listOf(LensType.ULTRA_WIDE, LensType.WIDE, LensType.TELEPHOTO, LensType.PERISCOPE)
+    val lenses = listOf(
+        LensType.ULTRA_WIDE,
+        LensType.WIDE,
+        LensType.TELEPHOTO,
+        LensType.PERISCOPE
+    )
 
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(24.dp))
             .background(Color.Black.copy(alpha = 0.55f))
             .border(1.dp, BorderDark, RoundedCornerShape(24.dp))
-            .padding(horizontal = 8.dp, vertical = 4.dp)
+            .padding(horizontal = 8.dp, vertical = 5.dp)
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(6.dp)
         ) {
+            // Stationary 4-lens selector buttons
             lenses.forEach { lens ->
                 val isActive = lens == activeLens
                 val bgColor by animateColorAsState(
@@ -69,30 +77,31 @@ fun LensSelectorBar(
                         color = textColor
                     )
                 }
+            }
 
-                // If this lens is active, place the 2x crop toggle right next to it!
-                if (isActive) {
-                    val cropBg by animateColorAsState(
-                        if (is2xCropActive) AccentGold else Color.White.copy(alpha = 0.18f),
-                        label = "cropBg"
-                    )
+            Spacer(modifier = Modifier.width(2.dp))
 
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(cropBg)
-                            .clickable { onToggle2xCrop() }
-                            .padding(horizontal = 9.dp, vertical = 6.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = "2×",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-                }
+            // Dedicated 2x in-sensor crop toggle button
+            val cropBg by animateColorAsState(
+                if (is2xCropActive) AccentGold else Color.White.copy(alpha = 0.12f),
+                label = "cropBg"
+            )
+            val cropTextColor = if (is2xCropActive) Color.Black else Color.White
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(cropBg)
+                    .clickable { onToggle2xCrop() }
+                    .padding(horizontal = 10.dp, vertical = 8.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "2×",
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = cropTextColor
+                )
             }
         }
     }

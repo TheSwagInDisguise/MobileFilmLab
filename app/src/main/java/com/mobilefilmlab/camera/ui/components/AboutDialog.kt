@@ -49,10 +49,25 @@ fun AboutDialog(
                     color = Color.White
                 )
                 Text(
-                    text = "Version 0.1.0-alpha.1 • Target: Oppo Find X9 Ultra",
+                    text = "Version 0.1.0-alpha.5 • Target: Oppo Find X9 Ultra",
                     fontSize = 11.sp,
                     color = AccentGold
                 )
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "Features & Capabilities",
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    text = "• 77 Recipe Lab presets ported to native Camera2.\n• Quad rear camera support (14mm UW, 23mm W, 70mm 3x, 135mm 10x) with honest 2x crop.\n• 2D Photographic Styles square pad for tone & warmth tuning.\n• Pro manual exposure (ISO, Shutter, Kelvin, EV bias, Focus).\n• Scoped storage MediaStore output with complete EXIF tags.",
+                    fontSize = 11.sp,
+                    color = TextSecondary,
+                    lineHeight = 16.sp
+                )
+
                 Spacer(modifier = Modifier.height(10.dp))
 
                 Text(
