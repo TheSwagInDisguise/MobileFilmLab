@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Bolt
 import androidx.compose.material.icons.filled.FlashAuto
 import androidx.compose.material.icons.filled.FlashOff
+import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Photo
 import androidx.compose.material.icons.filled.Settings
@@ -110,6 +111,7 @@ fun MainCameraScreen(
                 val (flashIcon, flashTint) = when (flashMode) {
                     FlashMode.OFF -> Pair(Icons.Default.FlashOff, TextMuted)
                     FlashMode.AUTO -> Pair(Icons.Default.FlashAuto, AccentGold)
+                    FlashMode.ON -> Pair(Icons.Default.FlashOn, AccentGold)
                     FlashMode.TORCH -> Pair(Icons.Default.Bolt, AccentGold)
                 }
 

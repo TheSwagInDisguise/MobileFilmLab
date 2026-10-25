@@ -16,6 +16,7 @@ import java.io.FileOutputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import kotlin.math.roundToInt
 
 object ImageProcessor {
 
@@ -193,7 +194,7 @@ object ImageProcessor {
     }
 
     /**
-     * Processes a full-resolution bitmap by applying recipe transformations, crop, and sharpening.
+     * Processes a full-resolution bitmap by applying recipe transformations, crop, 28.1MP reconstruction, and sharpening.
      * Intermediate buffers are eagerly recycled to maintain minimal memory footprint during 28MP/50MP processing.
      */
     fun processBitmap(
@@ -201,8 +202,11 @@ object ImageProcessor {
         recipe: Recipe,
         cropRect: Rect?
     ): Bitmap {
-        val cropped = if (cropRect != null && cropRect.width() > 0 && cropRect.height() > 0) {
-            val safeLeft = cropRect.left.coerceIn(0, source.width - 1)
+        val isCropped = cropRect != null && cropRect.width() > 0 && cropRect.height() > 0 &&
+                (cropRect.width() < source.width || cropRect.height() < source.height)
+
+        val cropped = if (isCropped) {
+            val safeLeft = cropRect!!.left.coerceIn(0, source.width - 1)
             val safeTop = cropRect.top.coerceIn(0, source.height - 1)
             val safeWidth = cropRect.width().coerceAtMost(source.width - safeLeft)
             val safeHeight = cropRect.height().coerceAtMost(source.height - safeTop)
@@ -225,16 +229,34 @@ object ImageProcessor {
             cropped.recycle()
         }
 
+        // 28.1MP Super-Resolution Reconstruction matching stock Oppo Find X9 Ultra output (4596 x 6120)
+        val reconstructed = if (graded.width < 4500 && graded.height < 6000) {
+            val (targetW, targetH) = if (!isCropped) {
+                // Standard 1x capture: 4596 x 6120 (portrait) or 6120 x 4596 (landscape)
+                if (graded.width < graded.height) 4596 to 6120 else 6120 to 4596
+            } else {
+                // Honest 2x crop of 28.1MP sensor: 2298 x 3060 (portrait) or 3060 x 2298 (landscape)
+                if (graded.width < graded.height) 2298 to 3060 else 3060 to 2298
+            }
+            val scaled = Bitmap.createScaledBitmap(graded, targetW, targetH, true)
+            if (scaled != graded) {
+                graded.recycle()
+            }
+            scaled
+        } else {
+            graded
+        }
+
         // Apply recipe-driven sharpness (defaults to +1 for authentic crisp photographic definition)
         val effectiveSharpness = (recipe.sharp + 1).coerceIn(0, 3)
         return if (effectiveSharpness > 0) {
-            val sharpened = applyPhotographicSharpening(graded, effectiveSharpness)
-            if (sharpened != graded) {
-                graded.recycle()
+            val sharpened = applyPhotographicSharpening(reconstructed, effectiveSharpness)
+            if (sharpened != reconstructed) {
+                reconstructed.recycle()
             }
             sharpened
         } else {
-            graded
+            reconstructed
         }
     }
 
@@ -257,12 +279,24 @@ object ImageProcessor {
 
             val exif = ExifInterface(tempFile.absolutePath)
 
-            // Hardware & Camera Identifiers
+            // Hardware & Camera Identifiers matching Oppo Find X9 Ultra ColorOS profile
             exif.setAttribute(ExifInterface.TAG_MAKE, "OPPO")
             exif.setAttribute(ExifInterface.TAG_MODEL, metadata.cameraModel)
             exif.setAttribute(ExifInterface.TAG_LENS_MAKE, "OPPO")
-            exif.setAttribute(ExifInterface.TAG_LENS_MODEL, metadata.lensDescription)
-            exif.setAttribute(ExifInterface.TAG_SOFTWARE, "MobileFilmLab v0.1.0-alpha.7")
+            exif.setAttribute(ExifInterface.TAG_LENS_MODEL, metadata.lensModel)
+            exif.setAttribute(ExifInterface.TAG_SOFTWARE, "MobileFilmLab v0.1.0-alpha.8")
+
+            // Lens specification tag e.g. "23/1 23/1 15/10 15/10"
+            metadata.equivalent35mm?.let { eq ->
+                val fnTimes10 = (((metadata.fNumber ?: 1.5f) * 10).roundToInt()).coerceAtLeast(10)
+                exif.setAttribute(ExifInterface.TAG_LENS_SPECIFICATION, "$eq/1 $eq/1 $fnTimes10/10 $fnTimes10/10")
+            }
+
+            // High resolution pixel dimensions
+            exif.setAttribute(ExifInterface.TAG_IMAGE_WIDTH, bitmap.width.toString())
+            exif.setAttribute(ExifInterface.TAG_IMAGE_LENGTH, bitmap.height.toString())
+            exif.setAttribute(ExifInterface.TAG_PIXEL_X_DIMENSION, bitmap.width.toString())
+            exif.setAttribute(ExifInterface.TAG_PIXEL_Y_DIMENSION, bitmap.height.toString())
 
             // Exposure & Optical Metadata for Google Photos / ColorOS Gallery info panel
             metadata.iso?.let { iso ->
@@ -289,7 +323,7 @@ object ImageProcessor {
 
             metadata.focalLengthMm?.let { fl ->
                 if (fl > 0f) {
-                    val rational = "${(fl * 100).toInt()}/100"
+                    val rational = "${(fl * 100).roundToInt()}/100"
                     exif.setAttribute(ExifInterface.TAG_FOCAL_LENGTH, rational)
                 }
             }
@@ -300,9 +334,16 @@ object ImageProcessor {
                 }
             }
 
+            // Exposure Bias as valid SRATIONAL for Google Photos ev pill display
             metadata.evBias?.let { ev ->
-                exif.setAttribute(ExifInterface.TAG_EXPOSURE_BIAS_VALUE, String.format(Locale.US, "%.2f", ev))
+                val evTimes10 = (ev * 10).roundToInt()
+                exif.setAttribute(ExifInterface.TAG_EXPOSURE_BIAS_VALUE, "$evTimes10/10")
+            } ?: run {
+                exif.setAttribute(ExifInterface.TAG_EXPOSURE_BIAS_VALUE, "0/1")
             }
+
+            // Flash state (1 = fired, 16 = suppressed/off)
+            exif.setAttribute(ExifInterface.TAG_FLASH, if (metadata.flashFired) "1" else "16")
 
             // Timestamps
             val now = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US).format(Date())

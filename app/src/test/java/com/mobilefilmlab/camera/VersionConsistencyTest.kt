@@ -7,13 +7,13 @@ class VersionConsistencyTest {
 
     @Test
     fun testSemanticVersionName() {
-        val versionName = "0.1.0-alpha.7"
-        assertEquals("0.1.0-alpha.7", versionName)
+        val versionName = "0.1.0-alpha.8"
+        assertEquals("0.1.0-alpha.8", versionName)
     }
 
     @Test
     fun testMonotonicVersionCode() {
-        val versionCode = 7
-        assertEquals(7, versionCode)
+        val versionCode = 8
+        assertEquals(8, versionCode)
     }
 }

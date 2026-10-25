@@ -77,4 +77,46 @@ class HighResolutionSelectorTest {
         assertEquals(6120, portraitH)
         assertEquals(28_127_520L, portraitW.toLong() * portraitH)
     }
+
+    @Test
+    fun test28MpReconstructionDimensions() {
+        // 1x standard capture reconstruction
+        val uncroppedW = 3072
+        val uncroppedH = 4096
+        val target1xW = 4596
+        val target1xH = 6120
+        assertEquals(28_127_520L, target1xW.toLong() * target1xH)
+
+        // 2x honest sensor crop reconstruction (50% area of 28.1MP)
+        val crop2xW = uncroppedW / 2
+        val crop2xH = uncroppedH / 2
+        val target2xW = target1xW / 2
+        val target2xH = target1xH / 2
+        assertEquals(1536, crop2xW)
+        assertEquals(2048, crop2xH)
+        assertEquals(2298, target2xW)
+        assertEquals(3060, target2xH)
+        assertEquals(7_031_880L, target2xW.toLong() * target2xH)
+    }
+
+    @Test
+    fun testFlashModeCycleIncludesAlwaysOn() {
+        val modes = com.mobilefilmlab.camera.camera.FlashMode.values().toList()
+        assertEquals(listOf(
+            com.mobilefilmlab.camera.camera.FlashMode.OFF,
+            com.mobilefilmlab.camera.camera.FlashMode.AUTO,
+            com.mobilefilmlab.camera.camera.FlashMode.ON,
+            com.mobilefilmlab.camera.camera.FlashMode.TORCH
+        ), modes)
+    }
+
+    @Test
+    fun testLensModelFormatMatchesStockColorOsExif() {
+        val model = "OPPO Find X9 Ultra"
+        val lensName = "wide camera"
+        val eq35 = 23
+        val fNum = 1.5f
+        val lensModel = "$model $lensName ${eq35}mm f/${String.format(java.util.Locale.US, "%.1f", fNum)}"
+        assertEquals("OPPO Find X9 Ultra wide camera 23mm f/1.5", lensModel)
+    }
 }

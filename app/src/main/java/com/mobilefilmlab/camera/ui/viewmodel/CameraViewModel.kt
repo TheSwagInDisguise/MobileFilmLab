@@ -108,7 +108,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     fun toggleFlash() {
         val next = when (_flashMode.value) {
             FlashMode.OFF -> FlashMode.AUTO
-            FlashMode.AUTO -> FlashMode.TORCH
+            FlashMode.AUTO -> FlashMode.ON
+            FlashMode.ON -> FlashMode.TORCH
             FlashMode.TORCH -> FlashMode.OFF
         }
         _flashMode.value = next

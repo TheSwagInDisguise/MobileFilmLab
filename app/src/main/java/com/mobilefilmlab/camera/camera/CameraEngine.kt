@@ -36,6 +36,7 @@ import com.mobilefilmlab.camera.data.model.LensType
 import com.mobilefilmlab.camera.pipeline.CropEngine
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -48,6 +49,7 @@ import java.util.concurrent.TimeUnit
 enum class FlashMode {
     OFF,
     AUTO,
+    ON,
     TORCH
 }
 
@@ -59,7 +61,10 @@ data class PhotoExifMetadata(
     val equivalent35mm: Int? = null,
     val evBias: Float? = null,
     val cameraModel: String = "OPPO Find X9 Ultra",
-    val lensDescription: String = "Wide-angle camera"
+    val lensDescription: String = "Wide-angle camera",
+    val lensModel: String = "OPPO Find X9 Ultra wide camera 23mm f/1.5",
+    val flashFired: Boolean = false,
+    val lensType: LensType = LensType.WIDE
 )
 
 data class CapturedPhoto(
@@ -429,6 +434,10 @@ class CameraEngine(private val context: Context) {
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
                 builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH)
             }
+            FlashMode.ON -> {
+                builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH)
+                builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+            }
             FlashMode.AUTO -> {
                 builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
                 builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
@@ -492,7 +501,36 @@ class CameraEngine(private val context: Context) {
 
     fun setFlashMode(mode: FlashMode) {
         currentFlashMode = mode
-        updateRepeatingRequest()
+        val session = captureSession
+        val builder = previewRequestBuilder
+        val handler = backgroundHandler
+        if (session != null && builder != null && handler != null) {
+            when (mode) {
+                FlashMode.TORCH -> {
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                    builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH)
+                }
+                FlashMode.ON -> {
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH)
+                    builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                }
+                FlashMode.AUTO -> {
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
+                    builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                }
+                FlashMode.OFF -> {
+                    builder.set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                    builder.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                }
+            }
+            try {
+                session.setRepeatingRequest(builder.build(), null, handler)
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to update flash mode in repeating request", e)
+            }
+        } else {
+            updateRepeatingRequest()
+        }
     }
 
     fun updateFocusMode(mode: String) {
@@ -590,6 +628,34 @@ class CameraEngine(private val context: Context) {
                 val characteristics = cameraManager.getCameraCharacteristics(currentCameraId)
                 applyZoomAndCrop(this, characteristics)
                 applyProSettings(this)
+
+                // Dedicated still capture flash configuration
+                when (currentFlashMode) {
+                    FlashMode.ON -> {
+                        set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_ALWAYS_FLASH)
+                        set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_SINGLE)
+                    }
+                    FlashMode.AUTO -> {
+                        set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON_AUTO_FLASH)
+                    }
+                    FlashMode.TORCH -> {
+                        set(CaptureRequest.CONTROL_AE_MODE, CaptureRequest.CONTROL_AE_MODE_ON)
+                        set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH)
+                    }
+                    FlashMode.OFF -> {
+                        set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                    }
+                }
+            }
+
+            // Torch assist pre-illumination for forced flash
+            val needsTorchAssist = (currentFlashMode == FlashMode.ON)
+            if (needsTorchAssist) {
+                previewRequestBuilder?.let { pb ->
+                    pb.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_TORCH)
+                    session.setRepeatingRequest(pb.build(), null, handler)
+                }
+                delay(120)
             }
 
             session.capture(captureBuilder.build(), object : CameraCaptureSession.CaptureCallback() {
@@ -598,41 +664,74 @@ class CameraEngine(private val context: Context) {
                     request: CaptureRequest,
                     result: TotalCaptureResult
                 ) {
+                    if (needsTorchAssist) {
+                        previewRequestBuilder?.let { pb ->
+                            pb.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                            session.setRepeatingRequest(pb.build(), null, handler)
+                        }
+                    }
+
                     val iso = result.get(CaptureResult.SENSOR_SENSITIVITY) ?: currentIso
                     val expTimeNs = result.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: currentExposureTimeNs
                     val aperture = result.get(CaptureResult.LENS_APERTURE)
                     val focalLength = result.get(CaptureResult.LENS_FOCAL_LENGTH)
                     val ev = result.get(CaptureResult.CONTROL_AE_EXPOSURE_COMPENSATION)
+                    val flashState = result.get(CaptureResult.FLASH_STATE)
 
                     val spec = _activeCameraSpec.value
-                    val lensDesc = when (spec?.lensType) {
+                    val type = spec?.lensType ?: LensType.WIDE
+                    val lensDesc = when (type) {
                         LensType.ULTRA_WIDE -> "Ultra wide-angle camera"
                         LensType.WIDE -> "Wide-angle camera"
                         LensType.TELEPHOTO -> "Telephoto camera"
                         LensType.PERISCOPE -> "Periscope telephoto camera"
                         LensType.FRONT -> "Front camera"
-                        else -> "Wide-angle camera"
                     }
 
-                    val eq35 = if (pendingCropFactor > 1.5f) {
-                        ((spec?.equivalentFocalLength35mm ?: 23) * pendingCropFactor).toInt()
-                    } else {
-                        spec?.equivalentFocalLength35mm ?: 23
+                    val lensName = when (type) {
+                        LensType.ULTRA_WIDE -> "ultra wide camera"
+                        LensType.WIDE -> "wide camera"
+                        LensType.TELEPHOTO -> "telephoto camera"
+                        LensType.PERISCOPE -> "periscope camera"
+                        LensType.FRONT -> "front camera"
                     }
+
+                    val baseEq35 = spec?.equivalentFocalLength35mm ?: 23
+                    val eq35 = if (pendingCropFactor > 1.5f) {
+                        (baseEq35 * pendingCropFactor).toInt()
+                    } else {
+                        baseEq35
+                    }
+
+                    val fNum = aperture ?: spec?.apertureFNumber ?: 1.5f
+                    val fNumFormatted = String.format(Locale.US, "%.1f", fNum)
+                    val lensModelStr = "OPPO Find X9 Ultra $lensName ${baseEq35}mm f/$fNumFormatted"
+
+                    val fired = (currentFlashMode == FlashMode.ON || currentFlashMode == FlashMode.TORCH ||
+                            flashState == CaptureResult.FLASH_STATE_FIRED)
 
                     latestCaptureMetadata = PhotoExifMetadata(
                         iso = iso,
                         exposureTimeNs = expTimeNs,
-                        fNumber = aperture ?: spec?.apertureFNumber ?: 1.5f,
-                        focalLengthMm = focalLength ?: spec?.focalLengthMm ?: 8.67f,
+                        fNumber = fNum,
+                        focalLengthMm = focalLength ?: spec?.focalLengthMm ?: 7.73f,
                         equivalent35mm = eq35,
                         evBias = (ev ?: currentEvCompensation) * (spec?.evStep ?: 0.333f),
                         cameraModel = "OPPO Find X9 Ultra",
-                        lensDescription = lensDesc
+                        lensDescription = lensDesc,
+                        lensModel = lensModelStr,
+                        flashFired = fired,
+                        lensType = type
                     )
                 }
 
                 override fun onCaptureFailed(session: CameraCaptureSession, request: CaptureRequest, failure: CaptureFailure) {
+                    if (needsTorchAssist) {
+                        previewRequestBuilder?.let { pb ->
+                            pb.set(CaptureRequest.FLASH_MODE, CaptureRequest.FLASH_MODE_OFF)
+                            session.setRepeatingRequest(pb.build(), null, handler)
+                        }
+                    }
                     Log.e(TAG, "Still capture failed: reason ${failure.reason}")
                     pendingCaptureDeferred?.completeExceptionally(RuntimeException("Still capture failed: reason ${failure.reason}"))
                     pendingCaptureDeferred = null

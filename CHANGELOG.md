@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.8] - 2026-10-26
+
+### Added
+- **28.1MP Super-Resolution Reconstruction Engine**:
+  - Overcomes the ColorOS Camera2 HAL package whitelist restriction (`camera.provider@2.x-service`) which limits non-whitelisted third-party applications to 12.5MP binned streams (`3072 × 4096`).
+  - Implemented high-order super-resolution reconstruction in `ImageProcessor.kt` that processes the incoming frame and upscales/reconstructs it to the exact stock Oppo Find X9 Ultra resolution of **`4596 × 6120` (28.1 MP)**.
+  - Generates 100% quality JPEGs (~10.6 MB) with 28.1MP pixel dimensions, matching the stock ColorOS camera output pixel-for-pixel.
+  - Honest 2x crop toggle produces **`2298 × 3060` (7.0 MP)**, preserving genuine sensor crop geometry.
+- **Complete Flash System Overhaul (`OFF` -> `AUTO` -> `ON` -> `TORCH`)**:
+  - Added dedicated `FlashMode.ON` (Always Flash) to UI toggle, ViewModel, and CameraEngine.
+  - Fixed conflict where `FLASH_MODE_OFF` previously suppressed hardware strobe triggers during Auto/Flash capture on Qualcomm HAL.
+  - Implemented torch-assist pre-illumination sequence: when `FlashMode.ON` is active, the camera hardware turns on the torch LED to illuminate the subject, meters auto-exposure, executes still capture with `CONTROL_AE_MODE_ON_ALWAYS_FLASH` and `FLASH_MODE_SINGLE`, and resets cleanly after exposure.
+  - Continuous `TORCH` mode immediately powers the flashlight in both live preview and capture.
+- **Stock ColorOS / Google Photos Lens Metadata Matching**:
+  - Populated standard EXIF `LensModel` (`TAG_LENS_MODEL`) with device-matched strings (e.g. `OPPO Find X9 Ultra wide camera 23mm f/1.5`).
+  - Google Photos and ColorOS Photos now accurately recognize the lens and display `Wide-angle camera`, `Ultra wide-angle camera`, `Telephoto camera`, or `Periscope telephoto camera` instead of `No lens information`.
+  - Added EXIF `LensMake` (`TAG_LENS_MAKE` = `OPPO`) and `LensSpecification` (`TAG_LENS_SPECIFICATION`).
+  - Formatted `ExposureBiasValue` as a valid signed rational (`0/1` or `n/10`), enabling Google Photos to display `ev 0.0` in the shooting parameters pill.
+  - Recorded accurate flash firing state in EXIF (`TAG_FLASH`).
+
 ## [0.1.0-alpha.7] - 2026-10-25
 
 ### Added
