@@ -71,11 +71,12 @@ fun CameraViewfinder(
                         }
                     }
 
-                    if (isAvailable && surfaceTexture != null) {
+                    val st = surfaceTexture
+                    if (isAvailable && st != null) {
                         val previewSize = cameraEngine.getOptimalPreviewSize(width, height)
-                        surfaceTexture.setDefaultBufferSize(previewSize.width, previewSize.height)
+                        st.setDefaultBufferSize(previewSize.width, previewSize.height)
                         configureTransform(this, width, height, previewSize, cameraEngine.getSensorOrientation())
-                        val surface = Surface(surfaceTexture)
+                        val surface = Surface(st)
                         cameraEngine.bindPreviewSurface(surface, previewSize.width, previewSize.height)
                     }
                 }
