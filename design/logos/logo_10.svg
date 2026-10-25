@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bg10" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1E1F24"/>
+      <stop offset="100%" stop-color="#08080B"/>
+    </radialGradient>
+    <linearGradient id="ceramicIsland" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2D303A"/>
+      <stop offset="50%" stop-color="#1E2027"/>
+      <stop offset="100%" stop-color="#14151A"/>
+    </linearGradient>
+    <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F39C12"/>
+      <stop offset="100%" stop-color="#D35400"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg10)"/>
+  <!-- Oppo Find X Ultra iconic circular camera island -->
+  <circle cx="256" cy="256" r="204" fill="url(#ceramicIsland)" stroke="#3E4352" stroke-width="4"/>
+  <!-- Fine serrated knurling on camera outer rim -->
+  <circle cx="256" cy="256" r="192" fill="none" stroke="#2B2E38" stroke-width="3" stroke-dasharray="2 4"/>
+  <circle cx="256" cy="256" r="182" fill="#111216" stroke="#252730" stroke-width="2"/>
+  <!-- Horizontal Horizon Split (Luxury Hasselblad aesthetic) -->
+  <line x1="84" y1="256" x2="428" y2="256" stroke="#2A2D37" stroke-width="2"/>
+  <!-- 4 Physical Camera Elements placed symmetrically -->
+  <!-- 1. Ultra-Wide 15mm (Top Left) -->
+  <circle cx="196" cy="196" r="42" fill="#181A22" stroke="#4B5366" stroke-width="2.5"/>
+  <circle cx="196" cy="196" r="24" fill="#0C0D10"/>
+  <circle cx="196" cy="196" r="8" fill="#3498DB"/>
+  <!-- 2. Primary 1-inch Wide 23mm (Top Right) -->
+  <circle cx="316" cy="196" r="48" fill="#181A22" stroke="url(#goldAccent)" stroke-width="3.5"/>
+  <circle cx="316" cy="196" r="30" fill="#0C0D10"/>
+  <circle cx="316" cy="196" r="10" fill="#E74C3C"/>
+  <!-- 3. Telephoto 70mm (Bottom Left) -->
+  <circle cx="196" cy="316" r="42" fill="#181A22" stroke="#4B5366" stroke-width="2.5"/>
+  <circle cx="196" cy="316" r="24" fill="#0C0D10"/>
+  <circle cx="196" cy="316" r="8" fill="#2ECC71"/>
+  <!-- 4. Periscope Telephoto 135mm (Bottom Right) -->
+  <circle cx="316" cy="316" r="42" fill="#181A22" stroke="#4B5366" stroke-width="2.5"/>
+  <rect x="303" y="303" width="26" height="26" rx="4" fill="#0C0D10" stroke="#9B59B6" stroke-width="2"/>
+  <circle cx="316" cy="316" r="5" fill="#9B59B6"/>
+  <!-- Center Film Lab Calibration Emblem -->
+  <circle cx="256" cy="256" r="20" fill="#0E0F13" stroke="url(#goldAccent)" stroke-width="2"/>
+  <text x="256" y="261" fill="#FFFFFF" font-family="-apple-system, sans-serif" font-weight="900" font-size="12" text-anchor="middle">MFL</text>
+</svg>

@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bg5" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#212226"/>
+      <stop offset="100%" stop-color="#0B0B0D"/>
+    </radialGradient>
+    <conicGradient id="kelvinArc" cx="50%" cy="50%">
+      <stop offset="0%" stop-color="#FF5500"/>
+      <stop offset="25%" stop-color="#FFAA00"/>
+      <stop offset="50%" stop-color="#FFF5E5"/>
+      <stop offset="75%" stop-color="#C0DEFF"/>
+      <stop offset="100%" stop-color="#4B90FF"/>
+    </conicGradient>
+    <linearGradient id="metalRim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#D4AF37"/>
+      <stop offset="50%" stop-color="#8C7322"/>
+      <stop offset="100%" stop-color="#54430F"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg5)"/>
+  <!-- Brass knurled dial outer bezel -->
+  <circle cx="256" cy="256" r="200" fill="#18181C" stroke="url(#metalRim)" stroke-width="8"/>
+  <!-- Knurling notches (60 notches around rim) -->
+  <g stroke="#D4AF37" stroke-width="2" opacity="0.7">
+    <line x1="256" y1="58" x2="256" y2="70"/>
+    <line x1="256" y1="442" x2="256" y2="454"/>
+    <line x1="58" y1="256" x2="70" y2="256"/>
+    <line x1="442" y1="256" x2="454" y2="256"/>
+    <line x1="116" y1="116" x2="124" y2="124"/>
+    <line x1="396" y1="116" x2="388" y2="124"/>
+    <line x1="116" y1="396" x2="124" y2="388"/>
+    <line x1="396" y1="396" x2="388" y2="388"/>
+  </g>
+  <!-- Inner dial face -->
+  <circle cx="256" cy="256" r="172" fill="#111215" stroke="#2B2D35" stroke-width="3"/>
+  <!-- Chromatic Kelvin arc (2500K warm tungsten to 9900K cool daylight) -->
+  <path d="M 120 256 A 136 136 0 1 1 392 256" fill="none" stroke="#FF7A00" stroke-width="16" stroke-linecap="round"/>
+  <path d="M 256 120 A 136 136 0 0 1 392 256" fill="none" stroke="#00A3FF" stroke-width="16" stroke-linecap="round"/>
+  <circle cx="120" cy="256" r="12" fill="#FF5500"/>
+  <circle cx="392" cy="256" r="12" fill="#00A3FF"/>
+  <!-- Mechanical shutter center release button -->
+  <circle cx="256" cy="256" r="88" fill="#1A1C22" stroke="url(#metalRim)" stroke-width="4"/>
+  <circle cx="256" cy="256" r="68" fill="#262830" stroke="#3A3D4A" stroke-width="2"/>
+  <!-- Center threaded mechanical cable-release hole -->
+  <circle cx="256" cy="256" r="16" fill="#0E0F12" stroke="#D4AF37" stroke-width="2"/>
+  <!-- Exposure value engraved markers -->
+  <text x="256" y="210" fill="#E0E0E0" font-family="-apple-system, sans-serif" font-weight="700" font-size="20" text-anchor="middle">5600K</text>
+  <text x="256" y="320" fill="#D4AF37" font-family="-apple-system, sans-serif" font-weight="600" font-size="16" text-anchor="middle">RECIPE LAB</text>
+</svg>

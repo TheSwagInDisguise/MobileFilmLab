@@ -1,0 +1,160 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 880" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bodyGrad_3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1E2024"/><stop offset="100%" stop-color="#0A0B0D"/>
+    </linearGradient>
+    <linearGradient id="vfScene_3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#9B59B6" stop-opacity="0.85"/>
+      <stop offset="50%" stop-color="#3D2618" stop-opacity="0.95"/>
+      <stop offset="100%" stop-color="#11161B"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Oppo Find X9 Ultra Phone Chassis -->
+  <rect x="0" y="0" width="400" height="880" rx="36" fill="url(#bodyGrad_3)" stroke="#3A3D46" stroke-width="4"/>
+  <rect x="8" y="8" width="384" height="864" rx="28" fill="#000000"/>
+
+  <!-- Top Status Bar & Punch-Hole Camera -->
+  <circle cx="200" cy="22" r="7" fill="#050608" stroke="#1A1C22" stroke-width="1.5"/>
+  <text x="32" y="26" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="11" font-weight="600">09:41</text>
+  <g transform="translate(330, 16)" fill="#8E929E">
+    <rect x="18" y="3" width="18" height="9" rx="2" fill="none" stroke="#8E929E" stroke-width="1.2"/>
+    <rect x="20" y="5" width="12" height="5" rx="1" fill="#4CD964"/>
+    <path d="M 2 11 L 6 3 L 10 3 L 6 11 Z" fill="#8E929E"/>
+  </g>
+
+  <!-- Top Navigation & Capability Bar -->
+  <g transform="translate(16, 42)">
+    <rect x="0" y="0" width="368" height="34" rx="10" fill="#14161C" opacity="0.9"/>
+    <circle cx="20" cy="17" r="10" fill="#20232C"/>
+    <path d="M 16 17 L 24 17 M 20 13 L 20 21" stroke="#FFFFFF" stroke-width="1.5"/>
+    <text x="38" y="21" fill="#FFFFFF" font-family="-apple-system, sans-serif" font-weight="700" font-size="11">MobileFilmLab</text>
+    <rect x="126" y="7" width="52" height="20" rx="5" fill="#2B1E14"/>
+    <text x="152" y="21" fill="#E67E22" font-family="-apple-system, sans-serif" font-weight="800" font-size="9" text-anchor="middle">DIR 3</text>
+    <rect x="236" y="7" width="56" height="20" rx="5" fill="#222631"/>
+    <text x="264" y="21" fill="#F1C40F" font-family="-apple-system, sans-serif" font-weight="700" font-size="9" text-anchor="middle">RAW+JPG</text>
+    <rect x="298" y="7" width="60" height="20" rx="5" fill="#222631"/>
+    <text x="328" y="21" fill="#4CD964" font-family="-apple-system, sans-serif" font-weight="600" font-size="9" text-anchor="middle">50MP 1"</text>
+  </g>
+
+  <!-- Live Viewfinder Area -->
+  <g transform="translate(16, 84)">
+    <rect x="0" y="0" width="368" height="420" rx="16" fill="url(#vfScene_3)"/>
+    
+    <!-- Grid & Horizon -->
+    <line x1="122" y1="0" x2="122" y2="420" stroke="#FFFFFF" stroke-width="0.5" opacity="0.2"/>
+    <line x1="245" y1="0" x2="245" y2="420" stroke="#FFFFFF" stroke-width="0.5" opacity="0.2"/>
+    <line x1="0" y1="140" x2="368" y2="140" stroke="#FFFFFF" stroke-width="0.5" opacity="0.2"/>
+    <line x1="0" y1="280" x2="368" y2="280" stroke="#FFFFFF" stroke-width="0.5" opacity="0.2"/>
+    <line x1="144" y1="210" x2="224" y2="210" stroke="#2ECC71" stroke-width="1.5" stroke-dasharray="6 3"/>
+    <circle cx="184" cy="210" r="3" fill="#2ECC71"/>
+
+    <!-- Mountain & Sunset -->
+    <path d="M 0 320 Q 90 220 180 290 T 368 260 L 368 420 L 0 420 Z" fill="#1B120C" opacity="0.8"/>
+    <path d="M 60 360 Q 200 280 368 330 L 368 420 L 0 420 Z" fill="#0C0E14" opacity="0.95"/>
+    <circle cx="280" cy="120" r="38" fill="#FFA500" opacity="0.6"/>
+
+    <!-- Viewfinder HUD Telemetry -->
+    <g transform="translate(12, 16)">
+      <rect x="0" y="0" width="344" height="24" rx="6" fill="#000000" opacity="0.65"/>
+      <text x="12" y="16" fill="#FFFFFF" font-family="monospace" font-size="9" font-weight="700">1/250s  f/1.6  ISO 125  EV +0.3  5600K</text>
+    </g>
+
+    <!-- Honest Crop Status Badge -->
+    <g transform="translate(10, 382)">
+      <rect x="0" y="0" width="348" height="26" rx="6" fill="#0A0B0E" opacity="0.88" stroke="#F39C12" stroke-width="1"/>
+      <circle cx="12" cy="13" r="3.5" fill="#2ECC71"/>
+      <text x="22" y="17" fill="#FFFFFF" font-family="-apple-system, sans-serif" font-size="8" font-weight="700">70mm TELE • 1.25× NATIVE-PIXEL CROP (32MP NO RESAMPLE)</text>
+    </g>
+  </g>
+
+  <!-- Physical Lens Selection Bar -->
+  <g transform="translate(16, 514)">
+    <text x="4" y="-6" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="9" font-weight="700" letter-spacing="0.5">PHYSICAL OPTICS (4 REAR CAMERAS)</text>
+    <rect x="0" y="0" width="368" height="42" rx="12" fill="#14161E" stroke="#2B2F3D" stroke-width="1.5"/>
+    
+    <rect x="6" y="5" width="84" height="32" rx="8" fill="#1E212B" stroke="none" stroke-width="1.5"/>
+    <text x="48" y="21" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="11" font-weight="800" text-anchor="middle">15mm UW</text>
+    <text x="48" y="31" fill="#5A5F70" font-family="-apple-system, sans-serif" font-size="8" font-weight="600" text-anchor="middle">0.6× • 50MP</text>
+
+    <rect x="96" y="5" width="84" height="32" rx="8" fill="#1E212B" stroke="none" stroke-width="1.5"/>
+    <text x="138" y="21" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="11" font-weight="800" text-anchor="middle">23mm WIDE</text>
+    <text x="138" y="31" fill="#5A5F70" font-family="-apple-system, sans-serif" font-size="8" font-weight="600" text-anchor="middle">1.0× • 1" LYT900</text>
+
+    <rect x="186" y="5" width="84" height="32" rx="8" fill="#D35400" stroke="#F39C12" stroke-width="1.5"/>
+    <text x="228" y="21" fill="#FFFFFF" font-family="-apple-system, sans-serif" font-size="11" font-weight="800" text-anchor="middle">70mm TELE</text>
+    <text x="228" y="31" fill="#FFD285" font-family="-apple-system, sans-serif" font-size="8" font-weight="600" text-anchor="middle">3.0× • 50MP</text>
+
+    <rect x="276" y="5" width="86" height="32" rx="8" fill="#1E212B" stroke="none" stroke-width="1.5"/>
+    <text x="319" y="21" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="11" font-weight="800" text-anchor="middle">135mm PERI</text>
+    <text x="319" y="31" fill="#5A5F70" font-family="-apple-system, sans-serif" font-size="8" font-weight="600" text-anchor="middle">6.0× • 50MP</text>
+  </g>
+
+  <!-- Virtual Framing Bar -->
+  <g transform="translate(16, 568)">
+    <text x="4" y="-5" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="9" font-weight="700" letter-spacing="0.5">VIRTUAL FRAMING (4 CROP LEVELS)</text>
+    <rect x="0" y="0" width="368" height="36" rx="10" fill="#0F1117" stroke="#222530" stroke-width="1"/>
+    
+    <rect x="5" y="4" width="84" height="28" rx="7" fill="#151821" stroke="none" stroke-width="1.2"/>
+    <text x="47" y="18" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" text-anchor="middle">1.0× (23mm)</text>
+    <text x="47" y="27" fill="#555A6B" font-family="-apple-system, sans-serif" font-size="7" font-weight="600" text-anchor="middle">Full Sensor</text>
+
+    <rect x="95" y="4" width="84" height="28" rx="7" fill="#2A3040" stroke="#4A90E2" stroke-width="1.2"/>
+    <text x="137" y="18" fill="#FFFFFF" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" text-anchor="middle">1.25× (28mm)</text>
+    <text x="137" y="27" fill="#64B5F6" font-family="-apple-system, sans-serif" font-size="7" font-weight="600" text-anchor="middle">Native Crop</text>
+
+    <rect x="185" y="4" width="84" height="28" rx="7" fill="#151821" stroke="none" stroke-width="1.2"/>
+    <text x="227" y="18" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" text-anchor="middle">1.5× (35mm)</text>
+    <text x="227" y="27" fill="#555A6B" font-family="-apple-system, sans-serif" font-size="7" font-weight="600" text-anchor="middle">Reduced-Res</text>
+
+    <rect x="275" y="4" width="86" height="28" rx="7" fill="#151821" stroke="none" stroke-width="1.2"/>
+    <text x="318" y="18" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="10" font-weight="700" text-anchor="middle">2.0× (46mm)</text>
+    <text x="318" y="27" fill="#555A6B" font-family="-apple-system, sans-serif" font-size="7" font-weight="600" text-anchor="middle">Resampled</text>
+  </g>
+
+  <!-- Recipe Dock -->
+  <g transform="translate(16, 616)">
+    <rect x="0" y="0" width="368" height="54" rx="14" fill="#14161F" stroke="#2A2E3D" stroke-width="1.5"/>
+    <circle cx="26" cy="27" r="14" fill="#252836"/>
+    <path d="M 26 19 L 28.5 24.5 L 34.5 25.2 L 30 29.3 L 31.3 35 L 26 32 L 20.7 35 L 22 29.3 L 17.5 25.2 L 23.5 24.5 Z" fill="#F1C40F"/>
+    
+    <text x="48" y="22" fill="#FFFFFF" font-family="-apple-system, sans-serif" font-size="12" font-weight="800">Velvia</text>
+    <text x="48" y="38" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="9" font-weight="600">[Fuji Sim] • Std +2/+1 • A3 G1 • EV +0.3</text>
+
+    <rect x="268" y="12" width="90" height="30" rx="8" fill="#E67E22"/>
+    <text x="313" y="31" fill="#FFFFFF" font-family="-apple-system, sans-serif" font-size="11" font-weight="700" text-anchor="middle">TUNE LOOK</text>
+  </g>
+
+  <!-- Quick Parameters -->
+  <g transform="translate(16, 680)">
+    
+  <rect x="0" y="0" width="368" height="64" rx="12" fill="#14161F" stroke="#252936" stroke-width="1"/>
+  <rect x="10" y="14" width="78" height="36" rx="8" fill="#1E222E" stroke="#363C4E" stroke-width="1"/>
+  <text x="49" y="28" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="8" font-weight="700" text-anchor="middle">DRO DYNAMIC</text>
+  <text x="49" y="42" fill="#2ECC71" font-family="-apple-system, sans-serif" font-size="10" font-weight="800" text-anchor="middle">AUTO (Lv6)</text>
+  <rect x="98" y="14" width="80" height="36" rx="8" fill="#1E222E" stroke="#363C4E" stroke-width="1"/>
+  <text x="138" y="28" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="8" font-weight="700" text-anchor="middle">COLOR TINT</text>
+  <text x="138" y="42" fill="#E67E22" font-family="-apple-system, sans-serif" font-size="10" font-weight="800" text-anchor="middle">A2 / M1</text>
+  <rect x="188" y="14" width="80" height="36" rx="8" fill="#1E222E" stroke="#363C4E" stroke-width="1"/>
+  <text x="228" y="28" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="8" font-weight="700" text-anchor="middle">FOCUS PEAK</text>
+  <text x="228" y="42" fill="#3498DB" font-family="-apple-system, sans-serif" font-size="10" font-weight="800" text-anchor="middle">ON (YELLOW)</text>
+  <rect x="278" y="14" width="80" height="36" rx="8" fill="#1E222E" stroke="#363C4E" stroke-width="1"/>
+  <text x="318" y="28" fill="#8E929E" font-family="-apple-system, sans-serif" font-size="8" font-weight="700" text-anchor="middle">ZEBRA CLIPPING</text>
+  <text x="318" y="42" fill="#E74C3C" font-family="-apple-system, sans-serif" font-size="10" font-weight="800" text-anchor="middle">95% HIGHL</text>
+  </g>
+
+  <!-- Bottom Capture Deck -->
+  <g transform="translate(16, 756)">
+    <rect x="18" y="18" width="54" height="54" rx="14" fill="#1C1E26" stroke="#3A3D4C" stroke-width="2"/>
+    <rect x="22" y="22" width="46" height="46" rx="10" fill="#2D303E"/>
+    <circle cx="45" cy="45" r="12" fill="#E67E22" opacity="0.8"/>
+
+    <circle cx="184" cy="45" r="42" fill="#161820" stroke="#3E4250" stroke-width="3"/>
+    <circle cx="184" cy="45" r="34" fill="#FFFFFF"/>
+    <circle cx="184" cy="45" r="30" fill="#F4F4F6" stroke="#D1D3D8" stroke-width="1.5"/>
+
+    <circle cx="318" cy="45" r="26" fill="#1A1C24" stroke="#323542" stroke-width="1.5"/>
+    <circle cx="318" cy="45" r="14" fill="#282B36"/>
+    <path d="M 314 45 L 322 45 M 318 41 L 318 49" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round"/>
+  </g>
+</svg>

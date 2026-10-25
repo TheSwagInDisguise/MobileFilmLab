@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bg8" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1A1C22"/>
+      <stop offset="100%" stop-color="#08090C"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg8)"/>
+  <!-- Technical rangefinder grid perimeter -->
+  <rect x="80" y="80" width="352" height="352" rx="20" fill="none" stroke="#252832" stroke-width="2"/>
+  <!-- 4 Corner Framelines (representing 4 crop stages) -->
+  <!-- 1.0x Full Sensor (outer) -->
+  <path d="M 100 130 L 100 100 L 130 100" stroke="#5C6478" stroke-width="3" fill="none"/>
+  <path d="M 412 130 L 412 100 L 382 100" stroke="#5C6478" stroke-width="3" fill="none"/>
+  <path d="M 100 382 L 100 412 L 130 412" stroke="#5C6478" stroke-width="3" fill="none"/>
+  <path d="M 412 382 L 412 412 L 382 412" stroke="#5C6478" stroke-width="3" fill="none"/>
+  <!-- 1.25x Native Crop -->
+  <path d="M 125 150 L 125 125 L 150 125" stroke="#7A849E" stroke-width="2.5" fill="none"/>
+  <path d="M 387 150 L 387 125 L 362 125" stroke="#7A849E" stroke-width="2.5" fill="none"/>
+  <path d="M 125 362 L 125 387 L 150 387" stroke="#7A849E" stroke-width="2.5" fill="none"/>
+  <path d="M 387 362 L 387 387 L 362 387" stroke="#7A849E" stroke-width="2.5" fill="none"/>
+  <!-- 1.5x Reduced Crop -->
+  <path d="M 150 170 L 150 150 L 170 150" stroke="#E67E22" stroke-width="2.5" fill="none"/>
+  <path d="M 362 170 L 362 150 L 342 150" stroke="#E67E22" stroke-width="2.5" fill="none"/>
+  <path d="M 150 342 L 150 362 L 170 362" stroke="#E67E22" stroke-width="2.5" fill="none"/>
+  <path d="M 362 342 L 362 362 L 342 362" stroke="#E67E22" stroke-width="2.5" fill="none"/>
+  <!-- 2.0x Digital Crop (inner) -->
+  <path d="M 175 190 L 175 175 L 190 175" stroke="#3498DB" stroke-width="3" fill="none"/>
+  <path d="M 337 190 L 337 175 L 322 175" stroke="#3498DB" stroke-width="3" fill="none"/>
+  <path d="M 175 322 L 175 337 L 190 337" stroke="#3498DB" stroke-width="3" fill="none"/>
+  <path d="M 337 322 L 337 337 L 322 337" stroke="#3498DB" stroke-width="3" fill="none"/>
+  <!-- Central crosshair circle -->
+  <circle cx="256" cy="256" r="54" fill="#13151A" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="6 4"/>
+  <!-- 4 Color Dots representing Film Emulsion Dyes (Cyan, Magenta, Yellow, Carbon) -->
+  <circle cx="240" cy="240" r="10" fill="#00E5FF"/>
+  <circle cx="272" cy="240" r="10" fill="#FF1744"/>
+  <circle cx="240" cy="272" r="10" fill="#FFEA00"/>
+  <circle cx="272" cy="272" r="10" fill="#00E676"/>
+</svg>

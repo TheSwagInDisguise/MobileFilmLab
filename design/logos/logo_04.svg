@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bg4" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1A1C24"/>
+      <stop offset="100%" stop-color="#090A0D"/>
+    </radialGradient>
+    <linearGradient id="opticsCyan" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00E5FF"/>
+      <stop offset="100%" stop-color="#0091EA"/>
+    </linearGradient>
+    <linearGradient id="opticsAmber" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF9100"/>
+      <stop offset="100%" stop-color="#FF3D00"/>
+    </linearGradient>
+    <linearGradient id="opticsMagenta" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF4081"/>
+      <stop offset="100%" stop-color="#C51162"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg4)"/>
+  <!-- Outer precision ring -->
+  <circle cx="256" cy="256" r="195" fill="none" stroke="#2F3442" stroke-width="3"/>
+  <circle cx="256" cy="256" r="185" fill="#13151B" stroke="#1F222B" stroke-width="2"/>
+  <!-- Geometric MFL optical letterform -->
+  <g transform="translate(116, 126)">
+    <!-- 'M' left pillar & diagonal (Cyan spectrum) -->
+    <path d="M 30 250 L 30 30 L 70 30 L 140 160 L 140 250 Z" fill="url(#opticsCyan)" opacity="0.95"/>
+    <!-- 'M' right pillar & diagonal (Magenta spectrum) -->
+    <path d="M 250 250 L 250 30 L 210 30 L 140 160 L 140 250 Z" fill="url(#opticsMagenta)" opacity="0.95"/>
+    <!-- Overlapping center 'F' and 'L' arm (Warm Amber) -->
+    <path d="M 70 30 L 210 30 L 210 65 L 110 65 L 110 120 L 190 120 L 190 155 L 110 155 L 110 250 L 70 250 Z" fill="url(#opticsAmber)" opacity="0.85"/>
+  </g>
+  <!-- Central optical glass lens element overlay -->
+  <circle cx="256" cy="256" r="70" fill="none" stroke="#FFFFFF" stroke-width="4" opacity="0.9"/>
+  <circle cx="256" cy="256" r="30" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-dasharray="4 4" opacity="0.6"/>
+  <circle cx="256" cy="256" r="8" fill="#FFFFFF"/>
+</svg>

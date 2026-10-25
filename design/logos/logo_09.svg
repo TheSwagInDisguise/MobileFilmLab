@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bg9" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1B1C22"/>
+      <stop offset="100%" stop-color="#08080B"/>
+    </radialGradient>
+    <linearGradient id="prismLight" x1="0%" y1="50%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#FFFFFF" stop-opacity="0.9"/>
+      <stop offset="100%" stop-color="#E0E6ED" stop-opacity="0.4"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg9)"/>
+  <!-- Precision optical circle -->
+  <circle cx="256" cy="256" r="195" fill="none" stroke="#2B2E38" stroke-width="2.5"/>
+  <!-- Optical Prism (equilateral triangle) -->
+  <polygon points="230,120 120,330 340,330" fill="#161922" stroke="#5E677C" stroke-width="4"/>
+  <polygon points="230,140 140,315 320,315" fill="#1C202B" stroke="#8A96B2" stroke-width="1.5" opacity="0.6"/>
+  <!-- Incident White Beam -->
+  <line x1="60" y1="260" x2="175" y2="225" stroke="url(#prismLight)" stroke-width="6" stroke-linecap="round"/>
+  <!-- Dispersed Emulsion Rainbow Ribbon curving outward like film stock -->
+  <path d="M 235 220 C 270 215, 340 180, 440 160" stroke="#E74C3C" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M 238 227 C 273 222, 340 195, 440 180" stroke="#E67E22" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M 241 234 C 276 229, 340 210, 440 200" stroke="#F1C40F" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M 244 241 C 279 236, 340 225, 440 220" stroke="#2ECC71" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M 247 248 C 282 243, 340 240, 440 240" stroke="#3498DB" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <path d="M 250 255 C 285 250, 340 255, 440 260" stroke="#9B59B6" stroke-width="7" fill="none" stroke-linecap="round"/>
+  <!-- Film perforation dots along bottom edge of ribbon -->
+  <circle cx="340" cy="285" r="4" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="370" cy="288" r="4" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="400" cy="292" r="4" fill="#FFFFFF" opacity="0.7"/>
+  <circle cx="430" cy="296" r="4" fill="#FFFFFF" opacity="0.7"/>
+</svg>

@@ -1,0 +1,31 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bg6" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#141416"/>
+      <stop offset="100%" stop-color="#050507"/>
+    </radialGradient>
+    <linearGradient id="amberGold6" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F5A623"/>
+      <stop offset="100%" stop-color="#E06D14"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg6)"/>
+  <!-- Ultra-clean minimalist rangefinder geometry -->
+  <!-- Outer precision frame -->
+  <rect x="96" y="96" width="320" height="320" rx="36" fill="none" stroke="#2B2D33" stroke-width="4"/>
+  <!-- Rangefinder optical window in top right corner -->
+  <rect x="330" y="126" width="56" height="36" rx="8" fill="#1C1E24" stroke="url(#amberGold6)" stroke-width="2.5"/>
+  <!-- Continuous geometric line forming the lens + MFL architecture -->
+  <circle cx="236" cy="276" r="100" fill="none" stroke="#FFFFFF" stroke-width="6"/>
+  <!-- Inner optical pupil -->
+  <circle cx="236" cy="276" r="44" fill="url(#amberGold6)"/>
+  <circle cx="236" cy="276" r="18" fill="#0C0D10"/>
+  <!-- Precise recipe tone curve incision -->
+  <path d="M 156 316 Q 236 216 316 276" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round"/>
+  <!-- Calibration hash marks along bottom border -->
+  <line x1="140" y1="384" x2="140" y2="396" stroke="#5E6370" stroke-width="2"/>
+  <line x1="200" y1="384" x2="200" y2="396" stroke="#5E6370" stroke-width="2"/>
+  <line x1="256" y1="380" x2="256" y2="400" stroke="url(#amberGold6)" stroke-width="3"/>
+  <line x1="312" y1="384" x2="312" y2="396" stroke="#5E6370" stroke-width="2"/>
+  <line x1="372" y1="384" x2="372" y2="396" stroke="#5E6370" stroke-width="2"/>
+</svg>

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Extended 35mm film leader -->
+    <path
+        android:fillColor="#1F222C"
+        android:pathData="M48,34 L80,34 C85,34 88,38 88,43 L88,65 L48,65 Z" />
+    <!-- Perforations top -->
+    <path android:fillColor="#0A0B0E" android:pathData="M52,37h5v3h-5z"/>
+    <path android:fillColor="#0A0B0E" android:pathData="M60,37h5v3h-5z"/>
+    <path android:fillColor="#0A0B0E" android:pathData="M68,37h5v3h-5z"/>
+    <path android:fillColor="#0A0B0E" android:pathData="M76,37h5v3h-5z"/>
+    <!-- Perforations bottom -->
+    <path android:fillColor="#0A0B0E" android:pathData="M52,59h5v3h-5z"/>
+    <path android:fillColor="#0A0B0E" android:pathData="M60,59h5v3h-5z"/>
+    <path android:fillColor="#0A0B0E" android:pathData="M68,59h5v3h-5z"/>
+    <path android:fillColor="#0A0B0E" android:pathData="M76,59h5v3h-5z"/>
+    <!-- Frame window core -->
+    <path android:fillColor="#0A0B0E" android:pathData="M54,43h28v13h-28z"/>
+    <!-- Amber glowing emulsion core -->
+    <path
+        android:fillColor="#F39C12"
+        android:pathData="M68,49m-5,0a5,5 0 1,0 10,0a5,5 0 1,0 -10,0" />
+    <path
+        android:fillColor="#0A0B0E"
+        android:pathData="M68,49m-2,0a2,2 0 1,0 4,0a2,2 0 1,0 -4,0" />
+    <!-- Canister body -->
+    <path
+        android:fillColor="#2D323E"
+        android:pathData="M28,27 L50,27 C53,27 55,29 55,32 L55,76 C55,79 53,81 50,81 L28,81 C25,81 23,79 23,76 L23,32 C23,29 25,27 28,27 Z" />
+    <!-- Spool top brass -->
+    <path
+        android:fillColor="#F39C12"
+        android:pathData="M35,21 L43,21 L44,27 L34,27 Z" />
+    <!-- Spool bottom brass -->
+    <path
+        android:fillColor="#F39C12"
+        android:pathData="M31,81 L47,81 C47,84 44,86 39,86 C34,86 31,84 31,81 Z" />
+    <!-- Velvet slot gold line -->
+    <path
+        android:strokeColor="#F39C12"
+        android:strokeWidth="1.5"
+        android:pathData="M50,30 L50,78" />
+</vector>

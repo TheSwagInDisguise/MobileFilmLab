@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#141519"/>
+      <stop offset="100%" stop-color="#08080A"/>
+    </linearGradient>
+    <linearGradient id="filmWarm" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA000"/>
+      <stop offset="50%" stop-color="#FF5722"/>
+      <stop offset="100%" stop-color="#D81B60"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg3)"/>
+  <!-- Outer film frame perimeter -->
+  <rect x="76" y="76" width="360" height="360" rx="24" fill="#1A1C23" stroke="#343946" stroke-width="3"/>
+  <!-- Top sprocket holes -->
+  <rect x="108" y="96" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <rect x="160" y="96" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <rect x="212" y="96" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <rect x="264" y="96" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <rect x="316" y="96" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <rect x="368" y="96" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <!-- Bottom sprocket holes -->
+  <rect x="108" y="396" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <rect x="160" y="396" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <rect x="212" y="396" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <rect x="264" y="396" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <rect x="316" y="396" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <rect x="368" y="396" width="28" height="20" rx="4" fill="#0B0C0E"/>
+  <!-- Inner film exposure window -->
+  <rect x="106" y="136" width="300" height="240" rx="12" fill="#0F1014" stroke="#2D313C" stroke-width="2"/>
+  <!-- 4 Frameline corner markers (representing the 4 crop modes) -->
+  <path d="M 126 166 L 126 152 L 140 152" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.8"/>
+  <path d="M 386 166 L 386 152 L 372 152" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.8"/>
+  <path d="M 126 346 L 126 360 L 140 360" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.8"/>
+  <path d="M 386 346 L 386 360 L 372 360" stroke="#FFFFFF" stroke-width="3" fill="none" opacity="0.8"/>
+  <!-- Glowing emulsion lens circle at center -->
+  <circle cx="256" cy="256" r="80" fill="url(#filmWarm)"/>
+  <circle cx="256" cy="256" r="70" fill="#14151A"/>
+  <!-- Analog grain crosshair and center point -->
+  <circle cx="256" cy="256" r="35" fill="none" stroke="url(#filmWarm)" stroke-width="3"/>
+  <circle cx="256" cy="256" r="8" fill="#FFA000"/>
+  <!-- Optical flare highlight -->
+  <ellipse cx="232" cy="232" rx="18" ry="8" fill="#FFFFFF" opacity="0.25" transform="rotate(-40 232 232)"/>
+</svg>

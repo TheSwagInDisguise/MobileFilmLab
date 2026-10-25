@@ -1,0 +1,43 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bg2" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#181A20"/>
+      <stop offset="100%" stop-color="#08090C"/>
+    </radialGradient>
+    <radialGradient id="lensGlow2" cx="40%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#4FD1C5" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#0E1015" stop-opacity="0.95"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" rx="112" fill="url(#bg2)"/>
+  <circle cx="256" cy="256" r="210" fill="none" stroke="#2A2E39" stroke-width="2"/>
+  <!-- Central interconnecting bridge lines -->
+  <line x1="186" y1="186" x2="326" y2="326" stroke="#2E3340" stroke-width="3" stroke-dasharray="4 4"/>
+  <line x1="326" y1="186" x2="186" y2="326" stroke="#2E3340" stroke-width="3" stroke-dasharray="4 4"/>
+  <!-- 4 Optical elements representing Oppo Find X9 Ultra 4 rear cameras -->
+  <!-- UW 15mm (Top Left) -->
+  <circle cx="186" cy="186" r="64" fill="#12141A" stroke="#484F60" stroke-width="3"/>
+  <circle cx="186" cy="186" r="52" fill="#161922" stroke="#E67E22" stroke-width="2.5"/>
+  <circle cx="186" cy="186" r="34" fill="#0C0D12"/>
+  <text x="186" y="191" fill="#E67E22" font-family="-apple-system, sans-serif" font-weight="700" font-size="14" text-anchor="middle">15</text>
+  <!-- Main 1-inch Wide 23mm (Top Right - Prominent) -->
+  <circle cx="326" cy="186" r="76" fill="#12141A" stroke="#5D667D" stroke-width="3.5"/>
+  <circle cx="326" cy="186" r="62" fill="#181B24" stroke="#E74C3C" stroke-width="3"/>
+  <circle cx="326" cy="186" r="42" fill="#0C0D12"/>
+  <circle cx="326" cy="186" r="30" fill="none" stroke="#E74C3C" stroke-width="1.5" stroke-dasharray="2 3"/>
+  <text x="326" y="192" fill="#E74C3C" font-family="-apple-system, sans-serif" font-weight="800" font-size="18" text-anchor="middle">23</text>
+  <!-- Tele 70mm (Bottom Left) -->
+  <circle cx="186" cy="326" r="66" fill="#12141A" stroke="#484F60" stroke-width="3"/>
+  <circle cx="186" cy="326" r="54" fill="#161922" stroke="#2ECC71" stroke-width="2.5"/>
+  <circle cx="186" cy="326" r="36" fill="#0C0D12"/>
+  <text x="186" y="331" fill="#2ECC71" font-family="-apple-system, sans-serif" font-weight="700" font-size="14" text-anchor="middle">70</text>
+  <!-- Periscope 135mm (Bottom Right) -->
+  <circle cx="326" cy="326" r="64" fill="#12141A" stroke="#484F60" stroke-width="3"/>
+  <circle cx="326" cy="326" r="52" fill="#161922" stroke="#3498DB" stroke-width="2.5"/>
+  <!-- Periscope prism aperture (square inner) -->
+  <rect x="312" y="312" width="28" height="28" rx="4" fill="#0C0D12" stroke="#3498DB" stroke-width="1.5"/>
+  <text x="326" y="331" fill="#3498DB" font-family="-apple-system, sans-serif" font-weight="700" font-size="13" text-anchor="middle">135</text>
+  <!-- Central color chemistry calibration dot -->
+  <circle cx="256" cy="256" r="16" fill="#12141A" stroke="#FFFFFF" stroke-width="2.5"/>
+  <circle cx="256" cy="256" r="8" fill="#F1C40F"/>
+</svg>

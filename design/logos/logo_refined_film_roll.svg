@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <radialGradient id="bgRoll" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1B1C22"/>
+      <stop offset="100%" stop-color="#08090C"/>
+    </radialGradient>
+    <linearGradient id="canisterGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#1A1C24"/>
+      <stop offset="30%" stop-color="#2D323E"/>
+      <stop offset="70%" stop-color="#1E212A"/>
+      <stop offset="100%" stop-color="#111216"/>
+    </linearGradient>
+    <linearGradient id="goldBrass" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F39C12"/>
+      <stop offset="50%" stop-color="#D68910"/>
+      <stop offset="100%" stop-color="#9A6308"/>
+    </linearGradient>
+    <linearGradient id="filmLeader" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#252833"/>
+      <stop offset="100%" stop-color="#161820"/>
+    </linearGradient>
+    <linearGradient id="amberWarmth" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF9800"/>
+      <stop offset="100%" stop-color="#E65100"/>
+    </linearGradient>
+    <filter id="canisterShadow" x="-10%" y="-10%" width="120%" height="120%">
+      <feDropShadow dx="0" dy="8" stdDeviation="10" flood-color="#000000" flood-opacity="0.6"/>
+    </filter>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bgRoll)"/>
+  
+  <!-- Outer subtle circular guideline -->
+  <circle cx="256" cy="256" r="216" fill="none" stroke="#252834" stroke-width="2"/>
+
+  <g filter="url(#canisterShadow)">
+    <!-- 35mm Film Roll Extended Leader (Emerging to the right) -->
+    <path d="M 230 160 L 375 160 C 400 160, 410 180, 410 205 L 410 320 L 230 320 Z" fill="url(#filmLeader)" stroke="#3E4454" stroke-width="2.5"/>
+    
+    <!-- Film Leader Sprocket Holes (Top row) -->
+    <rect x="250" y="174" width="22" height="15" rx="3.5" fill="#0B0C0E"/>
+    <rect x="290" y="174" width="22" height="15" rx="3.5" fill="#0B0C0E"/>
+    <rect x="330" y="174" width="22" height="15" rx="3.5" fill="#0B0C0E"/>
+    <rect x="370" y="174" width="22" height="15" rx="3.5" fill="#0B0C0E"/>
+    
+    <!-- Film Leader Sprocket Holes (Bottom row) -->
+    <rect x="250" y="290" width="22" height="15" rx="3.5" fill="#0B0C0E"/>
+    <rect x="290" y="290" width="22" height="15" rx="3.5" fill="#0B0C0E"/>
+    <rect x="330" y="290" width="22" height="15" rx="3.5" fill="#0B0C0E"/>
+    <rect x="370" y="290" width="22" height="15" rx="3.5" fill="#0B0C0E"/>
+
+    <!-- Film Frame Exposure Box with Warm Emulsion Core -->
+    <rect x="260" y="205" width="125" height="70" rx="8" fill="#101217" stroke="#333846" stroke-width="1.5"/>
+    <circle cx="322" cy="240" r="22" fill="url(#amberWarmth)" opacity="0.9"/>
+    <circle cx="322" cy="240" r="10" fill="#0B0C0E"/>
+    
+    <!-- Main 35mm Canister Body (Cylinder) -->
+    <rect x="140" y="130" width="105" height="252" rx="16" fill="url(#canisterGrad)" stroke="#4A5162" stroke-width="3"/>
+    
+    <!-- Canister Top Spool Hub (Brass Gold knurled spindle) -->
+    <path d="M 172 100 L 212 100 L 216 130 L 168 130 Z" fill="url(#goldBrass)" stroke="#B7791F" stroke-width="2"/>
+    <rect x="180" y="86" width="24" height="14" rx="3" fill="#D68910"/>
+    
+    <!-- Canister Bottom Cap (Brass Gold base) -->
+    <path d="M 152 382 L 232 382 C 232 396, 218 406, 192 406 C 166 406, 152 396, 152 382 Z" fill="url(#goldBrass)" stroke="#B7791F" stroke-width="2"/>
+    
+    <!-- Canister Vertical Velvet Lip Slot (where film exits) -->
+    <rect x="232" y="145" width="12" height="222" rx="4" fill="#0D0E12" stroke="#2D323E" stroke-width="1.5"/>
+    <line x1="238" y1="150" x2="238" y2="362" stroke="#F39C12" stroke-width="1.5" stroke-dasharray="3 4"/>
+
+    <!-- Metallic Canister Label Bands -->
+    <rect x="146" y="160" width="92" height="6" fill="#F39C12"/>
+    <rect x="146" y="346" width="92" height="6" fill="#F39C12"/>
+    
+    <!-- Engraved Brand Typography on Canister Body -->
+    <text x="192" y="240" fill="#FFFFFF" font-family="-apple-system, sans-serif" font-weight="900" font-size="16" text-anchor="middle" letter-spacing="1">FILM</text>
+    <text x="192" y="260" fill="#F39C12" font-family="-apple-system, sans-serif" font-weight="700" font-size="12" text-anchor="middle" letter-spacing="1.5">LAB</text>
+    <text x="192" y="285" fill="#8E94A5" font-family="-apple-system, sans-serif" font-weight="700" font-size="10" text-anchor="middle">35mm</text>
+  </g>
+</svg>
