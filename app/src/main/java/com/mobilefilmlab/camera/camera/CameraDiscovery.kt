@@ -50,12 +50,35 @@ class CameraDiscovery(private val context: Context) {
                 val activeArray = chars.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)
                 val activeW = activeArray?.width() ?: 4000
                 val activeH = activeArray?.height() ?: 3000
-                val mp = (activeW * activeH).toFloat() / 1_000_000.0f
 
-                // Formats
+                // Formats and resolution discovery
                 val streamMap = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
                 val outputFormats = streamMap?.outputFormats ?: intArrayOf()
                 val hasRaw = outputFormats.contains(ImageFormat.RAW_SENSOR)
+
+                val hiResSizes = streamMap?.getHighResolutionOutputSizes(ImageFormat.JPEG) ?: emptyArray()
+                val regularSizes = streamMap?.getOutputSizes(ImageFormat.JPEG) ?: emptyArray()
+                val maxSizes = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    val maxMap = chars.get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)
+                    (maxMap?.getHighResolutionOutputSizes(ImageFormat.JPEG) ?: emptyArray()) +
+                    (maxMap?.getOutputSizes(ImageFormat.JPEG) ?: emptyArray())
+                } else {
+                    emptyArray()
+                }
+
+                val allDiscoveredSizes = (hiResSizes.toList() + regularSizes.toList() + maxSizes.toList())
+                val stock28Mp = allDiscoveredSizes.firstOrNull { s ->
+                    (s.width == 6120 && s.height == 4596) ||
+                    (s.width == 4596 && s.height == 6120) ||
+                    (s.width * s.height in 27_000_000..29_500_000)
+                }
+                val maxOutputSize = stock28Mp ?: allDiscoveredSizes
+                    .filter { it.width * it.height <= 55_000_000 }
+                    .maxByOrNull { it.width * it.height }
+
+                val maxW = maxOutputSize?.width ?: activeW
+                val maxH = maxOutputSize?.height ?: activeH
+                val mp = (maxW * maxH).toFloat() / 1_000_000.0f
 
                 // ISO and Exposure
                 val isoRange = chars.get(CameraCharacteristics.SENSOR_INFO_SENSITIVITY_RANGE)

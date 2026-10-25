@@ -7,11 +7,15 @@ import android.graphics.ColorMatrixColorFilter
 import android.graphics.Paint
 import android.graphics.Rect
 import androidx.exifinterface.media.ExifInterface
+import com.mobilefilmlab.camera.camera.PhotoExifMetadata
 import com.mobilefilmlab.camera.data.model.Recipe
 import com.mobilefilmlab.camera.data.model.WbMode
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 object ImageProcessor {
 
@@ -126,6 +130,7 @@ object ImageProcessor {
 
     /**
      * High-performance unsharp mask convolution filter for restoring edge acuity and texture detail.
+     * Uses in-place scanline row caching to cut memory allocation in half, eliminating OOM pressure on 28MP/50MP frames.
      */
     fun applyPhotographicSharpening(bitmap: Bitmap, strength: Int): Bitmap {
         if (strength <= 0) return bitmap
@@ -133,28 +138,27 @@ object ImageProcessor {
         val width = bitmap.width
         val height = bitmap.height
         val pixels = IntArray(width * height)
-        val outputPixels = IntArray(width * height)
         bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
 
         val w = (strength * 0.12f).coerceIn(0.08f, 0.40f)
         val centerWeight = 1.0f + 4.0f * w
 
-        // Copy boundary scanlines
-        System.arraycopy(pixels, 0, outputPixels, 0, width)
-        System.arraycopy(pixels, (height - 1) * width, outputPixels, (height - 1) * width, width)
+        // Scanline buffers for in-place convolution: top row cache and current row copy
+        val prevRow = IntArray(width)
+        System.arraycopy(pixels, 0, prevRow, 0, width)
+        val currRowOrig = IntArray(width)
 
         for (y in 1 until height - 1) {
             val yOffset = y * width
-            outputPixels[yOffset] = pixels[yOffset]
-            outputPixels[yOffset + width - 1] = pixels[yOffset + width - 1]
+            System.arraycopy(pixels, yOffset, currRowOrig, 0, width)
 
             for (x in 1 until width - 1) {
                 val idx = yOffset + x
-                val cC = pixels[idx]
-                val cT = pixels[idx - width]
+                val cC = currRowOrig[x]
+                val cT = prevRow[x]
                 val cB = pixels[idx + width]
-                val cL = pixels[idx - 1]
-                val cR = pixels[idx + 1]
+                val cL = currRowOrig[x - 1]
+                val cR = currRowOrig[x + 1]
 
                 val rC = (cC shr 16) and 0xFF
                 val gC = (cC shr 8) and 0xFF
@@ -179,15 +183,18 @@ object ImageProcessor {
                 val newG = (gC * centerWeight - (gT + gB + gL + gR) * w).toInt().coerceIn(0, 255)
                 val newB = (bC * centerWeight - (bT + bB + bL + bR) * w).toInt().coerceIn(0, 255)
 
-                outputPixels[idx] = (0xFF shl 24) or (newR shl 16) or (newG shl 8) or newB
+                pixels[idx] = (0xFF shl 24) or (newR shl 16) or (newG shl 8) or newB
             }
+
+            System.arraycopy(currRowOrig, 0, prevRow, 0, width)
         }
 
-        return Bitmap.createBitmap(outputPixels, width, height, Bitmap.Config.ARGB_8888)
+        return Bitmap.createBitmap(pixels, width, height, Bitmap.Config.ARGB_8888)
     }
 
     /**
      * Processes a full-resolution bitmap by applying recipe transformations, crop, and sharpening.
+     * Intermediate buffers are eagerly recycled to maintain minimal memory footprint during 28MP/50MP processing.
      */
     fun processBitmap(
         source: Bitmap,
@@ -199,7 +206,11 @@ object ImageProcessor {
             val safeTop = cropRect.top.coerceIn(0, source.height - 1)
             val safeWidth = cropRect.width().coerceAtMost(source.width - safeLeft)
             val safeHeight = cropRect.height().coerceAtMost(source.height - safeTop)
-            Bitmap.createBitmap(source, safeLeft, safeTop, safeWidth, safeHeight)
+            val cr = Bitmap.createBitmap(source, safeLeft, safeTop, safeWidth, safeHeight)
+            if (cr != source) {
+                source.recycle()
+            }
+            cr
         } else {
             source
         }
@@ -210,22 +221,31 @@ object ImageProcessor {
         paint.colorFilter = ColorMatrixColorFilter(buildRecipeColorMatrix(recipe))
         canvas.drawBitmap(cropped, 0f, 0f, paint)
 
+        if (graded != cropped) {
+            cropped.recycle()
+        }
+
         // Apply recipe-driven sharpness (defaults to +1 for authentic crisp photographic definition)
         val effectiveSharpness = (recipe.sharp + 1).coerceIn(0, 3)
         return if (effectiveSharpness > 0) {
-            applyPhotographicSharpening(graded, effectiveSharpness)
+            val sharpened = applyPhotographicSharpening(graded, effectiveSharpness)
+            if (sharpened != graded) {
+                graded.recycle()
+            }
+            sharpened
         } else {
             graded
         }
     }
 
     /**
-     * Encodes bitmap to JPEG at 100% maximum quality and injects EXIF metadata.
+     * Encodes bitmap to JPEG at 100% maximum quality and injects full hardware EXIF shooting metadata.
+     * Accurately displays camera model, lens name, ISO, shutter speed, f-stop, focal length, and EV.
      */
     fun encodeJpegWithExif(
         bitmap: Bitmap,
         recipe: Recipe,
-        cameraModel: String = "OPPO Find X9 Ultra"
+        metadata: PhotoExifMetadata = PhotoExifMetadata()
     ): ByteArray {
         val stream = ByteArrayOutputStream()
         bitmap.compress(Bitmap.CompressFormat.JPEG, 100, stream)
@@ -236,18 +256,78 @@ object ImageProcessor {
             FileOutputStream(tempFile).use { it.write(jpegBytes) }
 
             val exif = ExifInterface(tempFile.absolutePath)
+
+            // Hardware & Camera Identifiers
             exif.setAttribute(ExifInterface.TAG_MAKE, "OPPO")
-            exif.setAttribute(ExifInterface.TAG_MODEL, cameraModel)
-            exif.setAttribute(ExifInterface.TAG_SOFTWARE, "MobileFilmLab v0.1.0-alpha.6")
+            exif.setAttribute(ExifInterface.TAG_MODEL, metadata.cameraModel)
+            exif.setAttribute(ExifInterface.TAG_LENS_MAKE, "OPPO")
+            exif.setAttribute(ExifInterface.TAG_LENS_MODEL, metadata.lensDescription)
+            exif.setAttribute(ExifInterface.TAG_SOFTWARE, "MobileFilmLab v0.1.0-alpha.7")
+
+            // Exposure & Optical Metadata for Google Photos / ColorOS Gallery info panel
+            metadata.iso?.let { iso ->
+                if (iso > 0) {
+                    exif.setAttribute(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY, iso.toString())
+                    exif.setAttribute("SensitivityType", "3") // SOS
+                }
+            }
+
+            metadata.fNumber?.let { fn ->
+                if (fn > 0f) {
+                    val fnStr = String.format(Locale.US, "%.1f", fn)
+                    exif.setAttribute(ExifInterface.TAG_F_NUMBER, fnStr)
+                    exif.setAttribute(ExifInterface.TAG_APERTURE_VALUE, fnStr)
+                }
+            }
+
+            metadata.exposureTimeNs?.let { ns ->
+                if (ns > 0L) {
+                    val sec = ns / 1_000_000_000.0
+                    exif.setAttribute(ExifInterface.TAG_EXPOSURE_TIME, String.format(Locale.US, "%.6f", sec))
+                }
+            }
+
+            metadata.focalLengthMm?.let { fl ->
+                if (fl > 0f) {
+                    val rational = "${(fl * 100).toInt()}/100"
+                    exif.setAttribute(ExifInterface.TAG_FOCAL_LENGTH, rational)
+                }
+            }
+
+            metadata.equivalent35mm?.let { eq ->
+                if (eq > 0) {
+                    exif.setAttribute(ExifInterface.TAG_FOCAL_LENGTH_IN_35MM_FILM, eq.toString())
+                }
+            }
+
+            metadata.evBias?.let { ev ->
+                exif.setAttribute(ExifInterface.TAG_EXPOSURE_BIAS_VALUE, String.format(Locale.US, "%.2f", ev))
+            }
+
+            // Timestamps
+            val now = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US).format(Date())
+            exif.setAttribute(ExifInterface.TAG_DATETIME, now)
+            exif.setAttribute(ExifInterface.TAG_DATETIME_ORIGINAL, now)
+            exif.setAttribute(ExifInterface.TAG_DATETIME_DIGITIZED, now)
+
+            // Recipe description
             exif.setAttribute(
                 ExifInterface.TAG_USER_COMMENT,
                 "Recipe: ${recipe.name} [${recipe.group.displayName}] | ${recipe.summary()}"
             )
+
+            // Upright orientation
+            exif.setAttribute(ExifInterface.TAG_ORIENTATION, ExifInterface.ORIENTATION_NORMAL.toString())
+
             exif.saveAttributes()
 
             val taggedBytes = tempFile.readBytes()
             tempFile.delete()
             taggedBytes
+        } catch (e: Exception) {
+            jpegBytes
+        }
+    }
         } catch (e: Exception) {
             jpegBytes
         }

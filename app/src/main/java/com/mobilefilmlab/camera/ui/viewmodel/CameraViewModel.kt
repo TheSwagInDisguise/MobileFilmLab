@@ -236,14 +236,14 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                 val cropFactor = if (_is2xActive.value) 2.0f else 1.0f
                 val captureResult = cameraEngine.capturePhoto(cropFactor)
 
-                captureResult.onSuccess { (bitmap, cropRect) ->
+                captureResult.onSuccess { captured ->
                     val tunedRecipe = activeRecipe.value.copy(
                         puckTone = _puckTone.value,
                         puckColor = _puckColor.value
                     )
 
-                    val processed = ImageProcessor.processBitmap(bitmap, tunedRecipe, cropRect)
-                    val jpegBytes = ImageProcessor.encodeJpegWithExif(processed, tunedRecipe)
+                    val processed = ImageProcessor.processBitmap(captured.bitmap, tunedRecipe, captured.cropRect)
+                    val jpegBytes = ImageProcessor.encodeJpegWithExif(processed, tunedRecipe, captured.metadata)
 
                     val saveResult = MediaStoreSaver.savePhoto(
                         getApplication(),

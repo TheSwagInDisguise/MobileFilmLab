@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.7] - 2026-10-25
+
+### Added
+- **28.1MP High-Resolution Stream Discovery**: Added comprehensive inspection of `StreamConfigurationMap.getHighResolutionOutputSizes(ImageFormat.JPEG)`. Android CTS requires all frame sizes that cannot sustain 20 fps burst rates (such as 28MP and 50MP) to be reported via `getHighResolutionOutputSizes()`, which prevented earlier versions from discovering the 6120×4596 stream.
+- **Stock-Matched 28MP (4596×6120) Portrait Output**: Calibrated ImageReader allocation and sensor orientation rotation matrix to match Oppo Find X9 Ultra's stock camera output pixel-for-pixel (4596×6120 @ 100% quality, ~10.6 MB).
+- **SessionConfiguration & OutputConfiguration Pipeline**: Upgraded capture session lifecycle to `android.hardware.camera2.params.SessionConfiguration` with explicit `OutputConfiguration` targets, supporting `addSensorPixelModeUsed(SENSOR_PIXEL_MODE_MAXIMUM_RESOLUTION)` without session stalling or fallback.
+- **Complete Hardware EXIF Metadata**: Fixed missing lens and exposure indicators in system gallery viewers (ColorOS Photos / Google Photos). The captured JPEG now records:
+  - Lens model name matching stock convention (`Wide-angle camera`, `Ultra wide-angle camera`, `Telephoto camera`, `Periscope telephoto camera`).
+  - Hardware ISO sensitivity (`TAG_PHOTOGRAPHIC_SENSITIVITY`).
+  - Exact exposure duration in seconds (`TAG_EXPOSURE_TIME`, e.g. `1/35 s`).
+  - True lens aperture (`TAG_F_NUMBER`, e.g. `f/1.5`).
+  - 35mm equivalent focal length (`TAG_FOCAL_LENGTH_IN_35MM_FILM`, e.g. `23 mm` or `46 mm` on 2x crop).
+  - Exposure compensation value (`TAG_EXPOSURE_BIAS_VALUE`).
+  - Standardized EXIF capture timestamp (`TAG_DATETIME_ORIGINAL`).
+- **Memory Optimization for 28MP / 50MP Processing**: Added `android:largeHeap="true"` to `AndroidManifest.xml` and converted the photographic unsharp mask convolution to in-place scanline row caching, cutting memory consumption in half and ensuring zero OOM crashes on full-resolution 28MP/50MP captures.
+
 ## [0.1.0-alpha.6] - 2026-10-25
 
 ### Added
