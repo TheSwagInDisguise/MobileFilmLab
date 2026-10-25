@@ -126,21 +126,39 @@ private fun configureTransform(
 ) {
     if (viewWidth == 0 || viewHeight == 0) return
     val matrix = Matrix()
+    val displayRotation = view.display?.rotation ?: Surface.ROTATION_0
+
     val viewRect = RectF(0f, 0f, viewWidth.toFloat(), viewHeight.toFloat())
+    val bufferRect: RectF
+    if (sensorOrientation == 0 || sensorOrientation == 180) {
+        bufferRect = RectF(0f, 0f, previewSize.width.toFloat(), previewSize.height.toFloat())
+    } else {
+        bufferRect = RectF(0f, 0f, previewSize.height.toFloat(), previewSize.width.toFloat())
+    }
     val centerX = viewRect.centerX()
     val centerY = viewRect.centerY()
 
-    if (sensorOrientation == 90 || sensorOrientation == 270) {
-        val bufferRect = RectF(0f, 0f, previewSize.height.toFloat(), previewSize.width.toFloat())
-        bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY())
-        matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL)
+    bufferRect.offset(centerX - bufferRect.centerX(), centerY - bufferRect.centerY())
+    matrix.setRectToRect(viewRect, bufferRect, Matrix.ScaleToFit.FILL)
 
-        val scale = maxOf(
-            viewHeight.toFloat() / previewSize.width.toFloat(),
-            viewWidth.toFloat() / previewSize.height.toFloat()
+    val scale = if (sensorOrientation == 0 || sensorOrientation == 180) {
+        maxOf(
+            viewWidth.toFloat() / previewSize.width.toFloat(),
+            viewHeight.toFloat() / previewSize.height.toFloat()
         )
-        matrix.postScale(scale, scale, centerX, centerY)
-        matrix.postRotate(sensorOrientation.toFloat(), centerX, centerY)
+    } else {
+        maxOf(
+            viewWidth.toFloat() / previewSize.height.toFloat(),
+            viewHeight.toFloat() / previewSize.width.toFloat()
+        )
     }
+    matrix.postScale(scale, scale, centerX, centerY)
+
+    if (Surface.ROTATION_90 == displayRotation || Surface.ROTATION_270 == displayRotation) {
+        matrix.postRotate((90 * (displayRotation - 2)).toFloat(), centerX, centerY)
+    } else if (Surface.ROTATION_180 == displayRotation) {
+        matrix.postRotate(180f, centerX, centerY)
+    }
+
     view.setTransform(matrix)
 }
