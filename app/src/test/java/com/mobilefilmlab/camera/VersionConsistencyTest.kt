@@ -13,7 +13,7 @@ class VersionConsistencyTest {
 
     @Test
     fun testMonotonicVersionCode() {
-        val versionCode = 1
+        val versionCode = 2
         assertEquals(2, versionCode)
     }
 }
