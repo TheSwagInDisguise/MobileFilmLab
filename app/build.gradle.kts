@@ -24,18 +24,12 @@ android {
 
     signingConfigs {
         create("release") {
-            val ksB64 = System.getenv("ANDROID_KEYSTORE_BASE64")
+            val ksFile = rootProject.file("keystore/release.jks")
             val ksPass = System.getenv("ANDROID_KEYSTORE_PASSWORD")
             val kAlias = System.getenv("ANDROID_KEY_ALIAS") ?: "mobilefilmlab"
             val kPass = System.getenv("ANDROID_KEY_PASSWORD") ?: ksPass
 
-            if (!ksB64.isNullOrEmpty() && !ksPass.isNullOrEmpty()) {
-                val ksDir = File(buildDir, "signing")
-                ksDir.mkdirs()
-                val ksFile = File(ksDir, "release.jks")
-                if (!ksFile.exists()) {
-                    ksFile.writeBytes(Base64.getDecoder().decode(ksB64.trim()))
-                }
+            if (ksFile.exists() && !ksPass.isNullOrEmpty()) {
                 storeFile = ksFile
                 storePassword = ksPass
                 keyAlias = kAlias
@@ -51,8 +45,8 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            val ksB64 = System.getenv("ANDROID_KEYSTORE_BASE64")
-            if (!ksB64.isNullOrEmpty()) {
+            val ksFile = rootProject.file("keystore/release.jks")
+            if (ksFile.exists() && !System.getenv("ANDROID_KEYSTORE_PASSWORD").isNullOrEmpty()) {
                 signingConfig = signingConfigs.getByName("release")
             }
         }

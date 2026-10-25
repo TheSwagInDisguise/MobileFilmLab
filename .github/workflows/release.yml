@@ -46,7 +46,6 @@ jobs:
 
       - name: Build Release APK
         env:
-          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
@@ -70,15 +69,25 @@ jobs:
           BUILD_TOOLS_DIR=$(find $ANDROID_HOME/build-tools -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
           echo "Using Build Tools: $BUILD_TOOLS_DIR"
           
-          $BUILD_TOOLS_DIR/zipalign -v -p 4 "$BUILT_APK" "aligned.apk"
+          rm -f aligned.apk "$SIGNED_APK_NAME"
           
+          # Check alignment; if already aligned, copy; otherwise zipalign
+          if $BUILD_TOOLS_DIR/zipalign -c 4 "$BUILT_APK"; then
+            echo "APK is already 4-byte aligned."
+            cp "$BUILT_APK" aligned.apk
+          else
+            echo "Aligning APK with zipalign..."
+            $BUILD_TOOLS_DIR/zipalign -v -p 4 "$BUILT_APK" aligned.apk
+          fi
+          
+          # Sign using apksigner with v1, v2, v3, and v4 schemes
           $BUILD_TOOLS_DIR/apksigner sign \
             --ks keystore/release.jks \
             --ks-pass "pass:$KEYSTORE_PASS" \
             --ks-key-alias "$KEY_ALIAS" \
             --key-pass "pass:$KEY_PASS" \
             --out "$SIGNED_APK_NAME" \
-            "aligned.apk"
+            aligned.apk
             
           echo "Successfully signed: $SIGNED_APK_NAME"
           ls -lh "$SIGNED_APK_NAME"
