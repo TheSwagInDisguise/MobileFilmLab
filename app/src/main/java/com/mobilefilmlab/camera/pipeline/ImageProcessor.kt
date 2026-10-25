@@ -328,8 +328,4 @@ object ImageProcessor {
             jpegBytes
         }
     }
-        } catch (e: Exception) {
-            jpegBytes
-        }
-    }
 }
