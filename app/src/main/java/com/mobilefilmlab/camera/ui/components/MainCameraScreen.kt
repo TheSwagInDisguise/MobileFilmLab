@@ -144,7 +144,7 @@ fun MainCameraScreen(
                     .fillMaxWidth(),
                 contentAlignment = Alignment.BottomCenter
             ) {
-                CameraViewfinder(modifier = Modifier.fillMaxSize())
+                CameraViewfinder(cameraEngine = viewModel.cameraEngine, modifier = Modifier.fillMaxSize())
 
                 // Floating Lens Selection Bar inside lower part of viewfinder
                 Column(

@@ -65,6 +65,16 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     private val _whiteBalanceKelvin = MutableStateFlow(5600)
     val whiteBalanceKelvin: StateFlow<Int> = _whiteBalanceKelvin.asStateFlow()
 
+    init {
+        viewModelScope.launch {
+            cameraEngine.cameraError.collect { err ->
+                if (err != null) {
+                    userNotice.value = err
+                }
+            }
+        }
+    }
+
     // UI Dialog States
     val isRecipeSheetOpen = MutableStateFlow(false)
     val isDiagnosticsOpen = MutableStateFlow(false)
@@ -79,14 +89,20 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         _mode.value = newMode
     }
 
+    fun onPermissionGranted() {
+        cameraEngine.refreshCameraList()
+        cameraEngine.openCamera()
+    }
+
     fun selectLens(lens: LensType) {
         _activeLens.value = lens
-        cameraEngine.selectLens(lens)
+        cameraEngine.selectLens(lens, _is2xActive.value)
         updateFraming()
     }
 
     fun toggle2xCrop() {
         _is2xActive.value = !_is2xActive.value
+        cameraEngine.selectLens(_activeLens.value, _is2xActive.value)
         updateFraming()
     }
 

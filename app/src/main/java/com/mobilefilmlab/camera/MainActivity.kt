@@ -21,6 +21,7 @@ class MainActivity : ComponentActivity() {
     ) { isGranted: Boolean ->
         if (isGranted) {
             viewModel.userNotice.value = "Camera access granted"
+            viewModel.onPermissionGranted()
         } else {
             viewModel.userNotice.value = "Camera permission is required to take photos"
         }
@@ -41,17 +42,22 @@ class MainActivity : ComponentActivity() {
     private fun checkCameraPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             requestPermissionLauncher.launch(Manifest.permission.CAMERA)
+        } else {
+            viewModel.onPermissionGranted()
         }
     }
 
     override fun onResume() {
         super.onResume()
         viewModel.cameraEngine.startBackgroundThread()
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
+            viewModel.cameraEngine.openCamera()
+        }
     }
 
     override fun onPause() {
-        viewModel.cameraEngine.stopBackgroundThread()
         viewModel.cameraEngine.closeCamera()
+        viewModel.cameraEngine.stopBackgroundThread()
         super.onPause()
     }
 }
