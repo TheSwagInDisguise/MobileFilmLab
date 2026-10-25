@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.4] - 2026-10-25
+
+### Fixed
+- **2D Photographic Style Square Pad Touch Tracking**: Fixed touch/drag handling in `PhotographicStylesSquarePad.kt` by migrating from relative `detectDragGestures` to absolute pointer coordinate tracking with `awaitEachGesture`.
+- **Persistent Puck Positioning**: Resolved issue where the tuning puck would snap back to the center upon release; the puck now tracks finger touch directly anywhere on the 2D coordinate plane and maintains its position persistently.
+- **Direct Tap-to-Position**: Added instant tap-to-reposition support allowing users to tap anywhere on the Tone/Warmth plane to position the puck immediately.
+
 ## [0.1.0-alpha.3] - 2026-10-25
 
 ### Fixed
