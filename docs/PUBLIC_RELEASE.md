@@ -11,3 +11,11 @@ The nine alpha release downloads were previously withdrawn. Beta.1 is superseded
 APK bytes are immutable after publication. Bugs require a new code/version/tag, not replacement of a published APK or moving a tag. Exact owner-approved tags control publication and regular-release classification; this is not blanket permission to recreate withdrawn downloads.
 
 Historical [beta.1 publication record](archive/PUBLIC_RELEASE_BETA_1.md) · [Signing](RELEASE_SIGNING.md) · [Validation status](BETA_READINESS.md)
+
+## Verified beta.2 build
+
+- Source tag commit: `b4a6e1d1c0f8eae74531dc40ed8794c75db493be`.
+- [Main CI](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/runs/40474427508) and [signed release](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/runs/40475125278) succeeded.
+- 95 Android tests and six publication-approval tests passed; release lint and downloaded APK package/version/alignment/certificate checks passed.
+- APK SHA-256: `b85473ac25aeea56c52a44de731b3712835c8db715ed39ba391bfb203bdd210b`.
+- Real handset RAW/DNG validation remains pending; automated checks are not sensor certification.

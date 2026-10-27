@@ -1,14 +1,15 @@
 {
-  "version": "0.2.0-beta.1",
-  "tag": "v0.2.0-beta.1",
-  "versionCode": 10,
-  "releaseUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.1",
-  "apkUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/download/v0.2.0-beta.1/MobileFilmLab-v0.2.0-beta.1-signed.apk",
-  "sha256": "8904258029217377606696654685deaa8c58f0d32b689bab9b0a7f437b729dc7",
-  "bytes": 40808802,
+  "version": "0.2.0-beta.2",
+  "tag": "v0.2.0-beta.2",
+  "versionCode": 11,
+  "releaseUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.2",
+  "apkUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/download/v0.2.0-beta.2/MobileFilmLab-v0.2.0-beta.2-signed.apk",
+  "sha256": "b85473ac25aeea56c52a44de731b3712835c8db715ed39ba391bfb203bdd210b",
+  "bytes": 40904070,
   "minimumAndroid": "9",
   "package": "com.mobilefilmlab.camera",
   "license": "GPL-3.0-or-later",
   "classification": "regular-release",
-  "primaryDevice": "Oppo Find X9 Ultra"
+  "primaryDevice": "Oppo Find X9 Ultra",
+  "rawCapture": "Camera2 RAW_SENSOR DNG where advertised; hardware validation remains device-dependent"
 }

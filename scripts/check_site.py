@@ -73,7 +73,7 @@ def main():
     downloads = [ref for _, _, ref in parser.refs if ref.endswith('.apk')]
     assert len(downloads) >= 2 and set(downloads) == {release['apkUrl']}, 'Stale download CTA'
     assert release['sha256'] in html and release['primaryDevice'] in html
-    assert 'JPEG, not RAW/DNG' in html and 'ISP' in html, 'Missing hardware-processing limitation'
+    assert 'RAW_SENSOR' in html and 'RAW + JPEG' in html and 'ISP' in html and 'firmware' in html, 'Missing RAW capability/firmware disclosure'
     assert 'AI-generated demo scene' in html and 'AI-assisted development' in html, 'Missing provenance disclosure'
     for filename in ('styles.css', 'app.js', 'robots.txt', 'sitemap.xml', '.nojekyll'):
         assert (SITE / filename).is_file(), f'Missing site file: {filename}'

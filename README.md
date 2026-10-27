@@ -48,6 +48,8 @@ MobileFilmLab adds **no generative image model, neural/ML photo enhancement or c
   </tr>
 </table>
 
+[View the RAW / JPEG format dialog](docs/screenshots/formats.png) · [Camera2 and RAW implementation/limits](docs/DYNAMIC_CAMERAS_AND_RAW.md)
+
 ## Install and test
 
 Download the **signed APK** from the release above and allow installation from your browser/file manager when Android asks. The release includes SHA-256 checksums and a testing guide. It uses the same package and signing certificate as the alphas, with a higher version code; install over the existing release rather than uninstalling to preserve custom recipes and favourites. Debug builds are separate apps. RAW sensor capture/metadata must still be validated on your handset; a compatible RAW editor may be needed.
