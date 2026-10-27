@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   build-and-release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     permissions:
       contents: write
@@ -22,19 +22,22 @@ jobs:
       RELEASE_TAG: ${{ github.event.inputs.tag_name || github.ref_name }}
       BETA_RELEASE_APPROVED: ${{ vars.BETA_RELEASE_APPROVED }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag_name || github.ref }}
       - name: Block unapproved promotion and verify exact tag/source identity
         run: python3 scripts/verify_release.py
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: temurin
           cache: gradle
       - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+          log-accepted-android-sdk-licenses: false
       - name: Unit and native-graphics regression tests
         run: ./gradlew testDebugUnitTest --no-daemon --stacktrace
       - name: Android release lint
