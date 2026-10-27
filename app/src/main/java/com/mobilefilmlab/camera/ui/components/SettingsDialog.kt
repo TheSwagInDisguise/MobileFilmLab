@@ -38,7 +38,7 @@ fun SettingsDialog(
             .heightIn(max=(LocalConfiguration.current.screenHeightDp*0.88f).dp)
             .background(SurfaceDark,RoundedCornerShape(22.dp)).padding(20.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(10.dp)) {
             Text("Camera settings",fontSize=20.sp,fontWeight=FontWeight.Bold,color=Color.White)
-            Text("${BuildConfig.VERSION_NAME} · ALPHA TEST BUILD",color=AccentGold,fontSize=11.sp)
+            Text("${BuildConfig.VERSION_NAME} · PUBLIC BETA",color=AccentGold,fontSize=11.sp)
             Text("Default: Oppo Natural (Camera2), without an added film grade. This is not the proprietary stock camera pipeline.",fontSize=12.sp,color=TextSecondary)
             SectionTitle("Capture processing")
             CapturePipeline.values().forEach { p ->
@@ -76,10 +76,10 @@ fun SettingsDialog(
             SectionTitle("Diagnostics & releases")
             OutlinedButton(onClick=onDiagnostics,modifier=Modifier.fillMaxWidth()) { Text("Camera capability report") }
             Text(updateStatus,fontSize=11.sp,color=TextSecondary)
-            Button(onClick=onCheckUpdates,enabled=updateStatus!="Checking GitHub releases…",modifier=Modifier.fillMaxWidth()) { Text("Check alpha / stable updates") }
+            Button(onClick=onCheckUpdates,enabled=updateStatus!="Checking GitHub releases…",modifier=Modifier.fillMaxWidth()) { Text("Check ${ReleaseChecker.channelLabel} updates") }
             if(update!=null) OutlinedButton(onClick={ runCatching { context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(update.page))) } },modifier=Modifier.fillMaxWidth()) { Text("View ${update.tag} release") }
             OutlinedButton(onClick={ runCatching { context.startActivity(Intent(Intent.ACTION_VIEW,Uri.parse(ReleaseChecker.RELEASES))) } },modifier=Modifier.fillMaxWidth()) { Text("Open releases page") }
-            Text("Update checks contact GitHub only when requested. No photo uploads or analytics. Downloads and installation stay under your control. Beta/RC builds are not offered by this alpha channel.",fontSize=10.sp,color=TextSecondary)
+            Text("Update checks contact GitHub only when requested. No photo uploads or analytics. Downloads and installation stay under your control. This beta channel offers newer beta and stable releases, not alpha or release-candidate builds.",fontSize=10.sp,color=TextSecondary)
             Button(onClick=onDismiss,modifier=Modifier.fillMaxWidth()) { Text("Done") }
         }
     }

@@ -1,0 +1,60 @@
+name: Device compatibility report
+description: Help expand support beyond the primary Oppo Find X9 Ultra target.
+title: "[Device]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Working, partial and unsupported reports all help. Please report only behaviour you actually tested.
+        **Oppo Find X9 Ultra is the primary target.** Other-device support is being expanded with beta testers, not assumed from successful installation.
+        Reports/attachments are public; review and redact personal data before posting.
+  - type: input
+    id: device
+    attributes:
+      label: Phone model, Android version and firmware/build
+    validations:
+      required: true
+  - type: input
+    id: app_version
+    attributes:
+      label: App version/code and install source
+      placeholder: "0.2.0-beta.1 (10), official signed APK"
+    validations:
+      required: true
+  - type: dropdown
+    id: status
+    attributes:
+      label: Observed support
+      options:
+        - Working in the basic checks I performed
+        - Partially working
+        - Cannot open camera or save photos
+        - Installation or startup fails
+    validations:
+      required: true
+  - type: textarea
+    id: lenses
+    attributes:
+      label: Exposed lenses and processing support
+      description: List enabled/disabled UW/W/3x/10x slots, detected equivalent focal lengths, actual output dimensions and any tested HDR/Night/fusion/ZSL fallback. Do not guess optical magnification from a slot label.
+    validations:
+      required: true
+  - type: textarea
+    id: tested
+    attributes:
+      label: Checks performed and remaining problems
+      description: Preview/capture orientation, crops, flash, manual controls, focus, gallery, recipe interchange, lifecycle, upgrade/data retention. State what you did not test.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Capability report and optional evidence
+      description: Settings → Camera capability report. Review/redact first. Include only non-private screenshots/samples you intend to share publicly.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: I have removed credentials and private/personal data from this report and attachments.
+          required: true

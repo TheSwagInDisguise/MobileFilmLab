@@ -1,4 +1,4 @@
-# Architecture — alpha.9
+# Architecture — public beta
 
 ## Data flow
 
@@ -31,4 +31,8 @@ The original 77 recipes remain in `RecipeCatalog`, plus three baseline profiles.
 
 ### Privacy and releases
 
-Scoped MediaStore writes are pending until complete; failures remove partial rows. The app's output gallery derives EXIF and dimensions from real saved files. Only an explicit release-check button contacts GitHub. No photo network path, analytics or automatic installation exists. The alpha updater excludes beta/RC. CI runs production-function tests, Robolectric native-graphics tests and lint. Signing secrets are isolated in release jobs; version/package/signature checks precede prerelease publishing. Beta promotion has a separate approval guard and uncompleted handset gates.
+Scoped MediaStore writes are pending until complete; failures remove partial rows. The app's output gallery derives EXIF and dimensions from real saved files. Only an explicit release-check button contacts GitHub. No photo network path, analytics or automatic installation exists. The updater stays on the installed prerelease channel (beta/stable in beta.1), rejects alpha/RC offers on that channel and validates exact official release/asset URLs. CI runs production-function tests, Robolectric native-graphics tests and lint. Signing secrets are isolated in release jobs; version/package/signature checks precede prerelease publishing. Non-alpha publication requires approval of the exact tag. Initial owner alpha.9 feedback authorised the first public-testing beta; broad hardware validation remains open.
+
+### Documentation rendering
+
+`DocumentationScreenshotsTest` renders the production Compose screen and modal recipe drawer with Robolectric native graphics. A generated scene and illustrative state are injected only for debug inspection. Signed releases cannot activate that provider and always retain the real TextureView camera path; documentation images are not Android assets or APK content. The demo is visibly labelled and is not evidence of physical-camera capability or image quality. See [provenance](docs/SCREENSHOTS.md).

@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-beta.1] - 2026-10-27
+
+### First public-testing beta
+- Owner-authorised beta following positive initial alpha.9 handset feedback; still a prerelease, not stable or universally hardware-validated.
+- Primary focus remains **Oppo Find X9 Ultra**; invite beta testers to help expand device compatibility.
+- Concise, general-feature README without camera/film-brand feature lists; upstream author thanks and complete attribution/licensing retained.
+- Clear AI-assisted/generated-development disclaimer in repository and About; truthful Android/Compose UI renders with a labelled generated demo scene.
+- Public test guide, device/bug issue forms, documentation index and clearly marked historical design/readiness records.
+- Beta/stable manual update channel with semantic selection and exact official release/asset matching; no silent downloads.
+- Exact-tag release approval, beta-aware immutable prerelease titles/assets, additional release-guard/update-channel/UI-render tests.
+- Package and existing signing certificate unchanged; versionCode **10** supports updating code 9.
+
+### Scope and limitations
+- Retains alpha.9's working capture/processing behaviour; no new proprietary tuning or image-quality parity claim.
+- Firmware-dependent lens/extension access, experimental fusion/ZSL, measured per-lens calibration, broad stress tests and other-device compatibility remain ongoing testing, not silently completed checks.
+- See [public testing](docs/TESTING.md), [validation status](docs/BETA_READINESS.md), [known limitations](KNOWN_LIMITATIONS.md) and [AI disclosure](docs/AI_DISCLOSURE.md).
+
 ## [0.1.0-alpha.9] - 2026-10-27
 
 ### Added / changed

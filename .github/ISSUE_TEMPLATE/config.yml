@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Public beta testing guide
+    url: https://github.com/TheSwagInDisguise/MobileFilmLab/blob/main/docs/TESTING.md
+    about: Installation, smoke checks, device reports and known testing limits.
+  - name: Privacy and data handling
+    url: https://github.com/TheSwagInDisguise/MobileFilmLab/blob/main/docs/PRIVACY.md
+    about: Review before sharing diagnostics or photographs in public.

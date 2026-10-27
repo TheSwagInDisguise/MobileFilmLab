@@ -1,0 +1,60 @@
+name: Bug report
+description: Report a reproducible public-beta problem.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing MobileFilmLab. Primary target: **Oppo Find X9 Ultra**; other-device compatibility is being expanded with beta testers.
+        Read [known limitations](https://github.com/TheSwagInDisguise/MobileFilmLab/blob/main/KNOWN_LIMITATIONS.md) first.
+        Reports and attachments are public. Remove personal photos, precise location, credentials and identifying details.
+  - type: input
+    id: app_version
+    attributes:
+      label: App version and install source
+      description: Include versionName/code and whether this is an official signed release or a debug/custom build.
+      placeholder: "0.2.0-beta.1 (10), signed release"
+    validations:
+      required: true
+  - type: input
+    id: device
+    attributes:
+      label: Phone model, Android version and firmware/build
+      placeholder: "Model / Android version / firmware"
+    validations:
+      required: true
+  - type: textarea
+    id: settings
+    attributes:
+      label: Camera and processing settings
+      description: Enabled lens, crop, AUTO/PRO/manual values, recipe, processing pipeline, ZSL/grain/output options.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Minimal reproduction steps
+      description: Say whether it repeats and whether returning to the default baseline changes it.
+    validations:
+      required: true
+  - type: textarea
+    id: result
+    attributes:
+      label: Expected and actual result
+      description: Include any visible error/fallback message. For photos, include actual saved dimensions/EXIF when relevant.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Capability report and optional non-private evidence
+      description: Copy Settings → Camera capability report. Review/redact it first. Attach only photos/screenshots you intend to make public.
+  - type: checkboxes
+    id: acknowledgement
+    attributes:
+      label: Before submitting
+      options:
+        - label: I understand this is a public beta and have reviewed the known limitations.
+          required: true
+        - label: I have removed credentials and private/personal data from this report and attachments.
+          required: true

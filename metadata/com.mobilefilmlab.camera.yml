@@ -9,16 +9,16 @@ Description: |-
   Independent Camera2 photo application with the complete 77-recipe Recipe Lab
   catalogue, neutral Camera2 baseline, custom presets, honest native-pixel crops,
   and capability-gated experimental processing. Not a proprietary stock camera
-  replacement. Alpha testing; handset validation is pending.
+  replacement. Public beta; broader handset validation is ongoing.
 Builds:
-  - versionName: 0.1.0-alpha.9
-    versionCode: 9
-    commit: v0.1.0-alpha.9
+  - versionName: 0.2.0-beta.1
+    versionCode: 10
+    commit: v0.2.0-beta.1
     subdir: app
     gradle:
       - yes
 AutoUpdateMode: None
 UpdateCheckMode: None
-CurrentVersion: 0.1.0-alpha.9
-CurrentVersionCode: 9
+CurrentVersion: 0.2.0-beta.1
+CurrentVersionCode: 10
 # Starter metadata only; not submitted to or verified by F-Droid.

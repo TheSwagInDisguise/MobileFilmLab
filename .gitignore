@@ -22,3 +22,10 @@ local.properties
 /keystore/
 .github_token
 *.hprof
+
+# Local automation/tool caches
+__pycache__/
+*.py[cod]
+.cache/
+.venv/
+.kotlin/

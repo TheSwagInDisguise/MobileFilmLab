@@ -20,14 +20,17 @@ jobs:
       contents: write
     env:
       RELEASE_TAG: ${{ github.event.inputs.tag_name || github.ref_name }}
-      BETA_RELEASE_APPROVED: ${{ vars.BETA_RELEASE_APPROVED }}
+      APPROVED_RELEASE_TAG: ${{ vars.APPROVED_RELEASE_TAG }}
     steps:
       - uses: actions/checkout@v5
         with:
           fetch-depth: 0
           ref: ${{ github.event.inputs.tag_name || github.ref }}
       - name: Block unapproved promotion and verify exact tag/source identity
-        run: python3 scripts/verify_release.py
+        run: |
+          python3 scripts/verify_release.py
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+          python3 scripts/check_docs.py
       - name: Set up JDK 17
         uses: actions/setup-java@v5
         with:
@@ -61,7 +64,7 @@ jobs:
           cp app/build/outputs/apk/release/app-release.apk "MobileFilmLab-${RELEASE_TAG}-signed.apk"
           python3 scripts/verify_apk.py "MobileFilmLab-${RELEASE_TAG}-signed.apk"
           sha256sum "MobileFilmLab-${RELEASE_TAG}-signed.apk" > checksums.txt
-          cp docs/ALPHA_9_TESTING.md ALPHA_9_TESTING.md
+          cp docs/TESTING.md TESTING.md
       - name: Upload QA reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -69,6 +72,7 @@ jobs:
           name: release-qa-reports
           retention-days: 7
           path: |
+            app/build/outputs/documentation-screenshots/
             app/build/reports/tests/
             app/build/test-results/
             app/build/reports/lint-results-*
@@ -79,8 +83,8 @@ jobs:
           path: |
             MobileFilmLab-*-signed.apk
             checksums.txt
-            ALPHA_9_TESTING.md
-      - name: Publish alpha as GitHub prerelease (never auto-promote)
+            TESTING.md
+      - name: Publish approved release (prereleases never auto-promote)
         env:
           GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
@@ -91,9 +95,15 @@ jobs:
           fi
           FLAGS=()
           if [[ "$RELEASE_TAG" == *-* ]]; then FLAGS+=(--prerelease --latest=false); fi
+          case "$RELEASE_TAG" in
+            *-alpha.*) TITLE="$RELEASE_TAG — alpha test candidate" ;;
+            *-beta.*) TITLE="$RELEASE_TAG — public beta" ;;
+            *-rc.*) TITLE="$RELEASE_TAG — release candidate" ;;
+            *) TITLE="$RELEASE_TAG" ;;
+          esac
           gh release create "$RELEASE_TAG" \
-            "MobileFilmLab-${RELEASE_TAG}-signed.apk" checksums.txt ALPHA_9_TESTING.md \
-            --verify-tag --title "$RELEASE_TAG — alpha test candidate" \
+            "MobileFilmLab-${RELEASE_TAG}-signed.apk" checksums.txt TESTING.md \
+            --verify-tag --title "$TITLE" \
             --notes-file ".github/release-notes/${RELEASE_TAG#v}.md" "${FLAGS[@]}"
       - name: Remove signing material
         if: always()

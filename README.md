@@ -1,59 +1,73 @@
+<p align="center">
+  <img src="docs/assets/icon.png" width="96" alt="MobileFilmLab film-canister icon">
+</p>
+
 # MobileFilmLab
 
-**Photos-only Android Camera2 app for the Oppo Find X9 Ultra.** Original 35mm film-canister branding, spacious AUTO/PRO interface and all **77 upstream Recipe Lab presets**, plus three independent Camera2 baseline profiles. GPL-3.0-or-later.
+**A photos-only Android camera with film-inspired looks and a spacious AUTO / PRO workflow.** Open source · GPL-3.0-or-later · Android 9+
 
-[![CI](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/workflows/ci.yml/badge.svg)](https://github.com/TheSwagInDisguise/MobileFilmLab/actions)
+[![CI](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/workflows/ci.yml/badge.svg)](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/workflows/ci.yml)
 
-## Current test release: `v0.1.0-alpha.9`
+## First public beta
 
-[Download the signed alpha](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.1.0-alpha.9) · [Testing checklist](docs/ALPHA_9_TESTING.md) · [Beta readiness](docs/BETA_READINESS.md) · [Known limitations](KNOWN_LIMITATIONS.md)
+**[Download v0.2.0-beta.1](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.1)** · [Testing guide](docs/TESTING.md) · [Report a bug](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose)
 
-**This is deliberately an alpha, not a beta.** Device testing and the owner's approval are required before promotion. Compiling successfully does not establish image-quality parity or confirm firmware-dependent features.
+### Built primarily for the Oppo Find X9 Ultra
 
-### Natural by default, honest about the stock camera
+The **Oppo Find X9 Ultra is the primary development and testing target**. We plan to expand compatibility to more devices with help from beta testers. Other phones may run the app, but camera access, lens availability and processing modes vary by device and firmware. Please share a [device compatibility report](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new?template=device_support.yml) to help improve support.
 
-The factory default is **Oppo Natural (Camera2)**: auto exposure/white balance, no added film colour grade or grain. At 1× with default settings, the exposed Camera2/OEM JPEG is kept without decoding/recompressing its pixel data; capture/recipe EXIF is added. This is the closest unmodified ISP baseline available to this app, **not a copy of Oppo's proprietary stock-app or Hasselblad processing**. No guessed saturation/contrast offsets are presented as calibrated stock tuning.
+This beta builds on a successful initial handset test of alpha.9. It is **ready for public testing, not a stable or universally validated release**. Keep another camera available for important photos; see [known limitations](KNOWN_LIMITATIONS.md).
 
-Alpha.8's fixed-size enlargement was ordinary interpolation, **not super-resolution or recovered native sensor detail**. Alpha.9 defaults to the actual captured pixel dimensions. Optional enlargement is explicitly labelled. Native output may be smaller than the stock camera's output; no package spoofing or private-API bypass is used.
+## Features
 
-## Features available for alpha testing
+- **AUTO and PRO** — uncluttered photo capture, tap-to-focus/meter, flash controls and hardware-limited manual exposure, white balance and focus.
+- **Lens and framing controls** — fixed `UW`, `W`, `3x`, `10x` lens slots where exposed; 1× / 1.5× / 2× / 3× digital crops with honest resolution information.
+- **80 built-in looks** — the complete 77-recipe upstream catalogue plus three independent camera baselines. Live colour previews, favourites and custom presets.
+- **Hands-on look editing** — a two-dimensional Tone / Warmth pad, live before/after comparison and optional film grain.
+- **Native output by default** — no mandatory enlargement. Unedited, uncropped baseline captures preserve the exposed camera JPEG pixel data; optional enlarged exports are labelled interpolation.
+- **Composition and capture tools** — grids, a sensor-driven level, hardware shutter keys and optional haptic feedback. Photos only; no video mode.
+- **Local gallery and recipe sharing** — swipe, zoom, inspect metadata, share or delete saved photos; import/export recipe files and QR images.
+- **Optional experimental processing** — advertised HDR/Night extensions, three-frame JPEG fusion and reprocessing ZSL where supported. These are not guaranteed stock-camera equivalents.
 
-- **Dynamic lens discovery/routing:** directly exposed rear IDs and physical output IDs behind logical cameras. Fixed translucent `UW`, `W`, `3x`, `10x` slots, with unavailable slots disabled. Slot names are navigation labels, **not proof of optical magnification**; the badge shows detected approximate 35mm-equivalent focal length.
-- **Four framing levels per lens:** short-tap `2×` toggles 1×/2×; hold it for 1×, 1.5×, 2× or 3×. Preview zoom is not applied a second time to the saved photo. Native crop dimensions are preserved.
-- **AUTO / PRO:** hardware-bounded ISO, shutter, EV, approximate Kelvin WB and AF modes where exposed. AUTO clears manual exposure/WB. When only ISO or shutter is specified, its companion is taken from the most recent result, not a promised shutter/ISO-priority algorithm.
-- **Flash:** Off → Auto → On → Torch, supported modes only, bounded AE precapture metering. EXIF comes from the result/JPEG, never from the selected icon. Firmware behaviour needs physical testing.
-- **Tap focus/metering:** touch coordinates account for sensor rotation, centre-fill and the active crop; only supported region types are requested.
-- **Live colour grading:** one shared matrix for the native viewfinder layer, periodically refreshed recipe tiles and saved JPEG grading. Split before/after drag comparison. Final sharpening, grain, OEM tone processing and recipe approximations can differ from the live colour preview.
-- **77 preserved upstream recipes across 12 original groups**, plus Natural/Vivid/B&W Camera2 baselines. Up to six starred quick-switch favourites, Tone/Warmth square, persistent custom presets, favourite and deletion controls.
-- **Safer image processing:** bounded, ISO-aware luminance sharpening with halo limiting and row buffers. Optional fine/medium/coarse procedural luminance grain, off by default. No neural enhancement or measured detail-recovery claim.
-- **Experimental 3-frame fusion:** −1/0/+1 EV requests, timestamp-matched JPEG/results, translation registration, exposure normalization and per-pixel motion rejection. Approximately 12MP input cap; poor registration uses the middle frame. Not RAW fusion, a neural HDR engine, or a guaranteed noise/detail improvement.
-- **OEM HDR/Night:** real `CameraExtensionSession` only when advertised for the openable camera. Unsupported/failed extension sessions report a standard Camera2 fallback. These modes own exposure/flash and do not claim the same processing as the stock app.
-- **Experimental reprocessing ZSL:** full-resolution PRIVATE input/output ring and `ImageWriter` reprocess request where the firmware supports the stream combination. Off by default. Only fresh, converged frames are considered; otherwise normal still capture is used. No guaranteed zero lag.
-- **Composition tools:** sensor-driven level with lifecycle cleanup, thirds/golden-ratio/square guides and Off. Square is a framing guide, not a saved 1:1 crop. Capture rotation follows physical device orientation even though the UI remains portrait-oriented.
-- **Gallery:** the app's saved photos, swiping, pinch/double-tap zoom, memory-bounded higher-resolution decoding, actual dimensions/EXIF/processing notes, Android sharing and confirmed deletion. No fabricated 28.1MP labels.
-- **Interchange:** versioned `.filmrecipe` JSON and QR PNG export; JSON and QR-image import through Android's document picker. Bounded input sizes, parameter validation, new custom IDs and transactional imports protect built-ins.
-- **Hardware shutter and haptics:** volume/camera keys trigger once, not on held-key repeats, and not while editing presets/in a dialog/gallery. Haptics can be disabled.
-- **Release checks:** explicit user request only, alpha/stable channel, semantic version comparison, no silent downloads/installation. Beta/RC are intentionally excluded from the alpha updater.
+## Screenshots
 
-## Privacy & storage
+**Real app UI rendered with Android/Compose, using an AI-generated demo scene and illustrative state.** These are not handset screenshots or photographs captured by the app. `DEMO SCENE` is visible in the viewfinder. [Provenance and reproduction](docs/SCREENSHOTS.md).
 
-No analytics, advertising, crash telemetry or photo uploads. Camera permission is needed for capture; vibration is optional. Internet permission is used **only for an explicit GitHub release check**. Android 9 additionally requests legacy storage access; Android 10+ uses scoped MediaStore storage in `Pictures/MobileFilmLab/` without broad photo-library permission. User-selected recipe documents and QR images are read locally. See [privacy details](docs/PRIVACY.md).
+<table>
+  <tr>
+    <td align="center"><img src="docs/screenshots/auto.png" width="240" alt="Actual AUTO interface rendered with a labelled demonstration scene"><br><strong>AUTO</strong></td>
+    <td align="center"><img src="docs/screenshots/pro.png" width="240" alt="Actual PRO interface with illustrative manual controls and custom look"><br><strong>PRO</strong></td>
+    <td align="center"><img src="docs/screenshots/recipes.png" width="240" alt="Actual recipe drawer with live colour tiles and Tone Warmth pad"><br><strong>Recipe editing</strong></td>
+  </tr>
+</table>
 
-## Build & verify
+## Install and test
 
-JDK 17 (recommended), Android SDK/platform/build tools 34, Gradle wrapper 8.7. Minimum Android 9/API 28. Direct APK distribution; no Play Store compatibility/certification claim.
+Download the **signed APK** from the release above and allow installation from your browser/file manager when Android asks. The release includes SHA-256 checksums and a testing guide. It uses the same package and signing certificate as the alphas, with a higher version code; install over the existing release rather than uninstalling to preserve custom recipes and favourites. Debug builds are separate apps.
+
+No analytics, advertising or photo uploads. Photos and recipe processing stay on-device; network access is used only when you explicitly check for releases. [Privacy](docs/PRIVACY.md) · [Signing and verification](docs/RELEASE_SIGNING.md)
+
+## Build and contribute
+
+Use **JDK 17**, Android SDK/build tools **34** and the included Gradle wrapper. Minimum Android 9 / API 28. Direct APK distribution; no app-store availability claim.
 
 ```sh
 ./gradlew testDebugUnitTest --no-daemon
 ./gradlew lintRelease --no-daemon
 ./gradlew assembleDebug --no-daemon
-./gradlew assembleRelease --no-daemon
 ```
 
-Release signing uses repository secrets, never committed key material. The public certificate fingerprint is documented in [release signing](docs/RELEASE_SIGNING.md). The workflow checks tag/version, tests, lint, package ID, alignment and signature, then publishes APK + SHA-256 + test checklist as a GitHub **prerelease**. Non-alpha publication is guarded pending explicit approval. An F-Droid metadata starter is included; this is **not** an F-Droid submission or availability claim.
+[Contributing](CONTRIBUTING.md) · [Architecture](ARCHITECTURE.md) · [Documentation](docs/README.md) · [Changelog](CHANGELOG.md)
 
-## Attribution
+## Thanks and attribution
 
-The 77 recipe definitions are derived from [voxivoid/recipe-lab-sony-pmca](https://github.com/voxivoid/recipe-lab-sony-pmca), commit `aab4b5703a2b77362b83682801c8e50145ddc6ee`. Parameter definitions are preserved; Android rendering is an independent approximation, not access to those cameras' colour registers. See [attribution](UPSTREAM_ATTRIBUTION.md), [third-party notices](THIRD_PARTY_NOTICES.md) and [GPL-3.0-or-later licence](LICENSE).
+- **[voxivoid](https://github.com/voxivoid)** — author of the [upstream recipe project](https://github.com/voxivoid/recipe-lab-sony-pmca), whose complete 77-recipe catalogue and related concepts underpin this port.
+- **[RandoTeam](https://github.com/RandoTeam)** — maintainers of a [camera interoperability reference](https://github.com/RandoTeam/OpOpenCam-Camera) consulted during public camera-API research; cited as a reference, not a claim that its code is incorporated.
+- The Android open-source community and the maintainers of the libraries listed in [third-party notices](THIRD_PARTY_NOTICES.md).
+- Early testers helping improve capture reliability, report firmware limitations and extend device compatibility.
 
-Not affiliated with or endorsed by Oppo, Sony, Fujifilm, Kodak, Leica, Ricoh or Hasselblad. No vendor camera art or copied upstream icons.
+Full provenance, upstream names and licensing notices remain in [upstream attribution](UPSTREAM_ATTRIBUTION.md), [third-party notices](THIRD_PARTY_NOTICES.md) and [LICENSE](LICENSE). This is an independent, unaffiliated project; third-party recipe labels are descriptive, and looks are approximations rather than official simulations or endorsements. [Third-party name policy](docs/THIRD_PARTY_NAMES.md).
+
+## AI-development disclosure
+
+**MobileFilmLab was developed substantially with AI assistance**, including generated code, tests, documentation and presentation assets, under human direction and with handset feedback. That is not a substitute for independent code review, security auditing or hardware validation. Bugs and inaccurate assumptions may remain. The demo scene above is also AI-generated; the UI itself is rendered from the app's source. [Full disclosure](docs/AI_DISCLOSURE.md).

@@ -33,6 +33,7 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size as ComposeSize
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
@@ -40,12 +41,14 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.mobilefilmlab.camera.BuildConfig
 import com.mobilefilmlab.camera.camera.CameraEngine
 import com.mobilefilmlab.camera.data.model.Recipe
 import com.mobilefilmlab.camera.pipeline.ImageProcessor
@@ -104,6 +107,8 @@ fun CameraViewfinder(
     onPreviewFrame: (android.graphics.Bitmap) -> Unit,
     modifier: Modifier=Modifier
 ) {
+    // Documentation-only inspection provider. Release builds always use the real TextureView.
+    val documentationScene=if(BuildConfig.DEBUG && LocalInspectionMode.current) LocalDocumentationScene.current else null
     val spec by cameraEngine.activeCameraSpec.collectAsState()
     val streaming by cameraEngine.isCameraStreaming.collectAsState()
     var texture by remember { mutableStateOf<TextureView?>(null) }
@@ -115,8 +120,11 @@ fun CameraViewfinder(
     val currentRecipe=activeRecipe.copy(puckTone=puckTone,puckColor=puckColor)
     val filter=remember(currentRecipe,settings.calibration) { ColorMatrixColorFilter(ImageProcessor.previewMatrix(currentRecipe,settings.calibration)) }
     LaunchedEffect(focusPoint) { if(focusPoint!=null) { delay(1800); focusPoint=null } }
-    LaunchedEffect(texture,streaming,samplePreview,settings.compare) {
-        while(isActive && streaming && (samplePreview || settings.compare)) {
+    LaunchedEffect(documentationScene) {
+        documentationScene?.let { onFrame(it); if(settings.compare) rawFrame=it }
+    }
+    LaunchedEffect(texture,streaming,samplePreview,settings.compare,documentationScene) {
+        while(isActive && documentationScene==null && streaming && (samplePreview || settings.compare)) {
             val t=texture
             if(t!=null && t.isAvailable && t.width>0 && t.height>0) {
                 val long=if(settings.compare) 960 else 240
@@ -132,7 +140,12 @@ fun CameraViewfinder(
         if(!settings.compare) rawFrame=null
     }
     Box(modifier.fillMaxSize().clip(RoundedCornerShape(18.dp)).background(Color.Black).border(1.dp,Color(0xFF2A2E3D),RoundedCornerShape(18.dp))) {
-        AndroidView(
+        if(documentationScene!=null) {
+            Image(documentationScene.asImageBitmap(),"AI-generated documentation scene",
+                modifier=Modifier.fillMaxSize(),contentScale=ContentScale.Crop,
+                colorFilter=ColorFilter.colorMatrix(androidx.compose.ui.graphics.ColorMatrix(
+                    ImageProcessor.previewMatrix(currentRecipe,settings.calibration).array)))
+        } else AndroidView(
             modifier=Modifier.fillMaxSize(),
             factory={ context ->
                 object : TextureView(context) {
@@ -224,6 +237,9 @@ fun CameraViewfinder(
                 drawCircle(AccentGold,2.dp.toPx(),p)
             }
         }
+        if(documentationScene!=null) Text("DEMO SCENE",color=AccentGold,fontSize=9.sp,
+            modifier=Modifier.align(Alignment.TopEnd).padding(10.dp)
+                .background(Color.Black.copy(alpha=.8f),RoundedCornerShape(6.dp)).padding(horizontal=8.dp,vertical=5.dp))
         if(!streaming) Text("Starting camera…",color=Color.White,modifier=Modifier.align(Alignment.Center),fontSize=12.sp)
         AnimatedVisibility(isShutterFlashing,enter=fadeIn(),exit=fadeOut(),modifier=Modifier.fillMaxSize()) {
             Box(Modifier.fillMaxSize().background(Color.White.copy(alpha=.65f)))

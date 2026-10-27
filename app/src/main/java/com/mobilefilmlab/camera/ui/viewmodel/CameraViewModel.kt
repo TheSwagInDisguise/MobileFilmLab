@@ -307,7 +307,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         if(updateStatus.value=="Checking GitHub releases…") return
         updateStatus.value="Checking GitHub releases…"
         viewModelScope.launch { ReleaseChecker.check().onSuccess { release ->
-            availableUpdate.value=release; updateStatus.value=if(release==null) "No newer alpha/stable build found" else "Available: ${release.tag}"
+            availableUpdate.value=release; updateStatus.value=if(release==null) "No newer ${ReleaseChecker.channelLabel} build found" else "Available: ${release.tag}"
         }.onFailure { updateStatus.value="Could not check updates. Use the releases page instead." } }
     }
     fun getDiagnosticsReport(): String = CameraDiagnosticsReport.generateReport(cameraEngine.cameraSpecs.value)+

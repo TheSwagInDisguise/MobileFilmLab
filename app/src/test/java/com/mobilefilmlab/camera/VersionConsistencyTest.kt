@@ -5,9 +5,9 @@ import org.junit.Test
 import java.io.File
 
 class VersionConsistencyTest {
-    @Test fun productionVersionIsAlphaNine() {
-        assertEquals("0.1.0-alpha.9",BuildConfig.VERSION_NAME)
-        assertEquals(9,BuildConfig.VERSION_CODE)
+    @Test fun productionVersionIsFirstPublicBeta() {
+        assertEquals("0.2.0-beta.1",BuildConfig.VERSION_NAME)
+        assertEquals(10,BuildConfig.VERSION_CODE)
         val gradle=File("build.gradle.kts").takeIf { it.exists() } ?: File("app/build.gradle.kts")
         val config=gradle.readText()
         assertTrue(config.contains("applicationId = \"com.mobilefilmlab.camera\""))

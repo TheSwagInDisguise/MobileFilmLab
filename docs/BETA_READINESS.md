@@ -1,49 +1,34 @@
-# Beta-readiness tracker
+# Public-beta scope and validation status
 
-**Test candidate:** `v0.1.0-alpha.9` / versionCode **9** / `com.mobilefilmlab.camera`  
-**Release channel:** alpha prerelease only. No beta build/tag is authorised or created by this work.
+**Candidate:** `v0.2.0-beta.1` / code **10** / `com.mobilefilmlab.camera`
+**Scope:** first signed **public-testing beta**, not a stable release or stock-camera parity claim.
 
-“Implemented” below means there is a wired code path, not that a phone-dependent feature has been verified. **Handset results are still pending.** Exact stock-camera processing cannot be recreated from public Camera2 alone.
+The owner reported alpha.9 working well on the primary handset and explicitly authorised the first public beta. This supersedes the earlier alpha-only publication restriction. It does **not** establish that every item in the historical hardware matrix was tested. The [old pre-beta tracker](archive/ALPHA_9_BETA_GATES.md) is retained as history, not silently checked off.
 
-| # | Agreed roadmap area | Alpha implementation | Gate before beta |
-|---|---|---|---|
-| 1 | Stock Oppo default | Neutral Camera2/OEM original JPEG by default; no added film grade/grain; Natural available to reset | Owner accepts/compares this closest public-API baseline. Exact proprietary stock tuning is **not** implemented/claimed |
-| 2 | Per-lens matching | Independent persistent RGB gain controls, identity defaults; detected lens metadata | Controlled chart/paired shots for all exposed lenses; no measured factory calibration yet |
-| 3 | Sharpening | ISO-aware, edge-adaptive luminance high-pass with noise threshold, row buffers and halo clamp | Fine texture, edge halo, sky/skin and low-light A/B tests; improved acuity is not proven detail recovery |
-| 4 | OEM HDR/Night | Advertised extensions queried; real extension sessions; visible standard fallback | Confirm support/unsupported fallback on this ColorOS build, capture/save/metadata, no lockups |
-| 5 | Three-frame fusion | Bracket requests, timestamp matching, translation registration, exposure normalization and motion rejection; ~12MP cap | Static/handheld/moving-scene A/B; reject ghosting and exposure errors; tune or leave experimental/off |
-| 6 | Tap focus/meter | Rotated/cropped sensor-coordinate mapping; supported AF/AE regions | Corners/centre and each crop on every exposed lens; close/far transitions |
-| 7 | ZSL | Optional PRIVATE reprocess input/output ring; fresh/converged frame selection; normal capture fallback | Confirm supported combination, source/output dimensions, latency and memory/thermal cost; unsupported correctly reported is acceptable unless owner requires ZSL |
-| 8 | Volume buttons | One shot per press, repeats suppressed; dialogs/gallery/editing excluded | Volume up/down/camera key press/hold and dialog regression tests |
-| 9 | Grids & level | Off/thirds/golden/square guides; lifecycle-managed accelerometer level; device-oriented JPEG | Real tilt, flat/absent sensor, portrait/landscape capture orientation; square clearly guide-only |
-| 10 | Favourite carousel | Persisted stars and up to six quick-switch favourites | Favourites survive update/relaunch, chips select correct look, no cramped overlap |
-| 11 | Before/after | Shared colour transform + draggable sampled baseline split | Monochrome/warmth/tone on real viewfinder; baseline really ungraded, no frozen frame/rotation issue |
-| 12 | Film grain | Explicit Off/Fine/Medium/Coarse luminance grain; off by default | No unintended default grain, reasonable texture across lenses/ISO, consistent exports |
-| 13 | Recipe exchange | Typed JSON/.filmrecipe and QR PNG export; JSON/QR-image import, limits/validation/new IDs/transactions | Export/import on phone + another scanner/device; malformed input does not replace built-ins |
-| 14 | In-app gallery | Folder-scoped swipe viewer, pinch/double-tap, higher-resolution decode, real EXIF/dimensions, share/delete | Zoom readable at native dimensions within heap; share permission, delete confirmation, permission denial/empty gallery |
-| 15 | Haptics | Shutter/control/favourite feedback; switch to disable | Tactile response, disabled means no app-triggered vibration, Android 9 fallback |
-| 16 | Stability, battery, thermal | Handler confinement, session epochs, bounded captures, worker processing, image cleanup, severe-thermal safeguards | 50-shot/all-lens run, 10-minute preview, 20 lifecycle cycles, low storage/permissions/camera conflict. Actual thermal/battery acceptance remains unmeasured; no app/device CTS certification claim |
-| 17 | Release engineering | Tests + lint + signed APK/checksums/package/certificate/tag verification; prerelease flag; explicit updater; beta approval guard; F-Droid metadata starter | Verify install-over-alpha.8, data retention, release integrity and user sign-off. No automatic beta promotion or F-Droid publication |
+## Accepted release scope
 
-## Mandatory cross-cutting fixes in this candidate
+- Primary development/testing target: **Oppo Find X9 Ultra**.
+- Broader-device compatibility will expand through beta tester reports and follow-up fixes. No universal support claim.
+- Preserve the working alpha.9 capture implementation; beta.1 primarily adds repository/documentation polish, truthful UI renders, AI disclosure and beta-aware release checks.
+- Keep all 77 upstream recipes plus three independent Camera2 baselines.
+- Expose only advertised camera capabilities; unavailable lenses/processing remain unavailable or visibly fall back.
+- Ship with the established release package and certificate, higher versionCode, tests/lint, APK integrity verification and immutable prerelease assets.
+- Scope publication approval to the exact tag `v0.2.0-beta.1`. No stable release is authorised by this approval.
 
-- Native pixels are the default; alpha.8's resize is no longer described as super-resolution.
-- No second hardware/software crop, telephoto zoom multiplier on an already selected physical lens, or silently substituted lens.
-- Capture/JPEG EXIF correlation, actual flash result, physical lens focal-length specification, signed EV rationals and APEX aperture conversion.
-- No placeholder black photo when camera is unready; failures/timeouts clear busy state and report an error.
-- Capture settings/recipe are snapshotted at shutter press; processing/storage run off the UI thread.
-- Gallery no longer hardcodes 28.1MP, wide lens or a quality guarantee.
-- Dynamic version labels, user-controlled network checks and accurate privacy/limitations documentation.
+## Evidence and open work
 
-## Hard stop: no beta promotion until all of these hold
+| Area | Status |
+|---|---|
+| Initial owner handset smoke feedback | Accepted: owner reported alpha.9 working well. Not a detailed per-feature validation report. |
+| Automated regression/native-graphics tests and lint | Required by both CI and signed-release workflow. See [beta.1 QA evidence](QA_BETA_1.md) and tagged workflow results. |
+| APK identity/signature/checksum/alignment | Required before publication; same established certificate and package. |
+| Upgrade/data retention | Same identity and increasing code support in-place upgrades. Actual recipe/favourite retention still needs tester confirmation; do not uninstall to upgrade. |
+| Every exposed lens, flash, manual control, focus/crop/orientation | Ongoing handset/firmware matrix; no assumption that one smoke test proves every combination. |
+| Exact stock-camera colour/processing or native maximum resolution | Not claimed. Public Camera2 baseline and available streams only; optional enlargement is interpolation. |
+| Measured per-lens chart calibration | Pending. Identity defaults/user controls are not factory calibration. |
+| OEM HDR/Night, fusion and reprocessing ZSL | Experimental, capability-dependent; quality, latency and firmware behaviour remain under testing. |
+| Long soak, memory, heat and battery acceptance | Pending broader stress testing; no zero-crash/zero-lag guarantee. |
+| Other Android devices | Unverified until reports arrive; use the compatibility issue form. |
+| Security review | No independent audit. AI assistance is [explicitly disclosed](AI_DISCLOSURE.md). |
 
-- [ ] Owner has tested the [alpha checklist](ALPHA_9_TESTING.md) and returned the selected-camera report.
-- [ ] Four rear lens slots are genuinely usable on the target phone, or the owner explicitly approves documented firmware limitations/re-scoping.
-- [ ] Baseline quality/default behaviour is accepted; no false claim of exact Oppo stock/AI tuning remains.
-- [ ] Flash, focus, crop geometry, orientation, EXIF and all 77 recipe workflows pass practical checks.
-- [ ] Experimental paths either pass agreed quality/stability checks or remain visibly unavailable/off with an accepted fallback. No feature is labelled verified just because it compiled.
-- [ ] Soak, storage/permission/lifecycle tests show no blocking defects, unacceptable heat, memory crashes or lost/corrupted photos.
-- [ ] Signed upgrade preserves custom recipes/favourites and matches the established release certificate.
-- [ ] Owner explicitly authorises the beta tag; repository approval guard is changed only after that authorisation.
-
-A feature needing unavailable proprietary firmware access or calibration photos is a **declared limitation/pending gate**, not a silently completed requirement. Keep shipping alpha fixes until these gates are satisfied.
+The beta is public **to collect this evidence**, not because all hardware work is complete. Report failures via the [testing guide](TESTING.md). Do not promote to stable, declare proprietary parity or mark pending validation complete without new evidence.

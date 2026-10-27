@@ -1,5 +1,3 @@
-import java.util.Base64
-
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -13,8 +11,8 @@ android {
         applicationId = "com.mobilefilmlab.camera"
         minSdk = 28
         targetSdk = 34
-        versionCode = 9
-        versionName = "0.1.0-alpha.9"
+        versionCode = 10
+        versionName = "0.2.0-beta.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

@@ -1,15 +1,15 @@
-# Known limitations — alpha.9
+# Known limitations — public beta
 
 ## Proprietary stock processing is not replicated
 
-We cannot infer Oppo's exact sensor models, frame count, algorithms, SNR gains or pipeline internals from the supplied JPEG/MakerNote. Earlier explanations overstated those details. Multi-frame processing, sharpening, denoising, exposure/focus and stream limits can all contribute to differences from the stock app.
+Exact proprietary sensor/processing internals, frame counts, algorithms and SNR gains cannot be inferred from JPEG/MakerNote metadata alone. Earlier explanations overstated those details. Multi-frame processing, sharpening, denoising, exposure/focus and stream limits can all contribute to differences from the stock app.
 
 **Oppo Natural (Camera2)** means the exposed ISP JPEG without an added film look, not certified stock-camera tuning or a Hasselblad colour profile. Per-lens gains default to identity and are user-adjustable; no measured calibration has been completed.
 
 ## Pixel counts and image quality
 
 - Alpha.8 enlarged images using a bitmap resize. That was not genuine super-resolution, did not defeat HAL access restrictions, and did not create new captured detail.
-- Alpha.9 uses native pixels by default. A 2× crop has a quarter of the captured pixels. The selected HAL stream is not necessarily the sensor's full pixel array.
+- Since alpha.9, native pixels are the default. A 2× crop has a quarter of the captured pixels. The selected HAL stream is not necessarily the sensor's full pixel array.
 - Optional enlarged export interpolates to a 6120-pixel long edge (about 28.1MP for 4:3), with a proportionally smaller target for crops. Other aspect ratios have different pixel counts. Higher-resolution native input is not downscaled just to match this target.
 - JPEG quality 98/100 is still lossy encoding. The default unedited original-JPEG path avoids another pixel recompression; edited images must be encoded again.
 - Sharpening boosts edge acuity; it does not prove recovered texture/detail. Do not judge quality solely by Laplacian variance, which also increases with noise/halos.
@@ -42,6 +42,6 @@ The gallery lists up to 500 readable images from the app's output folder. Higher
 
 Updates are opened in the browser for user-controlled download/installation. No background updater, analytics or auto-promotion. F-Droid metadata is a starter only, not a distribution commitment.
 
-## Beta promotion remains blocked
+## Public beta, not completed hardware validation
 
-Passing JVM/native-graphics tests and Android Lint does not verify ColorOS camera hardware or app CTS/device compatibility. See the [beta readiness gates](docs/BETA_READINESS.md). Exact stock-camera matching and four-lens operation cannot be claimed until validated or explicitly re-scoped with the owner.
+The owner accepted initial alpha.9 handset behaviour and authorised the first public beta. Passing JVM/native-graphics tests and Android Lint still does not verify physical camera hardware, broad firmware compatibility or an app/device certification. See [public-beta scope and ongoing validation](docs/BETA_READINESS.md) and the [tester guide](docs/TESTING.md). Exact stock-camera matching and four-lens access on every firmware are not claimed. Other-device support will expand with beta testers' reports.

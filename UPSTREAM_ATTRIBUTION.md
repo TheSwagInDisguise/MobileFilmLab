@@ -31,3 +31,9 @@ Complete source code is publicly accessible at [https://github.com/TheSwagInDisg
 
 ## Disclaimer & Independence Notice
 MobileFilmLab is independently developed and maintained. It is **not** affiliated with, endorsed by, or sponsored by Sony Corporation, the upstream Recipe Lab project, Fujifilm, Eastman Kodak Company, Leica Camera AG, Ricoh Imaging Company, or Hasselblad.
+
+## Additional technical reference
+
+- **RandoTeam** — [OpOpenCam-Camera](https://github.com/RandoTeam/OpOpenCam-Camera), consulted as a reference during public Camera2/OEM interoperability research. This acknowledgement does **not** assert that its code or artwork is incorporated into MobileFilmLab. Any future adaptation must be separately documented with its applicable licence and provenance.
+
+The README uses general feature descriptions; this dedicated file deliberately retains original project/vendor/category names for accurate provenance. Recipe labels in the app are descriptive references, not endorsements or a claim of exact proprietary rendering. The app's primary device target is Oppo Find X9 Ultra; the project is also independent of that device's manufacturer.
