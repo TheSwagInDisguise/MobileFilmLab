@@ -23,7 +23,9 @@ import com.mobilefilmlab.camera.ui.theme.BorderDark
 @Composable
 fun ShutterButton(
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    busy: Boolean = false
 ) {
     val interactionSource = remember { MutableInteractionSource() }
     val isPressed by interactionSource.collectIsPressedAsState()
@@ -37,18 +39,20 @@ fun ShutterButton(
             .background(Color(0xFF14161F))
             .border(2.5.dp, BorderDark, CircleShape)
             .clickable(
+                enabled = enabled,
                 interactionSource = interactionSource,
                 indication = null,
                 onClick = onClick
             ),
         contentAlignment = Alignment.Center
     ) {
+        if (busy) androidx.compose.material3.CircularProgressIndicator(modifier = Modifier.size(68.dp), color = com.mobilefilmlab.camera.ui.theme.AccentGold)
         // White Center Shutter Pad
         Box(
             modifier = Modifier
                 .size(60.dp)
                 .clip(CircleShape)
-                .background(Color.White)
+                .background(if (enabled) Color.White else Color(0xFF666A73))
                 .border(1.5.dp, Color(0xFFD4D8E2), CircleShape)
         )
     }

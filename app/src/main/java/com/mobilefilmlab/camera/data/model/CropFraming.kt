@@ -4,8 +4,8 @@ import android.graphics.Rect
 
 enum class HonestCropStatus(val label: String, val shortDescription: String) {
     FULL_SENSOR(
-        label = "Full sensor",
-        shortDescription = "Entire available sensor capture area at native resolution."
+        label = "Full native stream",
+        shortDescription = "Entire exposed JPEG stream. This does not imply access to the sensor maximum mode."
     ),
     NATIVE_NO_RESAMPLE(
         label = "Native-pixel crop / no-resample",
@@ -16,7 +16,7 @@ enum class HonestCropStatus(val label: String, val shortDescription: String) {
         shortDescription = "Cropped sensor area output at its native unscaled pixel dimensions."
     ),
     DIGITALLY_RESAMPLED(
-        label = "Resampled digital crop",
+        label = "Interpolated export enabled",
         shortDescription = "Enlarged digital crop interpolated for target output resolution."
     )
 }
@@ -34,7 +34,7 @@ data class FramingConfig(
             val factor = if (is2x) 2.0f else 1.0f
             val baseFocal = baseSpec?.equivalentFocalLength35mm ?: lens.approxFocalLength35mm
             val effectiveFocal = (baseFocal * factor).toInt()
-            val baseMp = baseSpec?.maxResolutionMp ?: 50.0f
+            val baseMp = baseSpec?.maxResolutionMp ?: 0.0f
             val effMp = if (is2x) (baseMp / 4.0f) else baseMp
 
             val status = if (!is2x) {

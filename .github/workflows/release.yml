@@ -1,139 +1,97 @@
 name: Release Signed APK
-
 on:
   push:
-    tags:
-      - 'v*'
+    tags: [ 'v*' ]
   workflow_dispatch:
     inputs:
       tag_name:
-        description: 'Tag name to release (e.g. v0.1.0-alpha.1)'
-        required: false
-        default: 'v0.1.0-alpha.1'
-
+        description: Already-pushed tag to release (must match source version)
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: release-${{ github.event.inputs.tag_name || github.ref_name }}
+  cancel-in-progress: false
 jobs:
   build-and-release:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     permissions:
       contents: write
-
+    env:
+      RELEASE_TAG: ${{ github.event.inputs.tag_name || github.ref_name }}
+      BETA_RELEASE_APPROVED: ${{ vars.BETA_RELEASE_APPROVED }}
     steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set up JDK 21
+          ref: ${{ github.event.inputs.tag_name || github.ref }}
+      - name: Block unapproved promotion and verify exact tag/source identity
+        run: python3 scripts/verify_release.py
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
-          cache: 'gradle'
-
-      - name: Make Gradle wrapper executable
-        run: chmod +x gradlew
-
-      - name: Run Unit Tests & Recipe Validation
-        run: ./gradlew test --stacktrace
-
-      - name: Decode Release Keystore
+          java-version: '17'
+          distribution: temurin
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+      - name: Unit and native-graphics regression tests
+        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace
+      - name: Android release lint
+        run: ./gradlew lintRelease --no-daemon --stacktrace
+      - name: Decode release keystore
         env:
           KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
+          umask 077
           mkdir -p keystore
-          echo "$KEYSTORE_BASE64" | base64 -d > keystore/release.jks
-          ls -lh keystore/release.jks
-
-      - name: Build Release APK
+          test -n "$KEYSTORE_BASE64"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > keystore/release.jks
+      - name: Build signed release
         env:
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
-        run: ./gradlew assembleRelease --stacktrace
-
-      - name: Locate, Align and Sign APK
-        env:
-          KEYSTORE_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
-          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+      - name: Verify signed package, version, alignment and established certificate
         run: |
-          RAW_TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
-          TAG_NAME="${RAW_TAG#refs/tags/}"
-          echo "Processing release for tag: $TAG_NAME"
-          
-          BUILT_APK=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          echo "Found APK: $BUILT_APK"
-          
-          SIGNED_APK_NAME="MobileFilmLab-${TAG_NAME}-signed.apk"
-          
-          BUILD_TOOLS_DIR=$(find $ANDROID_HOME/build-tools -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
-          echo "Using Build Tools: $BUILD_TOOLS_DIR"
-          
-          rm -f aligned.apk "$SIGNED_APK_NAME"
-          
-          # Check alignment; if already aligned, copy; otherwise zipalign
-          if $BUILD_TOOLS_DIR/zipalign -c 4 "$BUILT_APK"; then
-            echo "APK is already 4-byte aligned."
-            cp "$BUILT_APK" aligned.apk
-          else
-            echo "Aligning APK with zipalign..."
-            $BUILD_TOOLS_DIR/zipalign -v -p 4 "$BUILT_APK" aligned.apk
-          fi
-          
-          # Sign using apksigner with v1, v2, v3, and v4 schemes
-          $BUILD_TOOLS_DIR/apksigner sign \
-            --ks keystore/release.jks \
-            --ks-pass "pass:$KEYSTORE_PASS" \
-            --ks-key-alias "$KEY_ALIAS" \
-            --key-pass "pass:$KEY_PASS" \
-            --out "$SIGNED_APK_NAME" \
-            aligned.apk
-            
-          echo "Successfully signed: $SIGNED_APK_NAME"
-          ls -lh "$SIGNED_APK_NAME"
-
-      - name: Verify Signed APK Integrity and Certificate
-        run: |
-          RAW_TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
-          TAG_NAME="${RAW_TAG#refs/tags/}"
-          SIGNED_APK_NAME="MobileFilmLab-${TAG_NAME}-signed.apk"
-          BUILD_TOOLS_DIR=$(find $ANDROID_HOME/build-tools -mindepth 1 -maxdepth 1 | sort -V | tail -n 1)
-          
-          echo "=== Verifying APK Signature ==="
-          $BUILD_TOOLS_DIR/apksigner verify --verbose --print-certs "$SIGNED_APK_NAME"
-          
-          echo "=== Inspecting Package and Version via aapt2 ==="
-          $BUILD_TOOLS_DIR/aapt2 dump badging "$SIGNED_APK_NAME" | grep -E "package:|application-label:"
-
-      - name: Generate Checksums
-        run: |
-          RAW_TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
-          TAG_NAME="${RAW_TAG#refs/tags/}"
-          SIGNED_APK_NAME="MobileFilmLab-${TAG_NAME}-signed.apk"
-          sha256sum "$SIGNED_APK_NAME" > checksums.txt
-          cat checksums.txt
-
-      - name: Upload Workflow Artifacts
+          cp app/build/outputs/apk/release/app-release.apk "MobileFilmLab-${RELEASE_TAG}-signed.apk"
+          python3 scripts/verify_apk.py "MobileFilmLab-${RELEASE_TAG}-signed.apk"
+          sha256sum "MobileFilmLab-${RELEASE_TAG}-signed.apk" > checksums.txt
+          cp docs/ALPHA_9_TESTING.md ALPHA_9_TESTING.md
+      - name: Upload QA reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-qa-reports
+          retention-days: 7
+          path: |
+            app/build/reports/tests/
+            app/build/test-results/
+            app/build/reports/lint-results-*
+      - name: Upload verified deliverables
         uses: actions/upload-artifact@v4
         with:
           name: signed-release-apk
           path: |
             MobileFilmLab-*-signed.apk
             checksums.txt
-
-      - name: Create GitHub Release
+            ALPHA_9_TESTING.md
+      - name: Publish alpha as GitHub prerelease (never auto-promote)
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_TOKEN || secrets.GITHUB_TOKEN }}
         run: |
-          RAW_TAG="${{ github.event.inputs.tag_name || github.ref_name }}"
-          TAG_NAME="${RAW_TAG#refs/tags/}"
-          SIGNED_APK_NAME="MobileFilmLab-${TAG_NAME}-signed.apk"
-          
-          # Delete existing release if re-running
-          gh release delete "$TAG_NAME" --yes 2>/dev/null || true
-          
-          gh release create "$TAG_NAME" \
-            "$SIGNED_APK_NAME" \
-            checksums.txt \
-            --title "$TAG_NAME" \
-            --notes-file CHANGELOG.md
+          set -euo pipefail
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            echo 'This release already exists; refusing to overwrite a published APK. Use a new version/tag.'
+            exit 1
+          fi
+          FLAGS=()
+          if [[ "$RELEASE_TAG" == *-* ]]; then FLAGS+=(--prerelease --latest=false); fi
+          gh release create "$RELEASE_TAG" \
+            "MobileFilmLab-${RELEASE_TAG}-signed.apk" checksums.txt ALPHA_9_TESTING.md \
+            --verify-tag --title "$RELEASE_TAG — alpha test candidate" \
+            --notes-file ".github/release-notes/${RELEASE_TAG#v}.md" "${FLAGS[@]}"
+      - name: Remove signing material
+        if: always()
+        run: rm -rf keystore

@@ -119,6 +119,15 @@ class RecipeDbHelper(context: Context) : SQLiteOpenHelper(context, DATABASE_NAME
         db.insertWithOnConflict(TABLE_RECIPES, null, values, SQLiteDatabase.CONFLICT_REPLACE)
     }
 
+    fun saveRecipes(recipes: List<Recipe>) {
+        val db = writableDatabase
+        db.beginTransaction()
+        try {
+            recipes.forEach { saveRecipe(it) }
+            db.setTransactionSuccessful()
+        } finally { db.endTransaction() }
+    }
+
     fun deleteRecipe(recipeId: String) {
         val db = writableDatabase
         db.delete(TABLE_RECIPES, "id = ?", arrayOf(recipeId))

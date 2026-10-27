@@ -1,6 +1,7 @@
 package com.mobilefilmlab.camera.data.model
 
 enum class RecipeGroup(val displayName: String, val sortOrder: Int) {
+    OPPO("Oppo", -1),
     SONY("Sony", 0),
     FUJI_SIM("Fuji Sim", 1),
     FUJI_FILM("Fuji Film", 2),

@@ -4,10 +4,30 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-alpha.9] - 2026-10-27
+
+### Added / changed
+- Beta-roadmap implementation released deliberately as an **alpha test candidate**, with handset acceptance gates and an explicit beta-publication guard.
+- Neutral **Oppo Natural (Camera2)** factory default, original-JPEG pixel preservation when unedited, and three Camera2 baselines alongside all 77 upstream recipes. Per-lens user RGB matching controls (identity defaults, not a measured factory calibration).
+- Native output dimensions by default; labelled optional interpolation; corrected double-cropping and unnecessary zoom multiplication on selected physical lenses. Four crop levels per lens via long-press menu.
+- Edge-adaptive ISO-aware luminance sharpening with bounded halos/row buffers; opt-in procedural film grain.
+- Experimental three-JPEG bracket fusion with translation registration, exposure normalization and motion rejection; capability-gated OEM HDR/Night extension sessions and PRIVATE reprocessing ZSL with visible fallback.
+- Tap AF/AE mapping, bounded 3A/capture deadlines, volume-key single-shot/repeat handling, sensor-driven level, optional composition grids, device-aware capture orientation and haptic settings.
+- Shared live colour grading, refreshed recipe thumbnails, favourite quick-switch carousel and sampled split comparison; file/QR recipe exchange with validation and transactional imports.
+- Swipe/zoom in-app gallery with actual metadata/dimensions/processing notes, sharing and confirmed deletion.
+- Handler-confined camera lifecycle, timestamp-paired metadata, off-UI processing/storage, partial-save cleanup, thermal safeguards and errors instead of synthetic blank photos.
+- Tests of production functions plus native-graphics EXIF/bitmap/QR/SQLite tests, lint gates, verified signing/package/version/checksums, explicit alpha/stable updater and F-Droid metadata starter.
+
+### Corrections and limits
+- Alpha.8's enlargement was a bitmap interpolation, **not super-resolution, a HAL restriction bypass, or newly recovered detail**. Alpha.9 does not claim guaranteed 28MP native access.
+- Exact Oppo/Hasselblad stock tuning, sensor/AI pipeline internals, fixed SNR/sharpness improvements and zero-OOM/zero-lag guarantees were not established. JPEG quality 100 is not lossless. Earlier historical notes below must be read with these corrections.
+- Hardware support/quality, real lens calibration, flash, preview correctness, ZSL latency and thermal/battery behaviour remain pending handset testing. Square is guide-only; QR import reads an image; RAW/DNG/video are not implemented.
+- See `docs/ALPHA_9_TESTING.md`, `docs/BETA_READINESS.md` and `KNOWN_LIMITATIONS.md` before promotion.
+
 ## [0.1.0-alpha.8] - 2026-10-26
 
 ### Added
-- **28.1MP Super-Resolution Reconstruction Engine**:
+- **Fixed-size 28.1MP interpolated export (historical; corrected in alpha.9)**:
   - Overcomes the ColorOS Camera2 HAL package whitelist restriction (`camera.provider@2.x-service`) which limits non-whitelisted third-party applications to 12.5MP binned streams (`3072 × 4096`).
   - Implemented high-order super-resolution reconstruction in `ImageProcessor.kt` that processes the incoming frame and upscales/reconstructs it to the exact stock Oppo Find X9 Ultra resolution of **`4596 × 6120` (28.1 MP)**.
   - Generates 100% quality JPEGs (~10.6 MB) with 28.1MP pixel dimensions, matching the stock ColorOS camera output pixel-for-pixel.
@@ -46,7 +66,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Full-Resolution Sensor Output**: Enabled `SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION` and `SENSOR_PIXEL_MODE_MAXIMUM_RESOLUTION` on Android 12+ (Oppo Find X9 Ultra) to capture full Quad-Bayer remosaic sensor resolution (28MP / 50MP) instead of 12.5MP binned mode.
 - **Hardware ISP High-Quality Pipeline**: Configured Camera2 capture requests with `EDGE_MODE_HIGH_QUALITY`, `NOISE_REDUCTION_MODE_HIGH_QUALITY`, `COLOR_CORRECTION_ABERRATION_MODE_HIGH_QUALITY`, `SHADING_MODE_HIGH_QUALITY`, and `DISTORTION_CORRECTION_MODE_HIGH_QUALITY`.
 - **Photographic Unsharp Mask Engine**: Implemented fast photographic unsharp mask convolution in `ImageProcessor.kt` directly wired to the recipe's sharpness parameter (`recipe.sharp`), restoring crisp edge definition and tile/texture micro-contrast.
-- **Lossless Quality 100 JPEG Encoding**: Disabled secondary lossy Skia chroma quantization tables, preserving fine high-frequency sensor detail.
+- **Quality-100 JPEG encoding** (still lossy; the earlier lossless description was incorrect).
 
 ## [0.1.0-alpha.5] - 2026-10-25
 

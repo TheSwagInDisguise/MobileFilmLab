@@ -2,71 +2,48 @@ package com.mobilefilmlab.camera.data.repository
 
 import android.content.Context
 import com.mobilefilmlab.camera.data.db.RecipeDbHelper
-import com.mobilefilmlab.camera.data.model.Recipe
-import com.mobilefilmlab.camera.data.model.RecipeCatalog
-import com.mobilefilmlab.camera.data.model.RecipeGroup
+import com.mobilefilmlab.camera.data.importer.RecipeJsonSerializer
+import com.mobilefilmlab.camera.data.model.*
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import java.util.UUID
 
 class RecipeRepository(context: Context) {
-    private val dbHelper = RecipeDbHelper(context)
-
-    private val _recipes = MutableStateFlow<List<Recipe>>(emptyList())
-    val recipes: StateFlow<List<Recipe>> = _recipes.asStateFlow()
-
-    private val _activeRecipe = MutableStateFlow<Recipe>(RecipeCatalog.getFactory())
-    val activeRecipe: StateFlow<Recipe> = _activeRecipe.asStateFlow()
-
+    private val db=RecipeDbHelper(context)
+    private val prefs=context.getSharedPreferences("recipe_defaults",Context.MODE_PRIVATE)
+    private val _recipes=MutableStateFlow<List<Recipe>>(emptyList())
+    val recipes=_recipes.asStateFlow()
+    private val _activeRecipe=MutableStateFlow(RecipeCatalog.getDefaultRecipe())
+    val activeRecipe=_activeRecipe.asStateFlow()
     init {
+        if(!prefs.getBoolean("natural_seeded",false)) {
+            db.setFavourite(RecipeCatalog.STOCK_OPPO_NATURAL.id,true)
+            prefs.edit().putBoolean("natural_seeded",true).apply()
+        }
         refresh()
+        _activeRecipe.value=_recipes.value.first { it.id==RecipeCatalog.getDefaultRecipe().id }
     }
-
     fun refresh() {
-        val favIds = dbHelper.getFavouriteIds()
-        val customRecipes = dbHelper.getAllCustomRecipes()
-
-        // 77 catalog recipes with updated favourite flags
-        val catalogWithFavs = RecipeCatalog.ALL_RECIPES.map { r ->
-            r.copy(isFavourite = favIds.contains(r.id))
-        }
-
-        // Custom recipes
-        val customsWithFavs = customRecipes.map { r ->
-            r.copy(isFavourite = favIds.contains(r.id))
-        }
-
-        _recipes.value = catalogWithFavs + customsWithFavs
+        val favs=db.getFavouriteIds()
+        _recipes.value=(RecipeCatalog.ALL_RECIPES+db.getAllCustomRecipes()).map { it.copy(isFavourite=it.id in favs) }
+        _recipes.value.firstOrNull { it.id==_activeRecipe.value.id }?.let { _activeRecipe.value=it }
     }
-
-    fun setActiveRecipe(recipe: Recipe) {
-        _activeRecipe.value = recipe
+    fun setActiveRecipe(recipe: Recipe) { _activeRecipe.value=recipe }
+    fun toggleFavourite(recipe: Recipe) { db.setFavourite(recipe.id,!recipe.isFavourite); refresh() }
+    fun saveCustomRecipe(recipe: Recipe) { RecipeJsonSerializer.validate(recipe); db.saveRecipe(recipe); refresh(); setActiveRecipe(recipe) }
+    fun importRecipes(recipes: List<Recipe>): List<Recipe> {
+        recipes.forEach { RecipeJsonSerializer.validate(it) }
+        val imported=recipes.map { it.copy(id="custom_"+UUID.randomUUID(),group=RecipeGroup.CUSTOM,isCustom=true,isFavourite=false) }
+        db.saveRecipes(imported); refresh(); setActiveRecipe(imported.first())
+        return imported
     }
-
-    fun toggleFavourite(recipe: Recipe) {
-        val newFav = !recipe.isFavourite
-        dbHelper.setFavourite(recipe.id, newFav)
+    fun deleteCustomRecipe(id: String) {
+        if(!_recipes.value.any { it.id==id && it.isCustom }) return
+        db.deleteRecipe(id); db.setFavourite(id,false)
+        if(_activeRecipe.value.id==id) _activeRecipe.value=RecipeCatalog.getDefaultRecipe()
         refresh()
-        if (_activeRecipe.value.id == recipe.id) {
-            _activeRecipe.value = _activeRecipe.value.copy(isFavourite = newFav)
-        }
     }
-
-    fun saveCustomRecipe(recipe: Recipe) {
-        dbHelper.saveRecipe(recipe)
-        refresh()
-        setActiveRecipe(recipe)
-    }
-
-    fun deleteCustomRecipe(recipeId: String) {
-        dbHelper.deleteRecipe(recipeId)
-        refresh()
-        if (_activeRecipe.value.id == recipeId) {
-            _activeRecipe.value = RecipeCatalog.getFactory()
-        }
-    }
-
-    fun getFavourites(): List<Recipe> = _recipes.value.filter { it.isFavourite }
-
-    fun getByGroup(group: RecipeGroup): List<Recipe> = _recipes.value.filter { it.group == group }
+    fun getFavourites()=_recipes.value.filter { it.isFavourite }
+    fun getByGroup(group: RecipeGroup)=_recipes.value.filter { it.group==group }
+    fun close() { db.close() }
 }

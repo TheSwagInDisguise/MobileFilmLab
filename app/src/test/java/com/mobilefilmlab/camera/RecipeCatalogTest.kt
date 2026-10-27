@@ -11,27 +11,31 @@ import org.junit.Test
 class RecipeCatalogTest {
 
     @Test
-    fun testTotalRecipeCountIs77() {
-        val total = RecipeCatalog.ALL_RECIPES.size
-        assertEquals("Recipe Lab catalogue must contain exactly 77 recipes", 77, total)
+    fun testFullUpstreamCataloguePlusThreeCamera2Baselines() {
+        val total = RecipeCatalog.getUpstream77Recipes().size
+        assertEquals("Upstream definitions must still contain exactly 77 recipes", 77, total)
+        assertEquals(80, RecipeCatalog.ALL_RECIPES.size)
+        assertEquals(3, RecipeCatalog.getByGroup(RecipeGroup.OPPO).size)
     }
 
     @Test
     fun testFactoryRecipeIsFirst() {
         val first = RecipeCatalog.ALL_RECIPES.first()
-        assertEquals("FACTORY (ST)", first.name)
-        assertEquals(RecipeGroup.SONY, first.group)
+        assertEquals("Oppo Natural (Camera2)", first.name)
+        assertEquals(RecipeGroup.OPPO, first.group)
         assertEquals(CreativeStyle.STD, first.style)
         assertEquals(0, first.sat)
         assertEquals(0, first.con)
         assertEquals(0, first.sharp)
+        assertEquals(first.id, RecipeCatalog.getFactory().id)
+        assertNotNull(RecipeCatalog.getById("sony_factory_st"))
     }
 
     @Test
     fun testAllRecipeIdsAreUnique() {
         val ids = RecipeCatalog.ALL_RECIPES.map { it.id }
         val uniqueIds = ids.toSet()
-        assertEquals("All 77 recipe IDs must be unique", ids.size, uniqueIds.size)
+        assertEquals("All built-in recipe IDs must be unique", ids.size, uniqueIds.size)
     }
 
     @Test

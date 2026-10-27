@@ -17,3 +17,8 @@
 *.jks
 *.keystore
 local.properties
+**/build/
+**/.gradle/
+/keystore/
+.github_token
+*.hprof

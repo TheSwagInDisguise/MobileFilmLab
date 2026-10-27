@@ -1,12 +1,43 @@
 package com.mobilefilmlab.camera.data.model
 
 /**
- * Authoritative catalogue of all 77 built-in recipes ported from Recipe Lab (Sony PMCA).
+ * 77 upstream recipes plus 3 independent Camera2 baseline profiles.
  * Upstream Reference: https://github.com/voxivoid/recipe-lab-sony-pmca (commit aab4b57)
  */
 object RecipeCatalog {
 
     val ALL_RECIPES: List<Recipe> = listOf(
+        // ==================== 0. Oppo Find X9 Ultra Baseline Profiles ====================
+        Recipe(
+            id = "stock_oppo_natural",
+            name = "Oppo Natural (Camera2)",
+            group = RecipeGroup.OPPO,
+            style = CreativeStyle.STD,
+            sat = 0, con = 0, sharp = 0,
+            wbMode = WbMode.AUTO, kelvin = 0, ab = 0, gm = 0,
+            pe = PictureEffect.OFF, ev = 0, dro = DroMode.AUTO, sub = 0,
+            notes = "Neutral Camera2 ISP baseline, not Oppo stock-app/Hasselblad processing. Original JPEG is preserved when no edits, crop, grain or calibration are selected.",
+            isFavourite = true
+        ),
+        Recipe(
+            id = "stock_oppo_vivid",
+            name = "Oppo Vivid (approx.)",
+            group = RecipeGroup.OPPO,
+            style = CreativeStyle.VIVID,
+            sat = 1, con = 1, sharp = 1,
+            wbMode = WbMode.AUTO, kelvin = 0, ab = 0, gm = 0,
+            pe = PictureEffect.OFF, ev = 0, dro = DroMode.AUTO, sub = 0
+        ),
+        Recipe(
+            id = "stock_oppo_bw",
+            name = "Oppo B&W (approx.)",
+            group = RecipeGroup.OPPO,
+            style = CreativeStyle.MONO,
+            sat = 0, con = 2, sharp = 1,
+            wbMode = WbMode.AUTO, kelvin = 0, ab = 0, gm = 0,
+            pe = PictureEffect.OFF, ev = 0, dro = DroMode.AUTO, sub = 0
+        ),
+
         // ==================== 1. Sony (8 recipes) ====================
         Recipe(
             id = "sony_factory_st",
@@ -727,7 +758,13 @@ object RecipeCatalog {
 
     fun getById(id: String): Recipe? = ALL_RECIPES.firstOrNull { it.id == id }
 
-    fun getFactory(): Recipe = ALL_RECIPES.first()
+    val STOCK_OPPO_NATURAL: Recipe = ALL_RECIPES.first()
+
+    fun getDefaultRecipe(): Recipe = STOCK_OPPO_NATURAL
+
+    fun getFactory(): Recipe = STOCK_OPPO_NATURAL
+
+    fun getUpstream77Recipes(): List<Recipe> = ALL_RECIPES.filter { it.group != RecipeGroup.OPPO }
 
     fun getByGroup(group: RecipeGroup): List<Recipe> = ALL_RECIPES.filter { it.group == group }
 }

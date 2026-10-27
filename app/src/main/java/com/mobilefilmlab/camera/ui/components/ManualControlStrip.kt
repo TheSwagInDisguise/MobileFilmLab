@@ -66,8 +66,8 @@ fun ManualControlStrip(
         )
         ManualParamChip(
             label = "WB",
-            value = "${kelvin}K",
-            isHighlighted = kelvin != 5600,
+            value = if (kelvin == 0) "AUTO" else "${kelvin}K",
+            isHighlighted = kelvin != 0,
             onClick = onWbClick
         )
         ManualParamChip(

@@ -1,78 +1,34 @@
-# MobileFilmLab — Technical Architecture
+# Architecture — alpha.9
 
-## 1. System Overview
-MobileFilmLab is a native Android photography application built in **Kotlin** and **Jetpack Compose**, targeting modern multi-camera hardware (specifically the **Oppo Find X9 Ultra**).
+## Data flow
 
-The application bridges two distinct domains:
-1. **The Recipe Lab Preset Engine:** A port of the 77 built-in photographic recipes from the upstream Sony PMCA project, adapted into a computational color grading pipeline.
-2. **Multi-Camera Hardware Abstraction:** Dynamic discovery of the target device's physical camera optics (Ultra-wide 15mm, Primary 1" Wide 23mm, Telephoto 70mm, Periscope 135mm), coupled with honest digital crop framing.
+Compose controls → `CameraViewModel` state/snapshot → `CameraEngine` (Camera2 handler) → timestamp-correlated JPEG + capture result → worker-thread `ImageProcessor` → atomic MediaStore publication.
 
-```
-┌────────────────────────────────────────────────────────┐
-│                   Jetpack Compose UI                   │
-│  [Auto / Pro]   [UW | W | 3x | 10x]   [2x Crop]        │
-│  [2D Photographic Styles Pad]   [Recipe Sheet]         │
-└──────────────────────────┬─────────────────────────────┘
-                           │ StateFlow / Events
-┌──────────────────────────▼─────────────────────────────┐
-│                    CameraViewModel                     │
-└──────────────┬───────────────────────────┬─────────────┘
-               │                           │
-┌──────────────▼─────────────┐   ┌─────────▼─────────────┐
-│      Camera2 Engine        │   │   Recipe Repository   │
-│  - Dynamic Discovery       │   │  - 77 Catalog Recipes │
-│  - Session Management      │   │  - SQLite Database    │
-│  - Optical / Zoom Routing  │   │  - YAML / JSON Import │
-└──────────────┬─────────────┘   └─────────┬─────────────┘
-               │                           │
-               │ Raw Capture Frame         │ Active Recipe
-┌──────────────▼───────────────────────────▼─────────────┐
-│             Computational Image Pipeline               │
-│  - Matrix Color Transform & Tone S-Curve               │
-│  - Kelvin WB & Amber/Green Tint Multiplier             │
-│  - Optical Monochrome Filter Simulation                │
-│  - Non-destructive Sensor Crop & Resampling Check      │
-│  - EXIF Metadata Tagging (ExifInterface)               │
-└──────────────────────────┬─────────────────────────────┘
-                           │ Scoped Storage (Atomic)
-┌──────────────────────────▼─────────────────────────────┐
-│            Android MediaStore (Pictures/)              │
-└────────────────────────────────────────────────────────┘
-```
+### Camera ownership
 
-## 2. Dynamic Camera Discovery (`CameraDiscovery.kt`)
-The app does **not** hardcode camera IDs. It queries Android's `CameraManager` for all available characteristics:
-- Hardware level (`LEGACY`, `LIMITED`, `FULL`, `LEVEL_3`)
-- Facing direction (`LENS_FACING_BACK`, `LENS_FACING_FRONT`)
-- Logical multi-camera status (`REQUEST_AVAILABLE_CAPABILITIES_LOGICAL_MULTI_CAMERA`) and underlying physical camera IDs
-- Physical focal lengths ($mm$), equivalent 35mm focal lengths, aperture ($f$-number)
-- Active array size and pixel dimensions
-- Supported output formats (`JPEG`, `RAW_SENSOR`, `YUV_420_888`)
-- Manual sensor control capabilities (Exposure time, ISO, Manual focus distance, AWB lock)
+A dedicated handler owns open/close, sessions, requests, readers, reprocessing images and continuation matching. Generation/session epochs discard stale callbacks after lens or lifecycle changes. Activity pause closes hardware and cancels pending captures; no blocking semaphore/join runs on the UI thread. Missing camera resources return failure, not a dummy photo. Capture timeouts release shutter state. The native preview surface is retained from the alpha viewfinder path.
 
-## 3. Honest Crop & Framing Engine (`CropEngine.kt`)
-The four physical lenses map to:
-- `UW`: Ultra-wide (~15mm, 0.6x)
-- `W`: Primary Wide 1-inch (~23mm, 1.0x)
-- `3x`: Telephoto (~70mm, 3.0x)
-- `10x`: Periscope Super-telephoto (~135mm, 6.0x–10.0x)
+`CameraDiscovery` enumerates direct IDs and physical IDs behind logical cameras, derives approximate 35mm equivalent from focal length and sensor diagonal, and records capability flags. Physical output configurations use a logical open ID where direct opening is unavailable. Restricted lenses are not replaced without telling the user. The UI slot names are separate from measured/detected focal metadata.
 
-Each physical optic provides a direct `2x` crop toggle. The app classifies and displays the honest nature of every frame:
-1. `FULL_SENSOR`: Entire available sensor area at native resolution.
-2. `NATIVE_NO_RESAMPLE`: A cropped window output at native pixel resolution without interpolation.
-3. `REDUCED_RESOLUTION`: Cropped frame output at actual cropped pixel dimensions.
-4. `DIGITALLY_RESAMPLED`: Digital zoom enlargement interpolated to output size.
+Advertised normal, high-resolution and maximum-resolution JPEG sizes feed `ResolutionSelector`. Maximum mode is registered on its capture output/request, with a bounded smaller-stream fallback if the combination fails. Preview crop is not repeated in the still request: capture is full-stream, followed by one native software crop.
 
-## 4. Recipe Processing Pipeline (`ImageProcessor.kt`)
-Because Android devices do not have Sony's internal BIONZ X creative style registers, recipes are translated into an honest mathematical approximation:
-- **Tone Curve:** S-curves calculated from recipe contrast ($-3 \dots +3$).
-- **Color Matrix:** Scaled saturation and vibrance.
-- **Color Temperature & Tint:** Kelvin values translated to CIE daylight chromaticity coordinates; amber-blue and green-magenta offsets applied as linear RGB scaling matrices.
-- **Dynamic Range Optimization (DRO):** Shadow-lifting gamma curve approximating Sony DRO levels 1 through 5.
-- **Monochrome Optics:** B&W conversion weighted by simulated optical glass filter transmittance (Neutral, Yellow, Red, Green).
-- **2D Control Pad (Photographic Styles):** Real-time modulation along Tone ($Y$-axis) and Warmth ($X$-axis).
+### Capture paths
 
-## 5. Storage & Privacy
-- Zero internet permissions, zero analytics, zero crash telemetry, zero advertising.
-- All photos saved directly to `Pictures/MobileFilmLab/` using Android Scoped Storage (`MediaStore.Images.Media`).
-- Non-destructive processing preserves recipe metadata in standard EXIF tags (`ExifInterface.TAG_USER_COMMENT`).
+1. **Standard:** supported ISP quality modes, AF/AE wait/precapture with deadlines, full-stream JPEG; image and result correlate by sensor timestamp. EXIF never invents an ISO, exposure, camera sensor model or flash firing event.
+2. **OEM extension:** advertised HDR/Night `CameraExtensionSession`, independent supported stream sizes and bounded session fallback. The OEM owns exposure/flash. Extensions are not a promise of stock-app parity.
+3. **Fusion:** three independently correlated −1/0/+1 requests. Uses actual metadata when available for exposure normalization. JPEG decoding is capped near 12MP; normalized thumbnail translation alignment rejects low-confidence frames; linear-light weighted rows reject moving pixels against the middle reference. No RAW/neural/super-resolution claim.
+4. **PRIVATE ZSL:** capability/combination-gated input reader and ring of up to three Image/result pairs. Eligible frames are queued to `ImageWriter` and reprocessed to JPEG. The ring is cleared and images closed on reconfiguration. Flash/manual/crop/stale/unconverged cases use ordinary capture. Severe thermal state disables the ring.
+
+### Rendering and memory
+
+`Oppo Natural (Camera2)` with no edits/crop/grain/calibration preserves original compressed pixel data and adds EXIF only. All other captures decode honouring EXIF orientation, crop once, apply the shared recipe/calibration colour matrix, bounded ISO-aware luminance sharpening and opt-in grain, then encode at JPEG quality 98. Optional resizing is explicitly ordinary interpolation. Row buffers avoid full-frame integer arrays for sharpening/grain; editing decode size respects the app heap budget. Gallery hardware is closed before higher-resolution photo decoding.
+
+The TextureView's layer paint applies the shared colour matrix; recipe thumbnail samples use that matrix too. A sampled ungraded preview supports the split comparison. Preview does not claim to simulate final sharpening/grain or every OEM tone operation. Grid is composition-only; accelerometer level and orientation listeners are lifecycle-managed.
+
+### Persistence and interchange
+
+The original 77 recipes remain in `RecipeCatalog`, plus three baseline profiles. SQLite stores customs and favourites; imports validate first, assign new custom IDs, then save transactionally. JSON has a typed/versioned envelope and legacy array support. QR payloads are bounded compressed JSON with decompression limits; the image codec uses ZXing. SAF handles document/QR PNG exports and user-selected imports. No externally exported file provider or broad modern photo-library access is needed.
+
+### Privacy and releases
+
+Scoped MediaStore writes are pending until complete; failures remove partial rows. The app's output gallery derives EXIF and dimensions from real saved files. Only an explicit release-check button contacts GitHub. No photo network path, analytics or automatic installation exists. The alpha updater excludes beta/RC. CI runs production-function tests, Robolectric native-graphics tests and lint. Signing secrets are isolated in release jobs; version/package/signature checks precede prerelease publishing. Beta promotion has a separate approval guard and uncompleted handset gates.

@@ -1,6 +1,7 @@
 package com.mobilefilmlab.camera.camera
 
 import android.os.Build
+import com.mobilefilmlab.camera.BuildConfig
 import com.mobilefilmlab.camera.data.model.CameraSpec
 
 object CameraDiagnosticsReport {
@@ -26,8 +27,11 @@ object CameraDiagnosticsReport {
             sb.append("  • Physical Focal Length: ${spec.focalLengthMm} mm\n")
             sb.append("  • Aperture: f/${spec.apertureFNumber}\n")
             sb.append("  • Sensor Dimensions: ${spec.sensorWidthMm} mm × ${spec.sensorHeightMm} mm\n")
-            sb.append("  • Active Sensor Array: ${spec.activeArrayWidth} × ${spec.activeArrayHeight} (${String.format("%.1f", spec.maxResolutionMp)} MP)\n")
+            sb.append("  • Active sensor array: ${spec.activeArrayWidth} × ${spec.activeArrayHeight}; preferred exposed JPEG ~${String.format("%.1f", spec.maxResolutionMp)} MP\n")
             sb.append("  • Logical Multi-Camera: ${if (spec.isLogicalMultiCamera) "Yes (Physical IDs: ${spec.physicalCameraIds.joinToString()})" else "No (Direct Physical Access)"}\n")
+            sb.append("  • Open ID: ${spec.openCameraId}; physical output ID: ${spec.physicalOutputId ?: "direct"}\n")
+            sb.append("  • OEM extension IDs: ${spec.extensionModes}; PRIVATE reprocessing: ${spec.privateReprocessing}\n")
+            sb.append("  • Manual exposure: ${spec.manualSensor}; manual WB: ${spec.manualWb}; flash: ${spec.hasFlash}\n")
             sb.append("  • RAW / DNG Support: ${if (spec.hasRawSupport) "Available (RAW_SENSOR)" else "Not Exposed to 3rd-Party"}\n")
             sb.append("  • Sensitivity Range: ISO ${spec.minIso} .. ISO ${spec.maxIso}\n")
             sb.append("  • Shutter Range: 1/${(1_000_000_000L / spec.minExposureNs.coerceAtLeast(1L))}s .. ${(spec.maxExposureNs / 1_000_000_000L)}s\n")
@@ -42,8 +46,8 @@ object CameraDiagnosticsReport {
         }
 
         sb.append("\n=========================================\n")
-        sb.append("Report generated for GPL-3.0 compliance\n")
-        sb.append("MobileFilmLab v0.1.0-alpha.1\n")
+        sb.append("Report generated for device testing (no unique identifiers)\n")
+        sb.append("MobileFilmLab ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n")
         return sb.toString()
     }
 }

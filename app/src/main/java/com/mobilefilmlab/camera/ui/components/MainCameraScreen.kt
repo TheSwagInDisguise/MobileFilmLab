@@ -1,38 +1,23 @@
 package com.mobilefilmlab.camera.ui.components
 
 import android.content.Intent
+import android.graphics.Bitmap
+import android.net.Uri
+import android.provider.Settings
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bolt
-import androidx.compose.material.icons.filled.FlashAuto
-import androidx.compose.material.icons.filled.FlashOff
-import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Photo
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -43,288 +28,102 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mobilefilmlab.camera.camera.FlashMode
-import com.mobilefilmlab.camera.ui.theme.AccentGold
-import com.mobilefilmlab.camera.ui.theme.BgDark
-import com.mobilefilmlab.camera.ui.theme.BorderDark
-import com.mobilefilmlab.camera.ui.theme.SurfaceDark
-import com.mobilefilmlab.camera.ui.theme.TextMuted
+import com.mobilefilmlab.camera.data.model.Recipe
+import com.mobilefilmlab.camera.data.model.RecipeCatalog
+import com.mobilefilmlab.camera.ui.theme.*
 import com.mobilefilmlab.camera.ui.viewmodel.CameraMode
 import com.mobilefilmlab.camera.ui.viewmodel.CameraViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MainCameraScreen(
-    viewModel: CameraViewModel,
-    modifier: Modifier = Modifier
-) {
-    val context = LocalContext.current
-    val mode by viewModel.mode.collectAsState()
-    val flashMode by viewModel.flashMode.collectAsState()
-    val activeLens by viewModel.activeLens.collectAsState()
-    val is2xActive by viewModel.is2xActive.collectAsState()
-    val framingConfig by viewModel.framingConfig.collectAsState()
-    val activeRecipe by viewModel.activeRecipe.collectAsState()
-    val allRecipes by viewModel.allRecipes.collectAsState()
-    val puckTone by viewModel.puckTone.collectAsState()
-    val puckColor by viewModel.puckColor.collectAsState()
-    val evCompensation by viewModel.evCompensation.collectAsState()
-    val iso by viewModel.iso.collectAsState()
-    val shutterSpeed by viewModel.shutterSpeed.collectAsState()
-    val whiteBalanceKelvin by viewModel.whiteBalanceKelvin.collectAsState()
-    val focusMode by viewModel.focusMode.collectAsState()
-
-    val isRecipeSheetOpen by viewModel.isRecipeSheetOpen.collectAsState()
-    val isDiagnosticsOpen by viewModel.isDiagnosticsOpen.collectAsState()
-    val isAboutOpen by viewModel.isAboutOpen.collectAsState()
-    val isShutterFlashing by viewModel.isShutterFlashing.collectAsState()
-    val lastCapturedUri by viewModel.lastCapturedUri.collectAsState()
-    val lastCapturedThumbnail by viewModel.lastCapturedThumbnail.collectAsState()
-    val userNotice by viewModel.userNotice.collectAsState()
-
-    LaunchedEffect(userNotice) {
-        userNotice?.let {
-            Toast.makeText(context, it, Toast.LENGTH_SHORT).show()
-            viewModel.userNotice.value = null
-        }
-    }
-
-    Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(BgDark)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp, vertical = 20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            // ==================== TOP ACTION BAR ====================
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Interactive Flash / Torch Button
-                val (flashIcon, flashTint) = when (flashMode) {
-                    FlashMode.OFF -> Pair(Icons.Default.FlashOff, TextMuted)
-                    FlashMode.AUTO -> Pair(Icons.Default.FlashAuto, AccentGold)
-                    FlashMode.ON -> Pair(Icons.Default.FlashOn, AccentGold)
-                    FlashMode.TORCH -> Pair(Icons.Default.Bolt, AccentGold)
+fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
+    val context=LocalContext.current
+    val mode by viewModel.mode.collectAsState(); val flash by viewModel.flashMode.collectAsState()
+    val lens by viewModel.activeLens.collectAsState(); val crop by viewModel.cropFactor.collectAsState()
+    val framing by viewModel.framingConfig.collectAsState(); val recipe by viewModel.activeRecipe.collectAsState()
+    val recipes by viewModel.allRecipes.collectAsState(); val tone by viewModel.puckTone.collectAsState(); val color by viewModel.puckColor.collectAsState()
+    val ev by viewModel.evCompensation.collectAsState(); val iso by viewModel.iso.collectAsState(); val shutter by viewModel.shutterSpeed.collectAsState()
+    val kelvin by viewModel.whiteBalanceKelvin.collectAsState(); val focus by viewModel.focusMode.collectAsState()
+    val recipeOpen by viewModel.isRecipeSheetOpen.collectAsState(); val settingsOpen by viewModel.isSettingsOpen.collectAsState()
+    val diagnosticsOpen by viewModel.isDiagnosticsOpen.collectAsState(); val aboutOpen by viewModel.isAboutOpen.collectAsState()
+    val galleryOpen by viewModel.isGalleryOpen.collectAsState(); val busy by viewModel.isCapturing.collectAsState()
+    val flashing by viewModel.isShutterFlashing.collectAsState(); val thumbnail by viewModel.lastCapturedThumbnail.collectAsState()
+    val notice by viewModel.userNotice.collectAsState(); val settings by viewModel.settings.collectAsState()
+    val specs by viewModel.cameraEngine.cameraSpecs.collectAsState(); val streaming by viewModel.cameraEngine.isCameraStreaming.collectAsState()
+    val cameraError by viewModel.cameraEngine.cameraError.collectAsState(); val pipeline by viewModel.cameraEngine.pipelineStatus.collectAsState()
+    val captureProgress by viewModel.cameraEngine.progress.collectAsState(); val processing by viewModel.processingProgress.collectAsState()
+    val photos by viewModel.photos.collectAsState(); val thermal by viewModel.thermalStatus.collectAsState()
+    val updateStatus by viewModel.updateStatus.collectAsState(); val update by viewModel.availableUpdate.collectAsState()
+    var previewFrame by remember { mutableStateOf<Bitmap?>(null) }
+    var qrRecipe by remember { mutableStateOf<Recipe?>(null) }
+    val favourites=remember(recipes) { recipes.filter { it.isFavourite }.take(6) }
+    val export=rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { it?.let(viewModel::exportRecipe) }
+    val import=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let { uri -> viewModel.importRecipes(uri) } }
+    val importQr=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let { uri -> viewModel.importRecipes(uri,true) } }
+    LaunchedEffect(notice) { notice?.let { Toast.makeText(context,it,Toast.LENGTH_LONG).show(); viewModel.userNotice.value=null } }
+    Box(modifier.fillMaxSize().background(BgDark).systemBarsPadding()) {
+        Column(Modifier.fillMaxSize().padding(horizontal=14.dp,vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+                IconButton(onClick=viewModel::toggleFlash,enabled=!busy) {
+                    val icon=when(flash) { FlashMode.OFF->Icons.Default.FlashOff; FlashMode.AUTO->Icons.Default.FlashAuto; FlashMode.ON->Icons.Default.FlashOn; FlashMode.TORCH->Icons.Default.Bolt }
+                    Icon(icon,"Flash: ${flash.name}",tint=if(flash==FlashMode.OFF) TextSecondary else AccentGold)
                 }
-
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(SurfaceDark)
-                        .border(1.dp, BorderDark, CircleShape)
-                        .clickable { viewModel.toggleFlash() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = flashIcon,
-                        contentDescription = "Flash Toggle ($flashMode)",
-                        tint = flashTint,
-                        modifier = Modifier.size(19.dp)
-                    )
-                }
-
-                // Center AUTO vs PRO Mode Switcher
-                AutoProModeToggle(
-                    currentMode = mode,
-                    onModeSelected = { viewModel.setMode(it) }
-                )
-
-                // Info / About Icon
-                Box(
-                    modifier = Modifier
-                        .size(38.dp)
-                        .clip(CircleShape)
-                        .background(SurfaceDark)
-                        .border(1.dp, BorderDark, CircleShape)
-                        .clickable { viewModel.isAboutOpen.value = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "About",
-                        tint = Color.White,
-                        modifier = Modifier.size(19.dp)
-                    )
-                }
+                AutoProModeToggle(mode,viewModel::setMode)
+                IconButton(onClick={ viewModel.isAboutOpen.value=true },enabled=!busy) { Icon(Icons.Default.Info,"About MobileFilmLab",tint=Color.White) }
             }
-
-            Spacer(modifier = Modifier.height(6.dp))
-
-            // ==================== VIEWFINDER AREA ====================
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxWidth(),
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                CameraViewfinder(
-                    cameraEngine = viewModel.cameraEngine,
-                    activeRecipe = activeRecipe,
-                    puckTone = puckTone,
-                    puckColor = puckColor,
-                    isShutterFlashing = isShutterFlashing,
-                    modifier = Modifier.fillMaxSize()
-                )
-
-                // Floating Lens Selection Bar inside lower part of viewfinder
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                ) {
-                    LensSelectorBar(
-                        activeLens = activeLens,
-                        is2xCropActive = is2xActive,
-                        onLensSelected = { viewModel.selectLens(it) },
-                        onToggle2xCrop = { viewModel.toggle2xCrop() }
-                    )
-                }
-            }
-
-            // Honest Crop Telemetry Badge
-            HonestCropBadge(config = framingConfig)
-
-            // Pro Mode Manual Control Strip
-            if (mode == CameraMode.PRO) {
-                ManualControlStrip(
-                    evCompensation = evCompensation,
-                    iso = iso,
-                    shutter = shutterSpeed,
-                    kelvin = whiteBalanceKelvin,
-                    focusMode = focusMode,
-                    onEvClick = { viewModel.cycleEvCompensation() },
-                    onIsoClick = { viewModel.cycleIso() },
-                    onShutterClick = { viewModel.cycleShutter() },
-                    onWbClick = { viewModel.cycleWhiteBalance() },
-                    onFocusClick = { viewModel.cycleFocus() },
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            } else {
-                Spacer(modifier = Modifier.height(4.dp))
-            }
-
-            // Film Look Pill
-            FilmLookPill(
-                recipe = activeRecipe,
-                onClick = { viewModel.isRecipeSheetOpen.value = true },
-                modifier = Modifier.padding(vertical = 4.dp)
-            )
-
-            // ==================== BOTTOM CAPTURE DECK ====================
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 10.dp, horizontal = 18.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                // Interactive Gallery Thumbnail Shortcut
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(SurfaceDark)
-                        .border(1.5.dp, BorderDark, RoundedCornerShape(14.dp))
-                        .clickable {
-                            lastCapturedUri?.let { uri ->
-                                try {
-                                    val intent = Intent(Intent.ACTION_VIEW).apply {
-                                        setDataAndType(uri, "image/*")
-                                        flags = Intent.FLAG_GRANT_READ_URI_PERMISSION
-                                    }
-                                    context.startActivity(intent)
-                                } catch (e: Exception) {
-                                    Toast.makeText(context, "Could not open gallery viewer", Toast.LENGTH_SHORT).show()
-                                }
-                            } ?: run {
-                                Toast.makeText(context, "No photos captured yet", Toast.LENGTH_SHORT).show()
+            BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
+                val width=minOf(maxWidth,maxHeight*.75f)
+                Box(Modifier.width(width).height(width/.75f)) {
+                    CameraViewfinder(viewModel.cameraEngine,recipe,tone,color,flashing,settings,
+                        samplePreview=recipeOpen || favourites.size>1,controlsEnabled=!busy,
+                        onPreviewFrame={ previewFrame=it },modifier=Modifier.fillMaxSize())
+                    if(!streaming && cameraError!=null) {
+                        Column(Modifier.align(Alignment.Center).background(SurfaceDark.copy(alpha=.95f),RoundedCornerShape(14.dp)).padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+                            Text(cameraError!!,color=Color.White,fontSize=12.sp)
+                            Row {
+                                TextButton(onClick=viewModel::onPermissionGranted) { Text("Retry") }
+                                TextButton(onClick={ runCatching { context.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,Uri.parse("package:${context.packageName}"))) } }) { Text("App settings") }
                             }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (lastCapturedThumbnail != null) {
-                        Image(
-                            bitmap = lastCapturedThumbnail!!.asImageBitmap(),
-                            contentDescription = "Last photo",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize()
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Default.Photo,
-                            contentDescription = "Gallery",
-                            tint = TextMuted,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        }
+                    }
+                    Column(Modifier.align(Alignment.BottomCenter).padding(bottom=12.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
+                        if(favourites.size>1) LazyRow(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                            items(favourites,key={ it.id }) { fav ->
+                                Row(Modifier.clip(RoundedCornerShape(14.dp)).background(Color.Black.copy(alpha=.55f)).clickable(enabled=!busy) { viewModel.selectRecipe(fav) }.padding(5.dp),verticalAlignment=Alignment.CenterVertically) {
+                                    RecipeLiveThumbnail(previewFrame,fav,settings.calibration,Modifier.size(24.dp,30.dp).clip(RoundedCornerShape(5.dp)))
+                                    Text(fav.name,fontSize=9.sp,color=if(fav.id==recipe.id) AccentGold else Color.White,modifier=Modifier.padding(horizontal=6.dp))
+                                }
+                            }
+                        }
+                        LensSelectorBar(lens,crop,specs.filter { it.isBackFacing }.map { it.lensType }.toSet(),!busy,viewModel::selectLens,viewModel::toggle2xCrop,viewModel::setCrop)
                     }
                 }
-
-                // Large Shutter Button (Photos only!)
-                ShutterButton(onClick = { viewModel.triggerShutter() })
-
-                // Camera Diagnostics Shortcut
-                Box(
-                    modifier = Modifier
-                        .size(50.dp)
-                        .clip(CircleShape)
-                        .background(SurfaceDark)
-                        .border(1.5.dp, BorderDark, CircleShape)
-                        .clickable { viewModel.isDiagnosticsOpen.value = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Settings,
-                        contentDescription = "Diagnostics",
-                        tint = Color.White,
-                        modifier = Modifier.size(22.dp)
-                    )
+            }
+            HonestCropBadge(framing)
+            if(mode==CameraMode.PRO) ManualControlStrip(ev,iso,shutter,kelvin,focus,viewModel::cycleEvCompensation,viewModel::cycleIso,viewModel::cycleShutter,viewModel::cycleWhiteBalance,viewModel::cycleFocus)
+            FilmLookPill(recipe,onClick={ if(!busy) viewModel.isRecipeSheetOpen.value=true })
+            if(busy) Text(processing.ifBlank { captureProgress.ifBlank { "Capturing…" } },fontSize=11.sp,color=AccentGold)
+            Row(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=8.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
+                Box(Modifier.size(52.dp).clip(RoundedCornerShape(15.dp)).background(SurfaceDark).clickable(enabled=!busy) { viewModel.openGallery() },contentAlignment=Alignment.Center) {
+                    if(thumbnail!=null) Image(thumbnail!!.asImageBitmap(),"Open photo gallery",Modifier.fillMaxSize(),contentScale=ContentScale.Crop)
+                    else Icon(Icons.Default.Photo,"Open photo gallery",tint=TextSecondary)
                 }
+                ShutterButton(onClick=viewModel::triggerShutter,enabled=streaming && !busy,busy=busy)
+                IconButton(onClick={ viewModel.isSettingsOpen.value=true },enabled=!busy,modifier=Modifier.size(52.dp).background(SurfaceDark,RoundedCornerShape(15.dp))) { Icon(Icons.Default.Settings,"Camera settings",tint=Color.White) }
             }
         }
-
-        // ==================== BOTTOM SHEET: RECIPE & 2D PAD ====================
-        if (isRecipeSheetOpen) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.5f))
-                    .clickable { viewModel.isRecipeSheetOpen.value = false },
-                contentAlignment = Alignment.BottomCenter
-            ) {
-                RecipeBottomSheet(
-                    recipes = allRecipes,
-                    activeRecipe = activeRecipe,
-                    puckTone = puckTone,
-                    puckColor = puckColor,
-                    onRecipeSelected = { viewModel.selectRecipe(it) },
-                    onToggleFavourite = { viewModel.toggleFavourite(it) },
-                    onPuckMoved = { tone, color -> viewModel.updatePuck(tone, color) },
-                    onResetPuck = { viewModel.resetPuck() },
-                    onSaveCustomRecipe = { name -> viewModel.saveAsCustomRecipe(name) },
-                    onDismiss = { viewModel.isRecipeSheetOpen.value = false },
-                    modifier = Modifier.clickable(enabled = false) {}
-                )
-            }
+        if(recipeOpen) ModalBottomSheet(onDismissRequest={ viewModel.isRecipeSheetOpen.value=false },sheetState=rememberModalBottomSheetState(skipPartiallyExpanded=true),containerColor=SurfaceDark,dragHandle=null) {
+            RecipeBottomSheet(recipes,recipe,tone,color,previewFrame,settings.calibration,viewModel::selectRecipe,viewModel::toggleFavourite,viewModel::updatePuck,viewModel::resetPuck,
+                viewModel::saveAsCustomRecipe,viewModel::deleteRecipe,
+                onExport={ export.launch("MobileFilmLab-${recipe.name.replace("[^a-zA-Z0-9]".toRegex(),"").take(40)}.filmrecipe") },
+                onImport={ import.launch(arrayOf("application/json","text/plain","application/octet-stream","*/*")) },
+                onQr={ qrRecipe=viewModel.tunedRecipe() },onImportQr={ importQr.launch(arrayOf("image/*")) },onDismiss={ viewModel.isRecipeSheetOpen.value=false })
         }
-
-        // ==================== DIALOGS ====================
-        if (isDiagnosticsOpen) {
-            DiagnosticsDialog(
-                reportText = viewModel.getDiagnosticsReport(),
-                onDismiss = { viewModel.isDiagnosticsOpen.value = false }
-            )
-        }
-
-        if (isAboutOpen) {
-            AboutDialog(onDismiss = { viewModel.isAboutOpen.value = false })
-        }
+        if(settingsOpen) SettingsDialog(settings,lens,pipeline,thermal,updateStatus,update,viewModel::updateSettings,viewModel::checkUpdates,
+            onDiagnostics={ viewModel.isSettingsOpen.value=false; viewModel.isDiagnosticsOpen.value=true },onDismiss={ viewModel.isSettingsOpen.value=false })
+        if(diagnosticsOpen) DiagnosticsDialog(viewModel.getDiagnosticsReport()) { viewModel.isDiagnosticsOpen.value=false }
+        if(aboutOpen) AboutDialog { viewModel.isAboutOpen.value=false }
+        if(galleryOpen) InAppGalleryDialog(photos,viewModel.photoRepository,viewModel::deletePhoto,viewModel::closeGallery)
+        qrRecipe?.let { r -> RecipeQrDialog(r,{ viewModel.userNotice.value=it }) { qrRecipe=null } }
     }
 }

@@ -1,0 +1,24 @@
+Categories:
+  - Photography
+License: GPL-3.0-or-later
+SourceCode: https://github.com/TheSwagInDisguise/MobileFilmLab
+IssueTracker: https://github.com/TheSwagInDisguise/MobileFilmLab/issues
+Changelog: https://github.com/TheSwagInDisguise/MobileFilmLab/blob/main/CHANGELOG.md
+Summary: Photos-only Camera2 film recipe lab
+Description: |-
+  Independent Camera2 photo application with the complete 77-recipe Recipe Lab
+  catalogue, neutral Camera2 baseline, custom presets, honest native-pixel crops,
+  and capability-gated experimental processing. Not a proprietary stock camera
+  replacement. Alpha testing; handset validation is pending.
+Builds:
+  - versionName: 0.1.0-alpha.9
+    versionCode: 9
+    commit: v0.1.0-alpha.9
+    subdir: app
+    gradle:
+      - yes
+AutoUpdateMode: None
+UpdateCheckMode: None
+CurrentVersion: 0.1.0-alpha.9
+CurrentVersionCode: 9
+# Starter metadata only; not submitted to or verified by F-Droid.

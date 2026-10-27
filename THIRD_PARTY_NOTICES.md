@@ -57,3 +57,18 @@ MobileFilmLab incorporates or relies upon the following open-source software lib
 * **Licence:** Eclipse Public License 1.0 (EPL-1.0)
 * **Repository:** https://github.com/junit-team/junit4
 * **Usage:** Automated unit tests for recipe validation and crop logic.
+
+---
+
+### 7. ZXing Core
+* **Copyright:** ZXing authors
+* **Licence:** Apache License, Version 2.0
+* **Repository:** https://github.com/zxing/zxing
+* **Usage:** Local recipe QR PNG encoding and scanning of user-selected QR images. No network scanner service.
+
+---
+
+### 8. Robolectric (tests only)
+* **Licence:** MIT
+* **Repository:** https://github.com/robolectric/robolectric
+* **Usage:** Android EXIF/bitmap/SQLite/native-graphics regression tests on the JVM. Not shipped in the APK.

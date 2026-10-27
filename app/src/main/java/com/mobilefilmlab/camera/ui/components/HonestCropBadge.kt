@@ -38,7 +38,7 @@ fun HonestCropBadge(
         )
         Spacer(modifier = Modifier.width(6.dp))
         Text(
-            text = "${config.effectiveFocalLength35mm}mm • ${config.cropStatus.label}",
+            text = "${config.effectiveFocalLength35mm}mm eq. • ${config.cropStatus.label} • ~${String.format("%.1f", config.estimatedResolutionMp)}MP",
             fontSize = 11.sp,
             fontWeight = FontWeight.SemiBold,
             color = TextSecondary
