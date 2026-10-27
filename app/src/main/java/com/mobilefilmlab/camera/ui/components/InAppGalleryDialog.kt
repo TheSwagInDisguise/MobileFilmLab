@@ -54,9 +54,16 @@ fun InAppGalleryDialog(photos: List<PhotoRepository.Photo>,repository: PhotoRepo
                 IconButton(onDismiss) { Icon(Icons.Default.Close,"Close gallery",tint=Color.White) }
                 Text(if(photos.isEmpty()) "No photos yet" else "${pager.currentPage+1} / ${photos.size}",color=Color.White)
                 Row {
+                    if(current?.isRaw==true) IconButton(onClick={ current?.let { p ->
+                        runCatching {
+                            context.startActivity(Intent(Intent.ACTION_VIEW).apply {
+                                setDataAndType(p.uri,p.shareMime); clipData=ClipData.newRawUri("RAW DNG",p.uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            })
+                        }.onFailure { Toast.makeText(context,"No compatible RAW/DNG viewer installed",Toast.LENGTH_LONG).show() }
+                    } }) { Icon(Icons.Default.OpenInNew,"Open DNG in compatible editor",tint=Color.White) }
                     IconButton(onClick={ current?.let { p ->
                         runCatching {
-                            val intent=Intent(Intent.ACTION_SEND).apply { type="image/jpeg"; putExtra(Intent.EXTRA_STREAM,p.uri); clipData=ClipData.newRawUri("Photo",p.uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+                            val intent=Intent(Intent.ACTION_SEND).apply { type=p.shareMime; putExtra(Intent.EXTRA_STREAM,p.uri); clipData=ClipData.newRawUri("Photo",p.uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
                             context.startActivity(Intent.createChooser(intent,"Share photo"))
                         }.onFailure { Toast.makeText(context,"No sharing app available",Toast.LENGTH_SHORT).show() }
                     } },enabled=current!=null) { Icon(Icons.Default.Share,"Share photo",tint=Color.White) }
@@ -89,7 +96,7 @@ private fun ZoomablePhoto(photo: PhotoRepository.Photo,repository: PhotoReposito
     var error by remember(photo.uri) { mutableStateOf<String?>(null) }
     val full=active && scale>1.6f
     val bitmap by produceState<Bitmap?>(null,photo.uri,full) {
-        value=withContext(Dispatchers.IO) { runCatching { repository.load(photo.uri,full) }.onFailure { error="Could not load photo. Try opening it in your system gallery." }.getOrNull() }
+        value=withContext(Dispatchers.IO) { runCatching { repository.load(photo.uri,full) }.onFailure { error=if(photo.isRaw) "This device cannot preview the DNG. Use Open in a compatible RAW editor; the saved sensor file is unchanged." else "Could not load photo. Try opening it in your system gallery." }.getOrNull() }
     }
     LaunchedEffect(active) { if(!active) { scale=1f; offset=Offset.Zero } else onZoom(scale>1f) }
     LaunchedEffect(scale,active) { if(active) onZoom(scale>1f) }

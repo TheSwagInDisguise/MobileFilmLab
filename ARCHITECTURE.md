@@ -2,7 +2,7 @@
 
 ## Data flow
 
-Compose controls → `CameraViewModel` state/snapshot → `CameraEngine` (Camera2 handler) → timestamp-correlated JPEG + capture result → worker-thread `ImageProcessor` → atomic MediaStore publication.
+Compose controls → `CameraViewModel` state/snapshot → `CameraEngine` (Camera2 handler) → timestamp-correlated JPEG/RAW + capture result → worker-thread `ImageProcessor` → atomic MediaStore publication.
 
 ### Camera ownership
 
@@ -36,3 +36,13 @@ Scoped MediaStore writes are pending until complete; failures remove partial row
 ### Documentation rendering
 
 `DocumentationScreenshotsTest` renders the production Compose screen and modal recipe drawer with Robolectric native graphics. A generated scene and illustrative state are injected only for debug inspection. Signed releases cannot activate that provider and always retain the real TextureView camera path; documentation images are not Android assets or APK content. The demo is visibly labelled and is not evidence of physical-camera capability or image quality. See [provenance](docs/SCREENSHOTS.md).
+
+### Beta.2 dynamic routes and sensor RAW
+
+The rear selector consumes all photo-capable Camera2 IDs/physical routes and selects an exact camera ID, not a lens-category representative. Focal labels are metadata-derived; logical Auto routes remain explicit. Calibration keys are scoped to camera IDs with a legacy category fallback.
+
+RAW sessions are separate standard sessions: preview+RAW_SENSOR for RAW-only, or preview+RAW_SENSOR+JPEG for pairs. No still-JPEG target exists in RAW-only. Native RAW sizes are bounded at 55MP and retried within a fixed budget; maximum-pixel-mode, extensions, fusion, ZSL, enlargement and crop are not used. Image/result/optional-JPEG timestamps must match; physical output routes require physical capture metadata.
+
+Acquired RAW images have an idempotent lease over a retained reader. Session retirement closes the camera but defers the reader until an IO worker finishes DngCreator.writeImage. No full RAW ByteArray copy is allocated. The RAW image is released before optional JPEG grading to reduce peak memory. Cancellation, incomplete metadata and failure paths release pending image leases.
+
+DNG output streams directly to scoped storage. Modern rows remain pending until both files are written; cleanup removes created rows after failure. API 28 lacks pending visibility, and two-row publication is not universally transactional. The gallery distinguishes DNG MIME/types and offers external viewing if the platform decoder cannot render it. See [implementation and validation boundaries](docs/DYNAMIC_CAMERAS_AND_RAW.md).

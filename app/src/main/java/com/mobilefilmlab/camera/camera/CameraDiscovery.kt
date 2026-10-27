@@ -8,6 +8,8 @@ import android.os.Build
 import android.util.Log
 import com.mobilefilmlab.camera.data.model.CameraSpec
 import com.mobilefilmlab.camera.data.model.LensType
+import com.mobilefilmlab.camera.data.model.StreamSize
+import com.mobilefilmlab.camera.data.model.RawStreamSelector
 import kotlin.math.hypot
 import kotlin.math.roundToInt
 
@@ -48,6 +50,15 @@ class CameraDiscovery(context: Context) {
         val max = ResolutionSelector.select(sizes.map { ResolutionSelector.Candidate(it.width,it.height) })
         val caps = (c.get(CC.REQUEST_AVAILABLE_CAPABILITIES) ?: intArrayOf())
         val parentCaps = (parent.get(CC.REQUEST_AVAILABLE_CAPABILITIES) ?: intArrayOf())
+        val advertisedRaw=if(caps.contains(CC.REQUEST_AVAILABLE_CAPABILITIES_RAW))
+            runCatching { map?.getOutputSizes(ImageFormat.RAW_SENSOR)?.map { StreamSize(it.width,it.height) }.orEmpty() }.getOrDefault(emptyList()) else emptyList()
+        val rawSizes=RawStreamSelector.candidates(advertisedRaw)
+        val rawReason=when {
+            !caps.contains(CC.REQUEST_AVAILABLE_CAPABILITIES_RAW) -> "RAW capability is not advertised"
+            advertisedRaw.isEmpty() -> "No RAW_SENSOR output sizes are advertised"
+            rawSizes.isEmpty() -> "Only RAW streams above the 55MP memory-safety limit are advertised"
+            else -> ""
+        }
         val iso = c.get(CC.SENSOR_INFO_SENSITIVITY_RANGE)
         val exp = c.get(CC.SENSOR_INFO_EXPOSURE_TIME_RANGE)
         val ev = parent.get(CC.CONTROL_AE_COMPENSATION_RANGE)
@@ -67,15 +78,17 @@ class CameraDiscovery(context: Context) {
             sensorWidthMm=sw, sensorHeightMm=sh, apertureFNumber=aperture,
             activeArrayWidth=active?.width() ?: 0, activeArrayHeight=active?.height() ?: 0,
             maxResolutionMp=(max?.area ?: 0L)/1_000_000f,
-            hasRawSupport=map?.outputFormats?.contains(ImageFormat.RAW_SENSOR) == true,
+            hasRawSupport=rawSizes.isNotEmpty(),
             minIso=iso?.lower ?: 50, maxIso=iso?.upper ?: 6400,
             minExposureNs=exp?.lower ?: 100_000L, maxExposureNs=exp?.upper ?: 1_000_000_000L,
             minEv=ev?.lower ?: 0, maxEv=ev?.upper ?: 0, evStep=parent.get(CC.CONTROL_AE_COMPENSATION_STEP)?.toFloat() ?: 0f,
-            lensType=type, displayName="${type.label}: ~$eq mm f/$aperture (ID $id${if (physicalId != null) " via $openId" else ""})",
+            lensType=type, displayName="${if(c.physicalCameraIds.isNotEmpty()) "Logical auto" else type.label}: ${if(eq>0) "~$eq mm eq." else "$f mm physical"} f/$aperture (ID $id${if (physicalId != null) " via $openId" else ""})",
             openCameraId=openId, physicalOutputId=physicalId, hasFlash=parent.get(CC.FLASH_INFO_AVAILABLE) == true,
             manualSensor=caps.contains(CC.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_SENSOR),
             manualWb=caps.contains(CC.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING),
-            privateReprocessing=parentCaps.contains(CC.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING), extensionModes=modes
+            privateReprocessing=parentCaps.contains(CC.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING), extensionModes=modes,
+            rawSizes=rawSizes, hasJpegSupport=sizes.isNotEmpty(), rawUnavailableReason=rawReason,
+            availableFocalLengthsMm=c.get(CC.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)?.toList().orEmpty()
         )
     }
 }

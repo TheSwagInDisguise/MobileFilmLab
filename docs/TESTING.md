@@ -1,49 +1,60 @@
-# MobileFilmLab public beta testing
+# MobileFilmLab beta.2 public-release testing
 
-**Release:** `v0.2.0-beta.1` · versionCode **10** · package `com.mobilefilmlab.camera`
+**Version:** `0.2.0-beta.2` · code **11** · package `com.mobilefilmlab.camera`
 **Primary target:** **Oppo Find X9 Ultra** · Android 9 / API 28 minimum
 
-Thank you for helping test the first public beta. Initial owner feedback on alpha.9 was that it was working well; the broader compatibility, image-quality and stress matrix below is still open. Other-device support will expand with beta testers' reports, not an assumption that every Android camera behaves alike.
+This beta-version build is published as a regular Latest GitHub Release at the owner's request. That classification is not broad-device certification. The new RAW/session paths need real handset testing; there is no connected camera in the JVM/CI test environment.
 
 ## Install safely
 
-1. Download `MobileFilmLab-v0.2.0-beta.1-signed.apk` from the [official release](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.1).
-2. Optionally verify it against `checksums.txt` and the [established signing certificate](RELEASE_SIGNING.md).
-3. Install **over the existing release** to retain custom recipes/favourites. The package and signing key are unchanged; code 10 is higher than alpha.9's code 9. Do not uninstall unless you intend to erase app data. A debug build has a separate package.
-4. Allow camera permission. Android 9 also needs legacy storage permission. Android 10+ writes to `Pictures/MobileFilmLab/` through scoped storage.
-5. Use another camera for important photos while testing. Back up custom recipe exports and any photos you cannot replace.
+1. Download `MobileFilmLab-v0.2.0-beta.2-signed.apk` from the [current release](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/latest).
+2. Verify the attached checksum and optionally the [established signing certificate](RELEASE_SIGNING.md).
+3. Install **over** code 10 to retain app data; do not uninstall. Debug builds are separate apps. Back up important photos and export custom recipes.
+4. Grant camera permission; Android 9 also needs legacy storage permission. Photos go to `Pictures/MobileFilmLab/`.
 
-## Quick smoke checklist
+## Dynamic-camera checks
 
-- [ ] App opens; permission denial is explained and granting permission/retrying recovers.
-- [ ] AUTO preview is correctly oriented; a portrait and a landscape-held capture save with correct orientation and dimensions.
-- [ ] The default neutral baseline works without unexpected grade, grain or mandatory enlargement.
-- [ ] Every **enabled** rear lens slot selects the expected view. Unavailable slots stay disabled; report which slots your firmware exposes.
-- [ ] 1× / 1.5× / 2× / 3× crops match the saved framing. Short-tap `2×`; hold it for all levels. Do not assume slot names prove optical magnification.
-- [ ] Tap focus/metering, supported flash states, volume/camera shutter keys and return from background work without stuck capture state.
-- [ ] PRO controls change when supported; switching to AUTO clears manual exposure/WB. Unsupported controls explain their limits.
-- [ ] Browse built-in looks, move the Tone/Warmth puck, use before/after, star a favourite and save a custom recipe.
-- [ ] Recipe file and QR-image export/import work. Imported presets do not replace built-ins.
-- [ ] Open the gallery, swipe, zoom, inspect dimensions/EXIF, share and confirm a test-photo deletion.
-- [ ] Saved custom recipes and favourites survive a restart and an install-over-alpha upgrade.
-- [ ] A manual update check uses the beta/stable channel; nothing downloads or installs silently.
+- [ ] Compare Settings → Camera capability report with the visible rear camera chips. The list is derived from exposed photo-capable Camera2 routes, not fixed UW/W/3x/10x slots.
+- [ ] Tap every reported route. Confirm the exact ID/view changes; hold a chip for details. Distinct cameras with similar focal lengths should remain selectable.
+- [ ] Logical multi-camera routes say **Auto**. Do not count a logical route as an extra physical lens or infer hidden lenses from product specifications.
+- [ ] Labels show approximate detected equivalent millimetres, physical millimetres marked `*`, or an ID when metadata is missing—not guessed zoom ratios.
+- [ ] Camera-ID-specific JPEG gains persist, and legacy calibration/favourites/custom recipes survive the upgrade.
 
-## Extended testing
+## JPEG regression
 
-Try daylight, indoor mixed light, low light, high-contrast scenes, fine textures and moving subjects. Compare the same scene/framing before judging a look. The default is the exposed Camera2 ISP JPEG, not a reproduction of proprietary stock-camera processing.
+- [ ] AUTO/PRO preview, portrait/landscape-held capture orientation, tap focus, supported flash and manual controls work.
+- [ ] The default Natural 1× unedited output retains camera JPEG pixel data without mandatory grain or enlargement.
+- [ ] Short-tap/hold the framing control; 1× / 1.5× / 2× / 3× saved framing matches preview without a second crop.
+- [ ] Recipes, Tone/Warmth, favourites, custom saving, local file/QR-image interchange and gallery share/delete still work.
+- [ ] Background/resume, hardware shutter and disabled controls during dialogs/capture remain correct.
 
-Optional OEM HDR/Night, JPEG-domain three-frame fusion and PRIVATE reprocessing ZSL are **experimental and capability-dependent**. Test one option at a time. Unsupported operation should explain the fallback rather than hang or manufacture an output claim. Report the selected pipeline, visible active/fallback message and actual saved dimensions. Leave optional features disabled if they cause problems.
+## RAW (DNG) only — on each capable route
 
-For reliability, try 50 captures across exposed lenses, a 10-minute preview session, repeated background/resume cycles, screen locking, camera-in-use conflicts and low storage. Stop if the phone becomes uncomfortably hot. Record failures; do not treat one successful photo as a completed soak or thermal test.
+- [ ] Open the format badge or Settings → Photo file format. RAW choices are disabled with a capability reason where unsupported.
+- [ ] Choose RAW only. Framing becomes uncropped **1×**, output native, pipeline standard Camera2, with no OEM HDR/Night/fusion/ZSL/enlargement.
+- [ ] Shoot. Exactly one `.dng` is saved, not a renamed JPEG or a `.jpg` companion.
+- [ ] Open the file in a **RAW-capable editor**, not just the app's preview. Confirm it recognises sensor RAW/DNG, dimensions/active area, orientation, ISO and exposure, and renders without a corrupt/unsupported-file error.
+- [ ] RAW is not graded by the selected recipe, grain, RGB gains or digital crop. Its camera preview is not a decoded-RAW quality reference; editing/WB interpretation can differ.
+- [ ] If Android cannot preview DNG, the gallery's Open in compatible editor and Share actions work with the DNG MIME type.
 
-## Report an issue or a device
+## RAW + JPEG
 
-Use the [bug report](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new?template=bug_report.yml) or [device compatibility](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new?template=device_support.yml) form. Include:
+- [ ] Shoot with RAW+JPEG. Two files share a stem: `.dng` and `.jpg`.
+- [ ] The JPEG reflects the selected look; the DNG remains sensor data. Native dimensions/active-area framing and rendering can differ.
+- [ ] Try a different recipe/optional JPEG grain. Verify the JPEG changes, not the underlying DNG processing.
+- [ ] Try switching to a JPEG-only route while RAW is selected. A format-change confirmation appears; cancellation retains the existing camera/format.
+- [ ] An unsupported or failed RAW session reports an error instead of silently saving a JPEG-only replacement.
+- [ ] Low-storage/write failure does not leave a reported successful but incomplete pair. Modern rows remain pending until writes finish; API 28 has no pending-row visibility guarantee.
 
-- App version, phone model, Android version and firmware/build version.
-- Lens/crop, AUTO/PRO, recipe and processing settings.
-- Minimal steps, expected behaviour, actual result and whether it repeats.
-- The **Camera capability report** from Settings, after reviewing/redacting private details.
-- If useful, a non-private screenshot or paired sample with dimensions/EXIF intact. Public issue attachments are public; never include credentials, personal photographs or precise location without intending to share them.
+## Lifecycle and stress
 
-See [known limitations](../KNOWN_LIMITATIONS.md), [validation status](BETA_READINESS.md), [privacy](PRIVACY.md) and the [AI-development disclosure](AI_DISCLOSURE.md). A beta label invites testing; it is not a certification of camera access, image quality or compatibility.
+- [ ] Capture several DNGs/pairs, then close/reopen the camera; no stuck shutter or exhausted image queue.
+- [ ] Background/lock during a RAW write and resume. Verify either complete files or a clear failure, not invalid-buffer crashes or orphaned pending rows.
+- [ ] Try 50 mixed captures and a 10-minute preview session. Stop if the device becomes uncomfortably hot. Record time, native dimensions, memory/heat symptoms and any stream rejection.
+- [ ] Switch back to JPEG and verify all previous pipelines and framing controls remain available as supported.
+
+## Report useful, non-private evidence
+
+Use the [bug/device forms](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose). Include app version/code, model, Android/firmware, camera ID/route, chosen format, pipeline/status message, saved dimensions and reproducible steps. Review/redact the capability report. Only share sample DNG/JPEGs and metadata you intend to make public; remove private scenes, identifying data and precise location first.
+
+[RAW implementation/limitations](DYNAMIC_CAMERAS_AND_RAW.md) · [Known limitations](../KNOWN_LIMITATIONS.md) · [Privacy](PRIVACY.md) · [AI-development disclosure](AI_DISCLOSURE.md)

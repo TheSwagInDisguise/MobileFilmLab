@@ -30,6 +30,8 @@ import androidx.compose.ui.unit.sp
 import com.mobilefilmlab.camera.camera.FlashMode
 import com.mobilefilmlab.camera.data.model.Recipe
 import com.mobilefilmlab.camera.data.model.RecipeCatalog
+import com.mobilefilmlab.camera.data.model.CameraOptions
+import com.mobilefilmlab.camera.settings.CaptureFormat
 import com.mobilefilmlab.camera.ui.theme.*
 import com.mobilefilmlab.camera.ui.viewmodel.CameraMode
 import com.mobilefilmlab.camera.ui.viewmodel.CameraViewModel
@@ -39,13 +41,14 @@ import com.mobilefilmlab.camera.ui.viewmodel.CameraViewModel
 fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
     val context=LocalContext.current
     val mode by viewModel.mode.collectAsState(); val flash by viewModel.flashMode.collectAsState()
-    val lens by viewModel.activeLens.collectAsState(); val crop by viewModel.cropFactor.collectAsState()
+    val selectedCamera by viewModel.cameraEngine.activeCameraSpec.collectAsState(); val crop by viewModel.cropFactor.collectAsState()
     val framing by viewModel.framingConfig.collectAsState(); val recipe by viewModel.activeRecipe.collectAsState()
     val recipes by viewModel.allRecipes.collectAsState(); val tone by viewModel.puckTone.collectAsState(); val color by viewModel.puckColor.collectAsState()
     val ev by viewModel.evCompensation.collectAsState(); val iso by viewModel.iso.collectAsState(); val shutter by viewModel.shutterSpeed.collectAsState()
     val kelvin by viewModel.whiteBalanceKelvin.collectAsState(); val focus by viewModel.focusMode.collectAsState()
     val recipeOpen by viewModel.isRecipeSheetOpen.collectAsState(); val settingsOpen by viewModel.isSettingsOpen.collectAsState()
     val diagnosticsOpen by viewModel.isDiagnosticsOpen.collectAsState(); val aboutOpen by viewModel.isAboutOpen.collectAsState()
+    val formatOpen by viewModel.isFormatPickerOpen.collectAsState(); val pendingCamera by viewModel.pendingCamera.collectAsState()
     val galleryOpen by viewModel.isGalleryOpen.collectAsState(); val busy by viewModel.isCapturing.collectAsState()
     val flashing by viewModel.isShutterFlashing.collectAsState(); val thumbnail by viewModel.lastCapturedThumbnail.collectAsState()
     val notice by viewModel.userNotice.collectAsState(); val settings by viewModel.settings.collectAsState()
@@ -74,8 +77,10 @@ fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
             BoxWithConstraints(Modifier.weight(1f).fillMaxWidth(),contentAlignment=Alignment.Center) {
                 val width=minOf(maxWidth,maxHeight*.75f)
                 Box(Modifier.width(width).height(width/.75f)) {
-                    CameraViewfinder(viewModel.cameraEngine,recipe,tone,color,flashing,settings,
-                        samplePreview=recipeOpen || favourites.size>1,controlsEnabled=!busy,
+                    val rawOnly=settings.format==CaptureFormat.RAW
+                    CameraViewfinder(viewModel.cameraEngine,if(rawOnly) RecipeCatalog.getDefaultRecipe() else recipe,if(rawOnly) 0f else tone,if(rawOnly) 0f else color,flashing,
+                        if(rawOnly) settings.copy(compare=false,calibration=com.mobilefilmlab.camera.settings.LensCalibration()) else settings,
+                        samplePreview=!rawOnly && (recipeOpen || favourites.size>1),controlsEnabled=!busy,
                         onPreviewFrame={ previewFrame=it },modifier=Modifier.fillMaxSize())
                     if(!streaming && cameraError!=null) {
                         Column(Modifier.align(Alignment.Center).background(SurfaceDark.copy(alpha=.95f),RoundedCornerShape(14.dp)).padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally) {
@@ -87,7 +92,7 @@ fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
                         }
                     }
                     Column(Modifier.align(Alignment.BottomCenter).padding(bottom=12.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
-                        if(favourites.size>1) LazyRow(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
+                        if(settings.format.writesJpeg && favourites.size>1) LazyRow(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                             items(favourites,key={ it.id }) { fav ->
                                 Row(Modifier.clip(RoundedCornerShape(14.dp)).background(Color.Black.copy(alpha=.55f)).clickable(enabled=!busy) { viewModel.selectRecipe(fav) }.padding(5.dp),verticalAlignment=Alignment.CenterVertically) {
                                     RecipeLiveThumbnail(previewFrame,fav,settings.calibration,Modifier.size(24.dp,30.dp).clip(RoundedCornerShape(5.dp)))
@@ -95,13 +100,19 @@ fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
                                 }
                             }
                         }
-                        LensSelectorBar(lens,crop,specs.filter { it.isBackFacing }.map { it.lensType }.toSet(),!busy,viewModel::selectLens,viewModel::toggle2xCrop,viewModel::setCrop)
+                        LensSelectorBar(selectedCamera?.cameraId,crop,CameraOptions.rear(specs),settings.format,!busy,viewModel::selectCamera,viewModel::toggle2xCrop,viewModel::setCrop)
                     }
                 }
             }
-            HonestCropBadge(framing)
+            Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically,horizontalArrangement=Arrangement.spacedBy(8.dp)) {
+                OutlinedButton(onClick={ viewModel.isFormatPickerOpen.value=true },enabled=!busy,contentPadding=PaddingValues(horizontal=10.dp,vertical=2.dp)) {
+                    Text(settings.format.badge,fontSize=10.sp)
+                }
+                Box(Modifier.weight(1f),contentAlignment=Alignment.Center) { HonestCropBadge(framing) }
+            }
             if(mode==CameraMode.PRO) ManualControlStrip(ev,iso,shutter,kelvin,focus,viewModel::cycleEvCompensation,viewModel::cycleIso,viewModel::cycleShutter,viewModel::cycleWhiteBalance,viewModel::cycleFocus)
-            FilmLookPill(recipe,onClick={ if(!busy) viewModel.isRecipeSheetOpen.value=true })
+            if(settings.format.writesJpeg) FilmLookPill(recipe,onClick={ if(!busy) viewModel.isRecipeSheetOpen.value=true })
+            else Text("RAW sensor data · no recipe applied · Camera2 preview",color=TextSecondary,fontSize=10.sp)
             if(busy) Text(processing.ifBlank { captureProgress.ifBlank { "Capturing…" } },fontSize=11.sp,color=AccentGold)
             Row(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=8.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                 Box(Modifier.size(52.dp).clip(RoundedCornerShape(15.dp)).background(SurfaceDark).clickable(enabled=!busy) { viewModel.openGallery() },contentAlignment=Alignment.Center) {
@@ -119,8 +130,16 @@ fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
                 onImport={ import.launch(arrayOf("application/json","text/plain","application/octet-stream","*/*")) },
                 onQr={ qrRecipe=viewModel.tunedRecipe() },onImportQr={ importQr.launch(arrayOf("image/*")) },onDismiss={ viewModel.isRecipeSheetOpen.value=false })
         }
-        if(settingsOpen) SettingsDialog(settings,lens,pipeline,thermal,updateStatus,update,viewModel::updateSettings,viewModel::checkUpdates,
+        if(settingsOpen) SettingsDialog(settings,selectedCamera,CameraOptions.rear(specs).size,pipeline,thermal,updateStatus,update,viewModel::updateSettings,viewModel::checkUpdates,
             onDiagnostics={ viewModel.isSettingsOpen.value=false; viewModel.isDiagnosticsOpen.value=true },onDismiss={ viewModel.isSettingsOpen.value=false })
+        if(formatOpen) CaptureFormatDialog(settings.format,selectedCamera,{ viewModel.updateSettings(settings.copy(format=it)) }) { viewModel.isFormatPickerOpen.value=false }
+        pendingCamera?.let { target ->
+            val replacement=if(target.hasJpegSupport) CaptureFormat.JPEG else CaptureFormat.RAW
+            AlertDialog(onDismissRequest={ viewModel.pendingCamera.value=null },title={ Text("Switch photo format?") },
+                text={ Text("${CameraOptions.label(target)} (ID ${target.cameraId}) does not expose ${settings.format.label}. Switch to ${replacement.label} for this camera? No photo will be taken automatically.") },
+                confirmButton={ TextButton(onClick=viewModel::confirmCameraFormatSwitch) { Text("Switch format & camera") } },
+                dismissButton={ TextButton(onClick={ viewModel.pendingCamera.value=null }) { Text("Cancel") } })
+        }
         if(diagnosticsOpen) DiagnosticsDialog(viewModel.getDiagnosticsReport()) { viewModel.isDiagnosticsOpen.value=false }
         if(aboutOpen) AboutDialog { viewModel.isAboutOpen.value=false }
         if(galleryOpen) InAppGalleryDialog(photos,viewModel.photoRepository,viewModel::deletePhoto,viewModel::closeGallery)

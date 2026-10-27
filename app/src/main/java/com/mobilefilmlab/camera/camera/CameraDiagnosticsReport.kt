@@ -12,16 +12,17 @@ object CameraDiagnosticsReport {
         sb.append("MobileFilmLab Camera Hardware Diagnostics\n")
         sb.append("Target Device: ${Build.MANUFACTURER} ${Build.MODEL} (${Build.DEVICE})\n")
         sb.append("Android Version: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
-        sb.append("Total Exposed Cameras: ${specs.size}\n")
+        sb.append("Total Exposed Camera2 IDs/routes: ${specs.size} (logical routes are not extra physical lenses)\n")
         sb.append("=========================================\n\n")
 
         val rearCameras = specs.filter { it.isBackFacing }
         val frontCameras = specs.filter { !it.isBackFacing }
 
-        sb.append("--- Rear Camera Array (${rearCameras.size} detected) ---\n")
+        sb.append("--- Rear Camera2 routes (${rearCameras.size} exposed, including logical routes) ---\n")
         rearCameras.forEachIndexed { index, spec ->
             sb.append("\n[Camera ${index + 1}: ${spec.displayName}]\n")
             sb.append("  • Camera ID: ${spec.cameraId}\n")
+            sb.append("  • Detected focal lengths: ${spec.availableFocalLengthsMm} mm; JPEG output: ${spec.hasJpegSupport}\n")
             sb.append("  • Classification: ${spec.lensType.name} (${spec.lensType.label})\n")
             sb.append("  • 35mm Equivalent: ~${spec.equivalentFocalLength35mm} mm\n")
             sb.append("  • Physical Focal Length: ${spec.focalLengthMm} mm\n")
@@ -32,7 +33,8 @@ object CameraDiagnosticsReport {
             sb.append("  • Open ID: ${spec.openCameraId}; physical output ID: ${spec.physicalOutputId ?: "direct"}\n")
             sb.append("  • OEM extension IDs: ${spec.extensionModes}; PRIVATE reprocessing: ${spec.privateReprocessing}\n")
             sb.append("  • Manual exposure: ${spec.manualSensor}; manual WB: ${spec.manualWb}; flash: ${spec.hasFlash}\n")
-            sb.append("  • RAW / DNG Support: ${if (spec.hasRawSupport) "Available (RAW_SENSOR)" else "Not Exposed to 3rd-Party"}\n")
+            sb.append("  • RAW / DNG advertised: ${spec.hasRawSupport}; safe native sizes: ${spec.rawSizes}; ${spec.rawUnavailableReason}\n")
+            sb.append("    Actual preview/RAW/JPEG combination still needs a successful session and DNG capture on this firmware.\n")
             sb.append("  • Sensitivity Range: ISO ${spec.minIso} .. ISO ${spec.maxIso}\n")
             sb.append("  • Shutter Range: 1/${(1_000_000_000L / spec.minExposureNs.coerceAtLeast(1L))}s .. ${(spec.maxExposureNs / 1_000_000_000L)}s\n")
             sb.append("  • EV Bias: ${spec.minEv * spec.evStep} EV .. +${spec.maxEv * spec.evStep} EV (step: ${spec.evStep})\n")

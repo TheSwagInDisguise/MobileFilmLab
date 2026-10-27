@@ -13,5 +13,8 @@ data class PhotoExifMetadata(
     val note: String = "", val sourceWidth: Int = 0, val sourceHeight: Int = 0,
     val manualExposure: Boolean = false, val manualWhiteBalance: Boolean = false
 )
-data class CapturedJpeg(val bytes: ByteArray, val metadata: PhotoExifMetadata)
-data class CaptureBundle(val frames: List<CapturedJpeg>, val cropFactor: Float, val label: String)
+data class CapturedJpeg(val bytes: ByteArray, val metadata: PhotoExifMetadata, val raw: RawCapture? = null)
+data class CaptureBundle(val frames: List<CapturedJpeg>, val cropFactor: Float, val label: String) : AutoCloseable {
+    val raw: RawCapture? get() = frames.firstOrNull()?.raw
+    override fun close() { frames.forEach { it.raw?.close() } }
+}

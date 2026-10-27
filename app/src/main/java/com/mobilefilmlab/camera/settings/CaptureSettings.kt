@@ -18,6 +18,7 @@ data class LensCalibration(val red: Float = 1f, val green: Float = 1f, val blue:
 }
 data class CaptureSettings(
     val pipeline: CapturePipeline = CapturePipeline.STANDARD,
+    val format: CaptureFormat = CaptureFormat.JPEG,
     val grid: GridMode = GridMode.THIRDS,
     val showLevel: Boolean = true,
     val grain: Int = 0,
@@ -30,24 +31,33 @@ data class CaptureSettings(
 
 class SettingsStore(context: Context) {
     private val prefs = context.getSharedPreferences("capture_settings", Context.MODE_PRIVATE)
-    fun load(lens: LensType): CaptureSettings = CaptureSettings(
+    fun load(lens: LensType, cameraId: String? = null): CaptureSettings = CaptureSettings(
         pipeline = enumValue(prefs.getString("pipeline", null), CapturePipeline.STANDARD),
+        format = enumValue(prefs.getString("format", null), CaptureFormat.JPEG),
         grid = enumValue(prefs.getString("grid", null), GridMode.THIRDS),
         showLevel = prefs.getBoolean("level", true), grain = prefs.getInt("grain", 0).coerceIn(0, 3),
         haptics = prefs.getBoolean("haptics", true), zsl = prefs.getBoolean("zsl", false),
         outputSize = enumValue(prefs.getString("output", null), OutputSize.NATIVE),
         calibration = LensCalibration(
-            prefs.getFloat("${lens.name}_r", 1f).coerceIn(0.8f, 1.2f),
-            prefs.getFloat("${lens.name}_g", 1f).coerceIn(0.8f, 1.2f),
-            prefs.getFloat("${lens.name}_b", 1f).coerceIn(0.8f, 1.2f)
+            gain(lens,cameraId,"r").coerceIn(0.8f, 1.2f),
+            gain(lens,cameraId,"g").coerceIn(0.8f, 1.2f),
+            gain(lens,cameraId,"b").coerceIn(0.8f, 1.2f)
         )
     )
-    fun save(s: CaptureSettings, lens: LensType) {
-        prefs.edit().putString("pipeline", s.pipeline.name).putString("grid", s.grid.name)
+    private fun prefix(lens: LensType, cameraId: String?): String = if(cameraId==null) lens.name else
+        "camera_"+java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(cameraId.toByteArray(Charsets.UTF_8))
+    private fun gain(lens: LensType, cameraId: String?, channel: String): Float {
+        val key="${prefix(lens,cameraId)}_$channel"
+        return if(prefs.contains(key)) prefs.getFloat(key,1f) else prefs.getFloat("${lens.name}_$channel",1f)
+    }
+    fun selectedCameraId(): String? = prefs.getString("selected_camera_id",null)
+    fun save(s: CaptureSettings, lens: LensType, cameraId: String? = null) {
+        prefs.edit().putString("pipeline", s.pipeline.name).putString("format",s.format.name)
+            .putString("selected_camera_id",cameraId ?: prefs.getString("selected_camera_id",null)).putString("grid", s.grid.name)
             .putBoolean("level", s.showLevel).putInt("grain", s.grain).putBoolean("haptics", s.haptics)
             .putBoolean("zsl", s.zsl).putString("output", s.outputSize.name)
-            .putFloat("${lens.name}_r", s.calibration.red).putFloat("${lens.name}_g", s.calibration.green)
-            .putFloat("${lens.name}_b", s.calibration.blue).apply()
+            .putFloat("${prefix(lens,cameraId)}_r", s.calibration.red).putFloat("${prefix(lens,cameraId)}_g", s.calibration.green)
+            .putFloat("${prefix(lens,cameraId)}_b", s.calibration.blue).apply()
     }
     private inline fun <reified T : Enum<T>> enumValue(s: String?, default: T): T =
         enumValues<T>().firstOrNull { it.name == s } ?: default

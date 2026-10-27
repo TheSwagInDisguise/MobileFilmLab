@@ -21,6 +21,7 @@ jobs:
     env:
       RELEASE_TAG: ${{ github.event.inputs.tag_name || github.ref_name }}
       APPROVED_RELEASE_TAG: ${{ vars.APPROVED_RELEASE_TAG }}
+      REGULAR_RELEASE_TAG: ${{ vars.REGULAR_RELEASE_TAG }}
     steps:
       - name: Require exact-tag approval before checking out historical source
         run: |
@@ -101,13 +102,18 @@ jobs:
             exit 1
           fi
           FLAGS=()
-          if [[ "$RELEASE_TAG" == *-* ]]; then FLAGS+=(--prerelease --latest=false); fi
+          if [ "$RELEASE_TAG" = "$REGULAR_RELEASE_TAG" ]; then
+            FLAGS+=(--latest=true)
+          elif [[ "$RELEASE_TAG" == *-* ]]; then
+            FLAGS+=(--prerelease --latest=false)
+          fi
           case "$RELEASE_TAG" in
             *-alpha.*) TITLE="$RELEASE_TAG — alpha test candidate" ;;
             *-beta.*) TITLE="$RELEASE_TAG — public beta" ;;
             *-rc.*) TITLE="$RELEASE_TAG — release candidate" ;;
             *) TITLE="$RELEASE_TAG" ;;
           esac
+          if [ "$RELEASE_TAG" = "$REGULAR_RELEASE_TAG" ]; then TITLE="$RELEASE_TAG — public release"; fi
           gh release create "$RELEASE_TAG" \
             "MobileFilmLab-${RELEASE_TAG}-signed.apk" checksums.txt TESTING.md \
             --verify-tag --title "$TITLE" \

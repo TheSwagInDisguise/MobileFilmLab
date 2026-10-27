@@ -20,7 +20,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.mobilefilmlab.camera.BuildConfig
-import com.mobilefilmlab.camera.data.model.LensType
+import com.mobilefilmlab.camera.data.model.CameraSpec
+import com.mobilefilmlab.camera.data.model.CameraOptions
 import com.mobilefilmlab.camera.settings.*
 import com.mobilefilmlab.camera.updates.ReleaseChecker
 import com.mobilefilmlab.camera.ui.theme.*
@@ -28,7 +29,7 @@ import com.mobilefilmlab.camera.ui.theme.*
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun SettingsDialog(
-    settings: CaptureSettings,lens: LensType,status: String,thermal: String,
+    settings: CaptureSettings,camera: CameraSpec?,cameraCount: Int,status: String,thermal: String,
     updateStatus: String,update: ReleaseChecker.Release?,
     onChange: (CaptureSettings)->Unit,onCheckUpdates: ()->Unit,onDiagnostics: ()->Unit,onDismiss: ()->Unit
 ) {
@@ -40,19 +41,24 @@ fun SettingsDialog(
             Text("Camera settings",fontSize=20.sp,fontWeight=FontWeight.Bold,color=Color.White)
             Text("${BuildConfig.VERSION_NAME} · PUBLIC BETA",color=AccentGold,fontSize=11.sp)
             Text("Default: Oppo Natural (Camera2), without an added film grade. This is not the proprietary stock camera pipeline.",fontSize=12.sp,color=TextSecondary)
+            SectionTitle("Photo file format")
+            CaptureFormatChoices(settings.format,camera) { onChange(settings.copy(format=it)) }
+            Text("RAW is a real DNG from RAW_SENSOR, ungraded and uncropped. RAW + JPEG uses the same exposure; looks affect only its JPEG. RAW-only does not request a still JPEG. RAW modes lock native 1× framing and standard Camera2; no fusion, OEM HDR/Night, ZSL or enlargement.",fontSize=10.sp,color=TextSecondary)
+            SectionTitle("Detected cameras · $cameraCount photo routes")
+            Text("${camera?.let { CameraOptions.description(it) } ?: "No rear camera available"}\nLabels come from Camera2 focal/sensor metadata, not fixed lens slots. Logical Auto routes are not extra physical lenses. Hold a lens chip for details. Firmware can hide physical cameras.",fontSize=10.sp,color=TextSecondary)
             SectionTitle("Capture processing")
             CapturePipeline.values().forEach { p ->
                 Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-                    RadioButton(selected=settings.pipeline==p,onClick={ onChange(settings.copy(pipeline=p)) })
+                    RadioButton(selected=settings.pipeline==p,onClick={ onChange(settings.copy(pipeline=p)) },enabled=CaptureFormatPolicy.allowsPipeline(settings.format,p))
                     Text(p.label,color=Color.White,fontSize=12.sp)
                 }
             }
             Text("Active: $status\nThermal: $thermal",fontSize=11.sp,color=AccentGold)
             Text("OEM modes require firmware support and control their own exposure/flash. Fusion is JPEG-domain, translation-only, capped at ~12MP and can fall back for motion. It is not Oppo AI processing.",fontSize=11.sp,color=TextSecondary)
-            SettingToggle("Reprocessing ZSL (experimental)",settings.zsl,{ onChange(settings.copy(zsl=it)) },"PRIVATE input ring, where the device supports a reprocessable session. No guaranteed zero-lag fallback.")
+            SettingToggle("Reprocessing ZSL (experimental)",settings.zsl,{ onChange(settings.copy(zsl=it)) },"PRIVATE input ring, where the device supports a reprocessable session. No guaranteed zero-lag fallback.",enabled=!settings.format.writesRaw)
             SectionTitle("Output pixels")
             OutputSize.values().forEach { o ->
-                Row(verticalAlignment=Alignment.CenterVertically) { RadioButton(settings.outputSize==o,{ onChange(settings.copy(outputSize=o)) }); Text(o.label,fontSize=12.sp) }
+                Row(verticalAlignment=Alignment.CenterVertically) { RadioButton(settings.outputSize==o,{ onChange(settings.copy(outputSize=o)) },enabled=!settings.format.writesRaw || o==OutputSize.NATIVE); Text(o.label,fontSize=12.sp) }
             }
             Text("Native keeps the actual capture/crop dimensions. Enlarged export is interpolation, not additional captured detail. Square is a guide only; it does not crop the saved photo.",fontSize=11.sp,color=TextSecondary)
             SectionTitle("Composition")
@@ -60,15 +66,15 @@ fun SettingsDialog(
                 GridMode.values().forEach { g -> FilterChip(settings.grid==g,{ onChange(settings.copy(grid=g)) },label={ Text(g.label,fontSize=10.sp) }) }
             }
             SettingToggle("Sensor-driven horizon",settings.showLevel,{ onChange(settings.copy(showLevel=it)) },"Gold when within 1°. Hidden when the phone is flat or no sensor is available.")
-            SettingToggle("Live before / after comparison",settings.compare,{ onChange(settings.copy(compare=it)) },"Drag the divider. Colour preview only; final grain, sharpening and OEM processing can differ.")
-            SectionTitle("Optional film grain")
+            SettingToggle("Live before / after comparison",settings.compare,{ onChange(settings.copy(compare=it)) },"Drag the divider. Colour preview only; final grain, sharpening and OEM processing can differ.",enabled=settings.format.writesJpeg)
+            SectionTitle("Optional JPEG film grain")
             FlowRow(horizontalArrangement=Arrangement.spacedBy(6.dp)) {
-                listOf("Off","Fine","Medium","Coarse").forEachIndexed { i,label -> FilterChip(settings.grain==i,{ onChange(settings.copy(grain=i)) },label={ Text(label) }) }
+                listOf("Off","Fine","Medium","Coarse").forEachIndexed { i,label -> FilterChip(settings.grain==i,{ onChange(settings.copy(grain=i)) },label={ Text(label) },enabled=settings.format.writesJpeg) }
             }
             Text("Procedural luminance grain; no grain is added to any profile unless you enable it.",fontSize=11.sp,color=TextSecondary)
             SettingToggle("Haptic feedback",settings.haptics,{ onChange(settings.copy(haptics=it)) })
-            SectionTitle("${lens.label} lens matching")
-            Text("User calibration controls, not a measured factory profile. Leave all gains at 1.00 unless matching a neutral chart in controlled light. Saved independently for each lens.",fontSize=11.sp,color=TextSecondary)
+            SectionTitle("${camera?.let { CameraOptions.label(it) } ?: "Camera"} · JPEG lens matching")
+            Text("User calibration controls, not a measured factory profile. Leave all gains at 1.00 unless matching a neutral chart in controlled light. Saved independently for each camera ID; existing category gains are migrated when first used. DNG sensor data is never changed by these sliders.",fontSize=11.sp,color=TextSecondary)
             GainSlider("Red",settings.calibration.red) { onChange(settings.copy(calibration=settings.calibration.copy(red=it))) }
             GainSlider("Green",settings.calibration.green) { onChange(settings.copy(calibration=settings.calibration.copy(green=it))) }
             GainSlider("Blue",settings.calibration.blue) { onChange(settings.copy(calibration=settings.calibration.copy(blue=it))) }
@@ -85,9 +91,9 @@ fun SettingsDialog(
     }
 }
 @Composable private fun SectionTitle(s: String) { Text(s,fontWeight=FontWeight.Bold,color=Color.White,fontSize=14.sp,modifier=Modifier.padding(top=8.dp)) }
-@Composable private fun SettingToggle(label: String,checked: Boolean,onChecked: (Boolean)->Unit,note: String="") {
+@Composable private fun SettingToggle(label: String,checked: Boolean,onChecked: (Boolean)->Unit,note: String="",enabled: Boolean=true) {
     Column {
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text(label,Modifier.weight(1f),fontSize=12.sp); Switch(checked,onChecked) }
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) { Text(label,Modifier.weight(1f),fontSize=12.sp); Switch(checked,onChecked,enabled=enabled) }
         if(note.isNotBlank()) Text(note,color=TextSecondary,fontSize=10.sp)
     }
 }

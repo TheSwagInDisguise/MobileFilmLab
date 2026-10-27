@@ -2,6 +2,9 @@
 
 ## Current release and project
 
+- [Dynamic cameras and RAW formats](DYNAMIC_CAMERAS_AND_RAW.md).
+- [Beta.2 QA boundaries](QA_BETA_2.md).
+
 - [Live project website](https://theswagindisguise.github.io/MobileFilmLab/) and [website development/deployment](WEBSITE.md).
 - [Natural capture and no-app-added-AI processing](NATURAL_CAPTURE.md).
 - [Publication status and historical download withdrawal](PUBLIC_RELEASE.md).

@@ -10,24 +10,25 @@
 
 ## Current public release
 
-**[Explore the project website](https://theswagindisguise.github.io/MobileFilmLab/)** · **[Download v0.2.0-beta.1](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.1)** · [Testing guide](docs/TESTING.md) · [Report a bug](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose)
+**[Explore the project website](https://theswagindisguise.github.io/MobileFilmLab/)** · **[Download v0.2.0-beta.2](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.2)** · [Testing guide](docs/TESTING.md) · [Report a bug](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose)
 
 ### Built primarily for the Oppo Find X9 Ultra
 
 The **Oppo Find X9 Ultra is the primary development and testing target**. We plan to expand compatibility to more devices with help from beta testers. Other phones may run the app, but camera access, lens availability and processing modes vary by device and firmware. Please share a [device compatibility report](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new?template=device_support.yml) to help improve support.
 
-The existing **v0.2.0-beta.1** build is now the **Latest regular GitHub Release**, with its APK, version and signing key unchanged. It remains a beta-version app for public testing—not a newly built stable version or universal hardware validation. Older release downloads were withdrawn; source tags remain. [Publication details](docs/PUBLIC_RELEASE.md).
+**v0.2.0-beta.2 / code 11** adds dynamic Camera2 camera selection and RAW formats, with the same package/signing key for in-place upgrades. It is an owner-authorised regular Latest GitHub Release, but still a beta-version app—not universal hardware validation. Older binary downloads are withdrawn after the replacement is verified; source tags remain. [Publication details](docs/PUBLIC_RELEASE.md).
 
 ## Natural capture. No app-added AI.
 
 MobileFilmLab adds **no generative image model, neural/ML photo enhancement or cloud photo processing**. It starts with the hardware’s exposed Camera2 JPEG; the default unedited 1× Natural path preserves its pixel data. Creative colour, sharpening, grain and fusion use optional, conventional algorithms.
 
-**Hardware-first does not mean unprocessed RAW.** The device ISP still processes images; proprietary firmware and optional manufacturer modes may use techniques we cannot inspect or rule out. This version saves JPEG, not RAW/DNG. [What our no-app-added-AI promise means](docs/NATURAL_CAPTURE.md).
+**RAW when the hardware exposes it.** Choose ungraded sensor DNG, JPEG, or both. JPEG still passes through the device ISP, and even exposed RAW can contain firmware corrections; we cannot rule out all proprietary processing. [What our no-app-added-AI promise means](docs/NATURAL_CAPTURE.md).
 
 ## Features
 
 - **AUTO and PRO** — uncluttered photo capture, tap-to-focus/meter, flash controls and hardware-limited manual exposure, white balance and focus.
-- **Lens and framing controls** — fixed `UW`, `W`, `3x`, `10x` lens slots where exposed; 1× / 1.5× / 2× / 3× digital crops with honest resolution information.
+- **Device-driven camera controls** — all exposed photo-capable rear Camera2 routes, selected by exact ID and labelled with detected focal lengths. Logical Auto routes are distinguished from physical lenses. JPEG supports four digital framing levels.
+- **JPEG / RAW DNG / RAW+JPEG** — capability-gated file formats. RAW comes from the sensor stream without app grading, crop or interpolation; paired JPEG looks remain optional. RAW uses standard Camera2 and uncropped native 1×. [Details and limitations](docs/DYNAMIC_CAMERAS_AND_RAW.md).
 - **80 built-in looks** — the complete 77-recipe upstream catalogue plus three independent camera baselines. Live colour previews, favourites and custom presets.
 - **Hands-on look editing** — a two-dimensional Tone / Warmth pad, live before/after comparison and optional film grain.
 - **Native output by default** — no mandatory enlargement. Unedited, uncropped baseline captures preserve the exposed camera JPEG pixel data; optional enlarged exports are labelled interpolation.
@@ -49,7 +50,7 @@ MobileFilmLab adds **no generative image model, neural/ML photo enhancement or c
 
 ## Install and test
 
-Download the **signed APK** from the release above and allow installation from your browser/file manager when Android asks. The release includes SHA-256 checksums and a testing guide. It uses the same package and signing certificate as the alphas, with a higher version code; install over the existing release rather than uninstalling to preserve custom recipes and favourites. Debug builds are separate apps.
+Download the **signed APK** from the release above and allow installation from your browser/file manager when Android asks. The release includes SHA-256 checksums and a testing guide. It uses the same package and signing certificate as the alphas, with a higher version code; install over the existing release rather than uninstalling to preserve custom recipes and favourites. Debug builds are separate apps. RAW sensor capture/metadata must still be validated on your handset; a compatible RAW editor may be needed.
 
 No analytics, advertising or photo uploads. Photos and recipe processing stay on-device; network access is used only when you explicitly check for releases. [Privacy](docs/PRIVACY.md) · [Signing and verification](docs/RELEASE_SIGNING.md)
 

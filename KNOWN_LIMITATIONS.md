@@ -2,7 +2,7 @@
 
 ## No app-added AI does not mean no device processing
 
-MobileFilmLab adds no generative or neural/ML photo enhancement and sends no photos to a cloud processor. Its own optional editing/fusion is conventional. The device camera/ISP and optional OEM extensions may still use proprietary or AI-based processing we cannot inspect or rule out. This release captures JPEG, not RAW/DNG or a bare sensor stream. [Natural-capture scope](docs/NATURAL_CAPTURE.md).
+MobileFilmLab adds no generative or neural/ML photo enhancement and sends no photos to a cloud processor. Its own optional editing/fusion is conventional. The device camera/ISP and optional OEM extensions may still use proprietary or AI-based processing we cannot inspect or rule out. JPEG uses the device ISP. Beta.2 also exports actual RAW_SENSOR DNG where exposed, but that is still the firmware-provided sensor stream, not a guarantee of an untouched electrical signal. [Natural-capture scope](docs/NATURAL_CAPTURE.md).
 
 ## Proprietary stock processing is not replicated
 
@@ -21,7 +21,7 @@ Exact proprietary sensor/processing internals, frame counts, algorithms and SNR 
 
 ## Firmware-dependent lenses and sessions
 
-Only public Camera2 capabilities are used, under the fixed package `com.mobilefilmlab.camera`. Physical IDs are routed through logical output configurations when needed. Opening/stream combinations may still be blocked by ColorOS. Unavailable slots are disabled; a different camera is not silently relabelled as the requested lens. The `3x`/`10x` slots are not an assertion of optical zoom; check detected millimetres in diagnostics.
+Only public Camera2 capabilities are used, under the fixed package `com.mobilefilmlab.camera`. Physical IDs are routed through logical output configurations when needed. Opening/stream combinations may still be blocked by ColorOS. Unavailable slots are disabled; a different camera is not silently relabelled as the requested lens. The dynamic selector labels exact IDs with detected approximate equivalent focal lengths. Logical Auto routes are not additional physical lenses; unknown metadata is not replaced with guessed zoom labels.
 
 High-resolution and maximum-pixel-mode streams can fail in combination with preview. The engine tries a bounded set of smaller advertised native streams and reports failure if none works. No synthetic black substitute photo is saved.
 
@@ -42,10 +42,18 @@ Kelvin WB is an approximate manual gain model, not measured per-sensor colour sc
 
 ## Gallery, interchange and release checks
 
-The gallery lists up to 500 readable images from the app's output folder. Higher-resolution zoom decoding is memory-bounded; the overlay reports the decoded dimensions rather than promising arbitrary full-resolution allocation. No RAW/DNG capture/export, general-library gallery, live-camera QR scanner or video mode is implemented. QR import reads a user-selected image locally.
+The gallery lists up to 500 readable images from the app's output folder. Higher-resolution zoom decoding is memory-bounded; the overlay reports the decoded dimensions rather than promising arbitrary full-resolution allocation. RAW/DNG capture/export is capability-gated in beta.2; a compatible RAW editor may be needed. No general-library gallery, live-camera QR scanner or video mode is implemented. QR import reads a user-selected image locally.
 
 Updates are opened in the browser for user-controlled download/installation. No background updater, analytics or auto-promotion. F-Droid metadata is a starter only, not a distribution commitment.
 
 ## Public beta, not completed hardware validation
 
 The owner accepted initial alpha.9 handset behaviour and authorised the first public beta. Passing JVM/native-graphics tests and Android Lint still does not verify physical camera hardware, broad firmware compatibility or an app/device certification. See [public-beta scope and ongoing validation](docs/BETA_READINESS.md) and the [tester guide](docs/TESTING.md). Exact stock-camera matching and four-lens access on every firmware are not claimed. Other-device support will expand with beta testers' reports.
+
+## RAW/DNG — new hardware validation needed
+
+RAW formats use standard Camera2, native 1× and normal-resolution RAW_SENSOR streams at or below 55MP. They do not use JPEG fusion, OEM extensions, PRIVATE ZSL, enlargement or software crops. Raw-only requests no still JPEG; paired mode binds RAW/JPEG/result by sensor timestamp. Missing physical capture metadata or mismatched frames cause failure rather than a fabricated DNG or JPEG-only substitute.
+
+A RAW capability flag and advertised size do not guarantee that a preview/RAW/JPEG session works on every firmware. Native combinations are retried within a bounded budget; rejection remains possible. DNG and JPEG dimensions/active-area framing and editor rendering may differ. Raw previews use the device ISP, not a decoded sensor-RAW image.
+
+DNGs can be large, and Android's decoder may not preview them; use the gallery's external RAW-editor action. Retained-image lifetime and pending-file cleanup are software-tested, but actual DNG validity, exposure/orientation, lifecycle during large writes and memory/thermal behaviour require handset checks. Android 9 has no pending-row support and can transiently expose an in-progress row. See [RAW details](docs/DYNAMIC_CAMERAS_AND_RAW.md).

@@ -11,8 +11,8 @@ android {
         applicationId = "com.mobilefilmlab.camera"
         minSdk = 28
         targetSdk = 34
-        versionCode = 10
-        versionName = "0.2.0-beta.1"
+        versionCode = 11
+        versionName = "0.2.0-beta.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -107,4 +107,6 @@ dependencies {
 tasks.withType<Test>().configureEach {
     maxHeapSize = "384m"
     maxParallelForks = 1
+    // Robolectric PFD close interception needs this JDK 17 test-worker module opening.
+    jvmArgs("--add-opens=java.base/java.io=ALL-UNNAMED")
 }

@@ -23,9 +23,13 @@ import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
 import com.mobilefilmlab.camera.data.model.CameraSpec
 import com.mobilefilmlab.camera.data.model.LensType
+import com.mobilefilmlab.camera.data.model.RawStreamSelector
+import com.mobilefilmlab.camera.data.model.CameraOptions
+import com.mobilefilmlab.camera.data.model.StreamSize
 import com.mobilefilmlab.camera.pipeline.CropEngine
 import com.mobilefilmlab.camera.settings.CapturePipeline
 import com.mobilefilmlab.camera.settings.CaptureSettings
+import com.mobilefilmlab.camera.settings.CaptureFormatPolicy
 import kotlinx.coroutines.*
 import kotlinx.coroutines.android.asCoroutineDispatcher
 import kotlinx.coroutines.flow.*
@@ -62,6 +66,8 @@ class CameraEngine(private val context: Context) {
     val pipelineStatus = _pipelineStatus.asStateFlow()
     private val _captureSize = MutableStateFlow(Size(0,0))
     val captureSize = _captureSize.asStateFlow()
+    private val _rawCaptureSize = MutableStateFlow(Size(0,0))
+    val rawCaptureSize = _rawCaptureSize.asStateFlow()
     private val latestResult = MutableStateFlow<TotalCaptureResult?>(null)
     private val _progress = MutableStateFlow("")
     val progress = _progress.asStateFlow()
@@ -74,10 +80,15 @@ class CameraEngine(private val context: Context) {
     private var session: CameraCaptureSession? = null
     private var extensionSession: CameraExtensionSession? = null
     private var jpegReader: ImageReader? = null
+    private var rawReader: ImageReader? = null
+    private var rawLifetime: RetainedResource? = null
+    private var rawAttemptIndex = 0
+    private var rawRetries = 0
+    private var rawAttempts: List<StreamSize> = emptyList()
     private var previewSurface: Surface? = null
     private var previewSize = Size(1920,1080)
     private var previewBuilder: CaptureRequest.Builder? = null
-    private var settings = CaptureSettings()
+    @Volatile private var settings = CaptureSettings()
     @Volatile private var cropFactor = 1f
     @Volatile private var deviceOrientation = 0
     fun updateDeviceOrientation(degrees: Int) { if(degrees>=0) deviceOrientation=degrees }
@@ -111,10 +122,14 @@ class CameraEngine(private val context: Context) {
         val deferred: CompletableDeferred<CapturedJpeg> = CompletableDeferred(),
         var timestamp: Long = -1, var bytes: ByteArray? = null, var result: TotalCaptureResult? = null,
         val sourceResult: TotalCaptureResult? = null, val sourceSize: Pair<Int,Int>? = null, var extensionComplete: Boolean = false,
-        val manual: Boolean = false, val manualWb: Boolean = false
+        val manual: Boolean = false, val manualWb: Boolean = false,
+        val wantRaw: Boolean = false, val wantJpeg: Boolean = true, val rawCharacteristics: CameraCharacteristics? = null,
+        val orientation: Int = 0, var rawImage: ResourceLease<Image>? = null,
+        var jpegTimestamp: Long = -1, var completedRaw: RawCapture? = null
     )
     private val pending = mutableSetOf<Shot>()
     private val unmatchedJpegs = linkedMapOf<Long,ByteArray>()
+    private val unmatchedRaw = linkedMapOf<Long,ResourceLease<Image>>()
     private var extensionShot: Shot? = null
 
     init { refreshCameraList() }
@@ -122,10 +137,10 @@ class CameraEngine(private val context: Context) {
         val found = discovery.discoverCameras()
         _cameraSpecs.value = found
         val previous = _activeCameraSpec.value?.cameraId
-        _activeCameraSpec.value = found.firstOrNull { it.cameraId == previous }
-            ?: found.filter { it.isBackFacing && it.lensType == LensType.WIDE }
-                .minByOrNull { if (it.isLogicalMultiCamera) 1 else 0 }
-            ?: found.firstOrNull { it.isBackFacing }
+        val photoRoutes=CameraOptions.rear(found)
+        _activeCameraSpec.value = photoRoutes.firstOrNull { it.cameraId == previous }
+            ?: photoRoutes.filter { it.lensType == LensType.WIDE }.minByOrNull { if(it.isLogicalMultiCamera) 1 else 0 }
+            ?: photoRoutes.firstOrNull()
     }
     fun startBackgroundThread() { resumed = true }
     fun stopBackgroundThread() { closeCamera(); thread.quitSafely() }
@@ -145,7 +160,11 @@ class CameraEngine(private val context: Context) {
     fun closeCamera() { resumed = false; handler.post { closeInternal() } }
     private fun closeInternal() {
         generation++; sessionEpoch++; opening = false
-        pending.toList().forEach { it.deferred.completeExceptionally(IllegalStateException("Camera closed; please try again")) }
+        pending.toList().forEach {
+            it.deferred.completeExceptionally(IllegalStateException("Camera closed; please try again"))
+            it.rawImage?.close(); it.rawImage=null
+        }
+        clearRawInbox()
         pending.clear(); unmatchedJpegs.clear(); extensionShot = null
         closeStreams()
         runCatching { device?.close() }; device = null
@@ -158,6 +177,10 @@ class CameraEngine(private val context: Context) {
         clearZsl(); runCatching { writer?.close() }; writer=null
         runCatching { privateReader?.close() }; privateReader=null
         runCatching { jpegReader?.close() }; jpegReader=null
+        clearRawInbox()
+        // Do not invalidate an acquired RAW image while an IO worker is writing its DNG.
+        rawLifetime?.retire(); rawLifetime=null; rawReader=null
+        _rawCaptureSize.value=Size(0,0)
     }
     private fun clearZsl() {
         zslRing.forEach { it.image.close() }; zslRing.clear()
@@ -175,7 +198,7 @@ class CameraEngine(private val context: Context) {
         }
         val spec = _activeCameraSpec.value ?: run { _cameraError.value="No accessible rear camera"; return }
         val gen = generation
-        opening=true; forceStandard=false; disableZsl=false; attemptIndex=0
+        opening=true; forceStandard=false; disableZsl=false; attemptIndex=0; rawAttemptIndex=0; rawRetries=0
         try {
             manager.openCamera(spec.openCameraId, object : CameraDevice.StateCallback() {
                 override fun onOpened(camera: CameraDevice) {
@@ -193,22 +216,24 @@ class CameraEngine(private val context: Context) {
             },handler)
         } catch (e: Exception) { opening=false; _cameraError.value="Cannot open camera: ${e.message}" }
     }
-    fun selectLens(lensType: LensType, is2xCrop: Boolean = false) { selectLens(lensType,if (is2xCrop) 2f else 1f) }
-    fun selectLens(lensType: LensType, factor: Float) {
-        val choices = cameraSpecs.value.filter { it.isBackFacing && it.lensType == lensType }
-        val match = choices.sortedWith(compareBy<CameraSpec> { if(it.isLogicalMultiCamera) 1 else 0 }.thenBy { if(lensType==LensType.PERISCOPE) -it.equivalentFocalLength35mm else kotlin.math.abs(it.equivalentFocalLength35mm-lensType.approxFocalLength35mm) }).firstOrNull()
-        if (match == null) { _cameraError.value="${lensType.label} is not exposed by this firmware"; return }
-        val different = _activeCameraSpec.value?.cameraId != match.cameraId
-        _activeCameraSpec.value=match; cropFactor=factor.coerceIn(1f,4f)
+    /** Select an exact advertised route, never the first camera in a hardcoded lens category. */
+    fun selectCamera(cameraId: String, factor: Float = 1f) {
+        val match=CameraOptions.rear(cameraSpecs.value).firstOrNull { it.cameraId==cameraId }
+        if(match==null) { _cameraError.value="Camera ID $cameraId is no longer exposed by this firmware"; return }
+        val different=_activeCameraSpec.value?.cameraId!=match.cameraId
+        _activeCameraSpec.value=match
+        cropFactor=if(settings.format.writesRaw) 1f else factor.coerceIn(1f,3f)
         handler.post {
             focusRegion=null
-            if (different || settings.zsl) restartInternal() else updateRepeatingInternal()
+            if(different || settings.zsl) restartInternal() else updateRepeatingInternal()
         }
     }
     fun configure(s: CaptureSettings) {
         handler.post {
-            val reconfigure = settings.pipeline != s.pipeline || settings.zsl != s.zsl
-            settings=s
+            val next=CaptureFormatPolicy.normalize(s)
+            val reconfigure = settings.pipeline != next.pipeline || settings.zsl != next.zsl || settings.format != next.format
+            settings=next
+            if(next.format.writesRaw) cropFactor=1f
             if (reconfigure && resumed) restartInternal()
         }
     }
@@ -225,7 +250,7 @@ class CameraEngine(private val context: Context) {
                 sizes=sizes.filter { it in physical }
             }
             if (Build.VERSION.SDK_INT >= 31) {
-                val ext = extensionFor(settings.pipeline)
+                val ext = if(settings.format.writesRaw) null else extensionFor(settings.pipeline)
                 if (ext != null && ext in spec.extensionModes && !forceStandard) {
                     sizes = manager.getCameraExtensionCharacteristics(spec.openCameraId).getExtensionSupportedSizes(ext,SurfaceTexture::class.java)
                 }
@@ -247,6 +272,12 @@ class CameraEngine(private val context: Context) {
         if (!surface.isValid) return
         val gen=generation; val epoch=++sessionEpoch
         closeStreams()
+        if(settings.format.writesRaw && !spec.hasRawSupport) {
+            _isCameraStreaming.value=false
+            _cameraError.value="RAW_SENSOR is not exposed on this camera. Choose JPEG or a RAW-capable lens. ${spec.rawUnavailableReason}"
+            return
+        }
+        if(settings.format.writesRaw) { prepareRawSession(camera,spec,surface,gen,epoch); return }
         val wantedExt=extensionFor(settings.pipeline)
         selectedExtension=if (!forceStandard && wantedExt in spec.extensionModes && spec.physicalOutputId == null) wantedExt else null
         if (wantedExt != null && selectedExtension == null) _pipelineStatus.value="OEM extension unavailable on this lens; using Camera2"
@@ -261,7 +292,7 @@ class CameraEngine(private val context: Context) {
                 (map?.getOutputSizes(ImageFormat.JPEG)?.toList().orEmpty()+map?.getHighResolutionOutputSizes(ImageFormat.JPEG)?.toList().orEmpty()).forEach {
                     candidates+=ResolutionSelector.Candidate(it.width,it.height)
                 }
-                if (Build.VERSION.SDK_INT >= 31 && !settings.zsl && settings.pipeline != CapturePipeline.BURST) {
+                if (Build.VERSION.SDK_INT >= 31 && !settings.format.writesRaw && !settings.zsl && settings.pipeline != CapturePipeline.BURST) {
                     chars().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)?.let { maxMap ->
                         (maxMap.getOutputSizes(ImageFormat.JPEG)?.toList().orEmpty()+maxMap.getHighResolutionOutputSizes(ImageFormat.JPEG)?.toList().orEmpty()).forEach {
                             candidates+=ResolutionSelector.Candidate(it.width,it.height,true)
@@ -302,7 +333,7 @@ class CameraEngine(private val context: Context) {
             if (useMaximumMode && Build.VERSION.SDK_INT >= 31) {
                 outputs[1].addSensorPixelModeUsed(CameraMetadata.SENSOR_PIXEL_MODE_MAXIMUM_RESOLUTION)
             }
-            val canZsl=settings.zsl && !thermalLimited && !disableZsl && !useMaximumMode && spec.privateReprocessing && spec.physicalOutputId == null && cropFactor == 1f
+            val canZsl=!settings.format.writesRaw && settings.zsl && !thermalLimited && !disableZsl && !useMaximumMode && spec.privateReprocessing && spec.physicalOutputId == null && cropFactor == 1f
             var input: InputConfiguration?=null
             if (canZsl) {
                 val parentMap=parentChars().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
@@ -338,6 +369,7 @@ class CameraEngine(private val context: Context) {
                             _isCameraStreaming.value=true; _cameraError.value=null
                             val fallback=if (wantedExt != null) " · OEM unavailable" else ""
                             _pipelineStatus.value=when {
+                                rawReader != null -> "Camera2 · ${settings.format.badge} · native RAW_SENSOR + JPEG companion"
                                 privateReader != null -> "Camera2 · PRIVATE reprocessing ZSL active"
                                 settings.zsl -> "Camera2 · ZSL unavailable/fallback"
                                 settings.pipeline == CapturePipeline.BURST -> "Camera2 · experimental 3-frame JPEG fusion selected"
@@ -351,8 +383,72 @@ class CameraEngine(private val context: Context) {
             camera.createCaptureSession(config)
         } catch (e: Exception) { fallbackSession(e.message ?: "Session creation failed",gen,epoch) }
     }
+    private fun prepareRawSession(camera: CameraDevice,spec: CameraSpec,surface: Surface,gen: Int,epoch: Int) {
+        selectedExtension=null; useMaximumMode=false
+        try {
+            rawAttempts=RawStreamSelector.candidates(spec.rawSizes)
+            val size=rawAttempts.getOrNull(rawAttemptIndex) ?: error("No safe native RAW_SENSOR size is advertised")
+            val rr=ImageReader.newInstance(size.width,size.height,ImageFormat.RAW_SENSOR,2)
+            val lifetime=RetainedResource { runCatching { rr.close() }; Unit }
+            rawReader=rr; rawLifetime=lifetime; _rawCaptureSize.value=Size(size.width,size.height)
+            rr.setOnImageAvailableListener({ r ->
+                if(gen==generation && epoch==sessionEpoch) readRaw(r,lifetime)
+                else runCatching { r.acquireLatestImage()?.close() }
+            },handler)
+            val outputs=mutableListOf(OutputConfiguration(surface),OutputConfiguration(rr.surface))
+            if(settings.format.writesJpeg) {
+                val map=chars().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
+                val sizes=map?.getOutputSizes(ImageFormat.JPEG)?.toList().orEmpty()+map?.getHighResolutionOutputSizes(ImageFormat.JPEG)?.toList().orEmpty()
+                attempts=sizes.map { ResolutionSelector.Candidate(it.width,it.height) }.filter { it.area<=55_000_000L }.distinct().sortedByDescending { it.area }
+                val jpeg=attempts.getOrNull(attemptIndex) ?: error("No JPEG companion size is advertised")
+                val reader=ImageReader.newInstance(jpeg.width,jpeg.height,ImageFormat.JPEG,3)
+                jpegReader=reader; _captureSize.value=Size(jpeg.width,jpeg.height)
+                reader.setOnImageAvailableListener({ r ->
+                    if(gen==generation && epoch==sessionEpoch) readJpeg(r) else runCatching { r.acquireLatestImage()?.close() }
+                },handler)
+                outputs+=OutputConfiguration(reader.surface)
+            } else {
+                // True RAW-only capture: no JPEG reader or still-JPEG target, only the normal preview.
+                attempts=emptyList(); _captureSize.value=Size(0,0)
+            }
+            spec.physicalOutputId?.let { id -> outputs.forEach { it.setPhysicalCameraId(id) } }
+            camera.createCaptureSession(SessionConfiguration(SessionConfiguration.SESSION_REGULAR,outputs,executor,
+                object : CameraCaptureSession.StateCallback() {
+                    override fun onConfigured(s: CameraCaptureSession) {
+                        if(gen!=generation || epoch!=sessionEpoch) { s.close(); return }
+                        session=s
+                        try {
+                            val builder=camera.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW).apply { addTarget(surface) }
+                            previewBuilder=builder; applySettings(builder,true)
+                            s.setRepeatingRequest(builder.build(),previewCallback,handler)
+                            _isCameraStreaming.value=true; _cameraError.value=null
+                            _pipelineStatus.value="Camera2 · ${settings.format.badge} · native RAW_SENSOR"
+                        } catch(e: Exception) { fallbackSession("RAW preview request failed",gen,epoch) }
+                    }
+                    override fun onConfigureFailed(s: CameraCaptureSession) { s.close(); fallbackSession("RAW stream combination rejected",gen,epoch) }
+                }))
+            handler.postDelayed({ if(gen==generation && epoch==sessionEpoch && !_isCameraStreaming.value) fallbackSession("RAW session setup timed out",gen,epoch) },7000)
+        } catch(e: Exception) { fallbackSession(e.message ?: "RAW session creation failed",gen,epoch) }
+    }
     private fun fallbackSession(reason: String, gen: Int, epoch: Int) {
         if (gen != generation || epoch != sessionEpoch) return
+        if(settings.format.writesRaw) {
+            when {
+                rawRetries<5 && rawAttemptIndex+1<rawAttempts.size -> {
+                    rawRetries++; rawAttemptIndex++
+                    _pipelineStatus.value="$reason; trying another advertised native RAW stream"; prepareSession()
+                }
+                rawRetries<5 && attemptIndex+1<attempts.size && attemptIndex<3 -> {
+                    rawRetries++; attemptIndex++; rawAttemptIndex=0
+                    _pipelineStatus.value="$reason; trying a smaller JPEG companion with native RAW"; prepareSession()
+                }
+                else -> {
+                    _isCameraStreaming.value=false
+                    _cameraError.value="$reason. This firmware rejected the requested RAW + preview${if(settings.format.writesJpeg) "/JPEG" else ""} stream combination. No JPEG-only substitute was saved. Choose JPEG to continue."
+                }
+            }
+            return
+        }
         when {
             selectedExtension != null && !forceStandard -> { forceStandard=true; _cameraError.value="$reason; falling back to standard Camera2"; prepareSession() }
             privateReader != null && !disableZsl -> { disableZsl=true; _cameraError.value="$reason; ZSL disabled for this session"; prepareSession() }
@@ -432,6 +528,10 @@ class CameraEngine(private val context: Context) {
         }
         if (Build.VERSION.SDK_INT >= 30 && CaptureRequest.CONTROL_ZOOM_RATIO in keys) set(CaptureRequest.CONTROL_ZOOM_RATIO,1f)
         if (!preview) {
+            if(settings.format.writesRaw && CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE_ON in
+                (c.get(CameraCharacteristics.STATISTICS_INFO_AVAILABLE_LENS_SHADING_MAP_MODES) ?: intArrayOf())) {
+                set(CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE,CaptureRequest.STATISTICS_LENS_SHADING_MAP_MODE_ON)
+            }
             set(CaptureRequest.JPEG_QUALITY,98.toByte())
             set(CaptureRequest.JPEG_ORIENTATION,jpegOrientation())
             if (useMaximumMode && Build.VERSION.SDK_INT >= 31) set(CaptureRequest.SENSOR_PIXEL_MODE,CaptureRequest.SENSOR_PIXEL_MODE_MAXIMUM_RESOLUTION)
@@ -507,45 +607,61 @@ class CameraEngine(private val context: Context) {
             }
         }
     }
-    suspend fun capturePhoto(factor: Float, allowHeavy: Boolean=true): Result<CaptureBundle> = withContext(dispatcher) {
-        captureMutex.withLock {
-            val spec=activeCameraSpec.value ?: return@withLock Result.failure(IllegalStateException("No camera selected"))
-            if (!_isCameraStreaming.value || device == null) return@withLock Result.failure(IllegalStateException("Camera not ready; no image was saved"))
-            try {
-                val frames=mutableListOf<CapturedJpeg>()
-                if (extensionSession != null && Build.VERSION.SDK_INT >= 31) {
-                    _progress.value="Processing ${pipelineStatus.value}…"
-                    frames+=captureOne(spec,factor,0,extension=true)
-                } else {
-                    prepare3A()
-                    val burst=settings.pipeline == CapturePipeline.BURST && allowHeavy && flash == FlashMode.OFF && manualIso == null && manualTime == null
-                    if (burst) {
-                        // Each request is correlated independently; a timeout cannot leave a stuck shutter.
-                        for ((i,ev) in listOf(-1,0,1).withIndex()) {
-                            _progress.value="Capturing frame ${i+1}/3…"
-                            if (!spec.manualSensor) {
-                                val old=evSteps; evSteps=(old+if(spec.evStep>0) (ev/spec.evStep).roundToInt() else 0).coerceIn(spec.minEv,spec.maxEv)
-                                updateRepeatingInternal(); delay(220)
-                                frames+=captureOne(spec,factor,0)
-                                evSteps=old; updateRepeatingInternal()
-                            } else frames+=captureOne(spec,factor,ev,bracket=true)
+    suspend fun capturePhoto(factor: Float, allowHeavy: Boolean=true): Result<CaptureBundle> {
+        var undelivered: CaptureBundle?=null
+        try {
+            val result=withContext(dispatcher) {
+                captureMutex.withLock {
+                    val spec=activeCameraSpec.value ?: return@withLock Result.failure(IllegalStateException("No camera selected"))
+                    if(!_isCameraStreaming.value || device==null) return@withLock Result.failure(IllegalStateException("Camera not ready; no image was saved"))
+                    try {
+                        val frames=mutableListOf<CapturedJpeg>()
+                        if(settings.format.writesRaw) {
+                            check(spec.hasRawSupport && rawReader!=null) { "RAW_SENSOR is not ready on this camera; no JPEG-only fallback was saved" }
+                            check(factor==1f) { "RAW capture uses the uncropped sensor stream. Select 1×." }
+                            prepare3A(); _progress.value="Capturing ${settings.format.badge}…"
+                            frames+=captureOne(spec,1f,0,wantRaw=true)
+                        } else if(extensionSession!=null && Build.VERSION.SDK_INT>=31) {
+                            _progress.value="Processing ${pipelineStatus.value}…"
+                            frames+=captureOne(spec,factor,0,extension=true)
+                        } else {
+                            prepare3A()
+                            val burst=settings.pipeline==CapturePipeline.BURST && allowHeavy && flash==FlashMode.OFF && manualIso==null && manualTime==null
+                            if(burst) {
+                                for((i,ev) in listOf(-1,0,1).withIndex()) {
+                                    _progress.value="Capturing frame ${i+1}/3…"
+                                    if(!spec.manualSensor) {
+                                        val old=evSteps
+                                        try {
+                                            evSteps=(old+if(spec.evStep>0) (ev/spec.evStep).roundToInt() else 0).coerceIn(spec.minEv,spec.maxEv)
+                                            updateRepeatingInternal(); delay(220); frames+=captureOne(spec,factor,0)
+                                        } finally { evSteps=old; updateRepeatingInternal() }
+                                    } else frames+=captureOne(spec,factor,ev,bracket=true)
+                                }
+                            } else {
+                                _progress.value="Capturing…"
+                                val zsl=if(settings.zsl && allowHeavy && flash==FlashMode.OFF && manualIso==null && manualTime==null && factor==1f) selectZsl() else null
+                                frames+=captureOne(spec,factor,0,zsl=zsl)
+                            }
                         }
-                    } else {
-                        _progress.value="Capturing…"
-                        val zsl=if (settings.zsl && allowHeavy && flash == FlashMode.OFF && manualIso == null && manualTime == null && factor == 1f) selectZsl() else null
-                        frames+=captureOne(spec,factor,0,zsl=zsl)
+                        val bundle=CaptureBundle(frames,factor,if(frames.size==3) "Experimental 3-frame fusion" else frames.first().metadata.pipeline)
+                        undelivered=bundle
+                        Result.success(bundle)
+                    } catch(e: TimeoutCancellationException) {
+                        Result.failure(IllegalStateException("Capture timed out waiting for matching image/metadata; no complete photo pair was saved"))
+                    } catch(e: CancellationException) { throw e }
+                    catch(e: Exception) { Result.failure(e) }
+                    finally {
+                        _progress.value=""
+                        pending.toList().forEach { if(!it.deferred.isCompleted) it.deferred.cancel(); it.rawImage?.close(); it.rawImage=null }
+                        pending.clear(); unmatchedJpegs.clear(); clearRawInbox(); extensionShot=null
+                        runCatching { updateRepeatingInternal() }
                     }
                 }
-                Result.success(CaptureBundle(frames,factor,if (frames.size==3) "Experimental 3-frame fusion" else frames.first().metadata.pipeline))
-            } catch (e: CancellationException) { throw e }
-            catch (e: Exception) { Result.failure(e) }
-            finally {
-                _progress.value=""
-                pending.toList().forEach { if (!it.deferred.isCompleted) it.deferred.cancel() }
-                pending.clear(); unmatchedJpegs.clear(); extensionShot=null
-                runCatching { updateRepeatingInternal() }
             }
-        }
+            undelivered=null // Ownership is transferred only after cancellable dispatcher delivery succeeds.
+            return result
+        } finally { undelivered?.close() }
     }
     private fun selectZsl(): ZslFrame? {
         val now=android.os.SystemClock.elapsedRealtimeNanos()
@@ -557,14 +673,17 @@ class CameraEngine(private val context: Context) {
         } ?: return null
         zslRing.remove(selected); return selected
     }
-    private suspend fun captureOne(spec: CameraSpec, factor: Float, ev: Int, extension: Boolean=false, zsl: ZslFrame?=null, bracket: Boolean=false): CapturedJpeg {
+    private suspend fun captureOne(spec: CameraSpec, factor: Float, ev: Int, extension: Boolean=false, zsl: ZslFrame?=null, bracket: Boolean=false, wantRaw: Boolean=false): CapturedJpeg {
         val camera=device ?: throw IllegalStateException("Camera closed")
-        val reader=jpegReader ?: throw IllegalStateException("JPEG stream closed")
-        val label=when { extension -> pipelineStatus.value; zsl != null -> "Camera2 PRIVATE ZSL reprocess"; bracket -> "Bracket ${ev}EV"; else -> "Camera2 native JPEG" }
-        val shot=Shot(spec,factor,label,sourceResult=zsl?.result,sourceSize=zsl?.image?.let { it.width to it.height },manual=manualIso != null || manualTime != null,manualWb=kelvin>0)
+        val wantJpeg=!wantRaw || settings.format.writesJpeg
+        val reader=if(wantJpeg) jpegReader ?: throw IllegalStateException("JPEG stream closed") else null
+        val label=when { extension -> pipelineStatus.value; zsl != null -> "Camera2 PRIVATE ZSL reprocess"; bracket -> "Bracket ${ev}EV"; wantRaw -> if(wantJpeg) "Camera2 native RAW_SENSOR + JPEG" else "Camera2 native RAW_SENSOR"; else -> "Camera2 native JPEG" }
+        val shot=Shot(spec,factor,label,sourceResult=zsl?.result,sourceSize=zsl?.image?.let { it.width to it.height },manual=manualIso != null || manualTime != null,manualWb=kelvin>0,
+            wantRaw=wantRaw,wantJpeg=wantJpeg,bytes=if(wantJpeg) null else ByteArray(0),
+            rawCharacteristics=if(wantRaw) chars() else null,orientation=jpegOrientation())
         pending+=shot
         val b=if (zsl != null) camera.createReprocessCaptureRequest(zsl.result) else camera.createCaptureRequest(CameraDevice.TEMPLATE_STILL_CAPTURE)
-        b.addTarget(reader.surface); b.setTag(shot)
+        reader?.let { b.addTarget(it.surface) }; if(wantRaw) b.addTarget(rawReader?.surface ?: error("RAW stream closed")); b.setTag(shot)
         if (extension) {
             b.set(CaptureRequest.JPEG_ORIENTATION,jpegOrientation())
             extensionShot=shot
@@ -589,20 +708,27 @@ class CameraEngine(private val context: Context) {
             }
             session!!.capture(b.build(),object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureStarted(s: CameraCaptureSession,r: CaptureRequest,timestamp: Long,frame: Long) {
-                    shot.timestamp=timestamp; shot.bytes=unmatchedJpegs.remove(timestamp); completeShot(shot)
+                    shot.timestamp=timestamp; attachBuffered(shot); completeShot(shot)
                 }
                 override fun onCaptureCompleted(s: CameraCaptureSession,r: CaptureRequest,result: TotalCaptureResult) {
                     shot.result=shot.sourceResult ?: result
                     if (shot.timestamp < 0) shot.timestamp=result.get(CaptureResult.SENSOR_TIMESTAMP) ?: -1
-                    if (shot.bytes == null) shot.bytes=unmatchedJpegs.remove(shot.timestamp)
+                    attachBuffered(shot)
                     completeShot(shot)
                 }
                 override fun onCaptureFailed(s: CameraCaptureSession,r: CaptureRequest,failure: CaptureFailure) { shot.deferred.completeExceptionally(IllegalStateException("Still capture failed (reason ${failure.reason})")) }
                 override fun onCaptureSequenceAborted(s: CameraCaptureSession,id: Int) { shot.deferred.completeExceptionally(IllegalStateException("Capture interrupted")) }
             },handler)
         }
-        try { return withTimeout(if(extension) 60_000L else 15_000L) { shot.deferred.await() } }
-        finally { pending.remove(shot); if (extensionShot === shot) extensionShot=null }
+        var delivered=false
+        try {
+            val captured=withTimeout(if(extension) 60_000L else 15_000L) { shot.deferred.await() }
+            delivered=true; return captured
+        } finally {
+            pending.remove(shot); shot.rawImage?.close(); shot.rawImage=null
+            if(!delivered) shot.completedRaw?.close()
+            if(extensionShot===shot) extensionShot=null
+        }
     }
     private fun readJpeg(r: ImageReader) {
         try {
@@ -612,24 +738,66 @@ class CameraEngine(private val context: Context) {
                 val bytes=try { val buffer=im.planes[0].buffer; ByteArray(buffer.remaining()).also { buffer.get(it) } } finally { im.close() }
                 val ext=extensionShot
                 if (ext != null) { ext.bytes=bytes; completeShot(ext,true); continue }
-                val shot=pending.firstOrNull { it.timestamp == ts }
-                if (shot != null) { shot.bytes=bytes; completeShot(shot) }
+                val shot=pending.firstOrNull { !it.deferred.isCompleted && ts in timestamps(it) }
+                if (shot != null) { shot.bytes=bytes; shot.jpegTimestamp=ts; completeShot(shot) }
                 else if (pending.isNotEmpty()) { unmatchedJpegs[ts]=bytes; while(unmatchedJpegs.size>3) unmatchedJpegs.remove(unmatchedJpegs.keys.first()) }
             }
         } catch (e: Exception) { pending.forEach { it.deferred.completeExceptionally(e) } }
     }
+    private fun rawResult(s: Shot): CaptureResult? = s.spec.physicalOutputId?.let { s.result?.physicalCameraResults?.get(it) } ?: s.result
+    private fun timestamps(s: Shot): Set<Long> = setOfNotNull(s.timestamp.takeIf { it>=0 },
+        s.result?.get(CaptureResult.SENSOR_TIMESTAMP),rawResult(s)?.get(CaptureResult.SENSOR_TIMESTAMP))
+    private fun attachBuffered(s: Shot) {
+        for(ts in timestamps(s)) {
+            if(s.bytes==null) unmatchedJpegs.remove(ts)?.let { s.bytes=it; s.jpegTimestamp=ts }
+            if(s.wantRaw && s.rawImage==null) s.rawImage=unmatchedRaw.remove(ts)
+        }
+    }
+    private fun clearRawInbox() { unmatchedRaw.values.forEach { it.close() }; unmatchedRaw.clear() }
+    private fun readRaw(reader: ImageReader,lifetime: RetainedResource) {
+        try {
+            while(true) {
+                val image=reader.acquireNextImage() ?: break
+                if(pending.none { it.wantRaw && !it.deferred.isCompleted }) { image.close(); continue }
+                val lease=try { lifetime.retain(image) } catch(e: Exception) { image.close(); throw e }
+                val ts=image.timestamp
+                val shot=pending.firstOrNull { it.wantRaw && !it.deferred.isCompleted && ts in timestamps(it) }
+                if(shot!=null) {
+                    shot.rawImage?.close(); shot.rawImage=lease; completeShot(shot)
+                } else {
+                    unmatchedRaw.put(ts,lease)?.close()
+                    while(unmatchedRaw.size>2) unmatchedRaw.remove(unmatchedRaw.keys.first())?.close()
+                }
+            }
+        } catch(e: Exception) { pending.filter { it.wantRaw }.forEach { it.deferred.completeExceptionally(e) } }
+    }
     private fun completeShot(s: Shot, extension: Boolean=false) {
         val bytes=s.bytes ?: return
-        if ((!extension && s.result == null) || (extension && s.result == null && !s.extensionComplete)) return
-        if (s.deferred.isCompleted) return
-        s.deferred.complete(CapturedJpeg(bytes,metadata(s,bytes)))
-        s.bytes=null
+        if((!extension && s.result==null) || (extension && s.result==null && !s.extensionComplete) || s.deferred.isCompleted) return
+        if(s.wantRaw && s.rawImage==null) return
+        var raw: RawCapture?=null
+        try {
+            if(s.wantRaw) {
+                val image=requireNotNull(s.rawImage)
+                val result=if(s.spec.physicalOutputId!=null) {
+                    s.result?.physicalCameraResults?.get(s.spec.physicalOutputId)
+                        ?: error("Firmware returned no physical RAW capture metadata; no substitute DNG was written")
+                } else requireNotNull(s.result)
+                check(SensorFrameMatch.matches(image.value.timestamp,result.get(CaptureResult.SENSOR_TIMESTAMP),s.jpegTimestamp.takeIf { it>=0 },s.wantJpeg)) {
+                    "RAW, JPEG and sensor metadata are not from the same frame"
+                }
+                raw=RawCapture(image,requireNotNull(s.rawCharacteristics),result,s.orientation,s.spec.cameraId)
+            }
+            val capture=CapturedJpeg(bytes,metadata(s,bytes),raw)
+            if(s.deferred.complete(capture)) { s.completedRaw=raw; s.rawImage=null; s.bytes=null }
+            else raw?.close()
+        } catch(e: Exception) { raw?.close(); s.deferred.completeExceptionally(e) }
     }
     private fun metadata(s: Shot, bytes: ByteArray): PhotoExifMetadata {
         val r=s.result
         val physical=if (s.spec.physicalOutputId != null) r?.physicalCameraResults?.get(s.spec.physicalOutputId) else null
         fun <T> value(k: CaptureResult.Key<T>): T? = physical?.get(k) ?: r?.get(k)
-        val exif=runCatching { ExifInterface(ByteArrayInputStream(bytes)) }.getOrNull()
+        val exif=if(bytes.isNotEmpty()) runCatching { ExifInterface(ByteArrayInputStream(bytes)) }.getOrNull() else null
         val aperture=value(CaptureResult.LENS_APERTURE) ?: exif?.getAttributeDouble(ExifInterface.TAG_F_NUMBER,0.0)?.takeIf { it>0 }?.toFloat() ?: s.spec.apertureFNumber.takeIf { it>0 }
         val focal=value(CaptureResult.LENS_FOCAL_LENGTH) ?: exif?.getAttributeDouble(ExifInterface.TAG_FOCAL_LENGTH,0.0)?.takeIf { it>0 }?.toFloat() ?: s.spec.focalLengthMm.takeIf { it>0 }
         val model=exif?.getAttribute(ExifInterface.TAG_MODEL) ?: Build.MODEL
@@ -649,11 +817,11 @@ class CameraEngine(private val context: Context) {
             lensDescription=lens,
             lensModel="$cameraName $lens ${baseEq}mm${if (aperture != null) String.format(Locale.US," f/%.1f",aperture) else ""}",
             flashFired=flashTag?.let { it and 1 != 0 }, flashExif=flashTag, lensType=s.spec.lensType,
-            pipeline=s.label, sourceWidth=s.sourceSize?.first ?: exif?.getAttributeInt(ExifInterface.TAG_IMAGE_WIDTH,0) ?: 0,
-            sourceHeight=s.sourceSize?.second ?: exif?.getAttributeInt(ExifInterface.TAG_IMAGE_LENGTH,0) ?: 0,
+            pipeline=s.label, sourceWidth=if(!s.wantJpeg) s.rawImage?.value?.width ?: 0 else s.sourceSize?.first ?: exif?.getAttributeInt(ExifInterface.TAG_IMAGE_WIDTH,0) ?: 0,
+            sourceHeight=if(!s.wantJpeg) s.rawImage?.value?.height ?: 0 else s.sourceSize?.second ?: exif?.getAttributeInt(ExifInterface.TAG_IMAGE_LENGTH,0) ?: 0,
             note=s.sourceSize?.let { "PRIVATE reprocess input ${it.first}x${it.second}; JPEG output ${captureSize.value}" }.orEmpty(),
             manualExposure=s.manual,manualWhiteBalance=s.manualWb
         )
     }
-    fun diagnosticSummary(): String = "Pipeline: ${pipelineStatus.value}\nSelected JPEG stream: ${captureSize.value}\nCrop factor: $cropFactor (software once)\nZSL ring: ${zslRing.size}/3; PRIVATE input: ${privateReader?.let { "${it.width}x${it.height}" } ?: "none"}\nNo synthetic captures; actual native sizes only."
+    fun diagnosticSummary(): String = "Pipeline: ${pipelineStatus.value}\nSelected JPEG stream: ${captureSize.value}\nCapture files: ${settings.format.label}; RAW_SENSOR stream: ${rawCaptureSize.value}\nCrop factor: $cropFactor (software once)\nZSL ring: ${zslRing.size}/3; PRIVATE input: ${privateReader?.let { "${it.width}x${it.height}" } ?: "none"}\nNo synthetic captures; actual native sizes only."
 }

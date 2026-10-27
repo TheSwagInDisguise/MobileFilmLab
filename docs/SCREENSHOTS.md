@@ -7,12 +7,13 @@
 | [auto.png](screenshots/auto.png) | Actual AUTO screen, neutral camera baseline, favourite chips and lens controls. |
 | [pro.png](screenshots/pro.png) | Actual PRO screen with illustrative manual values and a saved custom look. |
 | [recipes.png](screenshots/recipes.png) | Actual modal recipe drawer, colour-transformed demo thumbnails and Tone / Warmth pad. |
+| [formats.png](screenshots/formats.png) | Actual JPEG / RAW / RAW+JPEG dialog with illustrative advertised RAW capability. |
 
 These are **production Android/Jetpack Compose components rendered by Robolectric native graphics (API 34)** at **864 × 1920** pixels. The interface is not AI-invented, hand-redrawn in HTML or composited from design mockups. The same screen, drawer, controls, typography and colour-matrix implementation used by the app are exercised by `DocumentationScreenshotsTest`.
 
 **Important:** no handset is connected to this rendering workflow. The camera scene is an **AI-generated coastal landscape**, not a camera capture or a verified photograph of a specific location. Demo camera availability, focal length, resolution, ISO, shutter and white balance are illustrative; they do not prove any device capability. The displayed demo resolution is derived from the source image, not an advertised sensor resolution. `Coastal Gold` and `Soft Monochrome` are test-created custom presets demonstrating the app's existing save workflow, not extra built-in catalogue entries. The generated scene says nothing about real-camera image quality, HDR, fusion or ZSL performance.
 
-A `DEMO SCENE` badge appears in the viewfinder. Only the wide lens is marked available in the fixture; disabled slots demonstrate honest unavailable-state handling.
+A `DEMO SCENE` badge appears in the viewfinder. Beta.2 fixtures show three illustrative rear routes labelled 14mm, 23mm and 83mm; these are test inputs, not a verified lens list for any phone. The format dialog uses explicitly simulated RAW capability and does not prove that a DNG was captured. Floating windows use their Android window gravity in the headless compositor; rendering can still differ from actual handset window metrics.
 
 ## Reproduce
 

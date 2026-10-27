@@ -1,7 +1,7 @@
 package com.mobilefilmlab.camera.data.model
 
 enum class LensType(val label: String, val approxFocalLength35mm: Int) {
-    ULTRA_WIDE("UW", 15), WIDE("W", 23), TELEPHOTO("3x", 70), PERISCOPE("10x", 230), FRONT("Selfie", 21)
+    ULTRA_WIDE("Ultra-wide", 15), WIDE("Wide", 23), TELEPHOTO("Telephoto", 70), PERISCOPE("Long telephoto", 230), FRONT("Front", 21)
 }
 
 data class CameraSpec(
@@ -33,5 +33,9 @@ data class CameraSpec(
     val manualSensor: Boolean = false,
     val manualWb: Boolean = false,
     val privateReprocessing: Boolean = false,
-    val extensionModes: List<Int> = emptyList()
+    val extensionModes: List<Int> = emptyList(),
+    val rawSizes: List<StreamSize> = emptyList(),
+    val hasJpegSupport: Boolean = true,
+    val rawUnavailableReason: String = "RAW_SENSOR is not advertised by this camera",
+    val availableFocalLengthsMm: List<Float> = emptyList()
 )

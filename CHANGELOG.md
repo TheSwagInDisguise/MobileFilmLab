@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-beta.2] - 2026-10-27
+
+- Replaced four fixed rear lens slots with all exposed photo-capable rear Camera2 routes, exact-ID selection, detected focal labels and explicit logical Auto labels.
+- Added capability-gated JPEG only, real sensor RAW DNG only, and timestamp-matched RAW + JPEG. RAW-only requests no still JPEG.
+- RAW uses standard/native/uncropped 1× capture, with recipes/grain/calibration affecting JPEG only. No OEM/fusion/ZSL RAW emulation or JPEG-only fallback.
+- Added retained RAW-image lifetime across session close, direct DNG streaming, same-stem pairs, pending rows/rollback, DNG gallery metadata and correct external-view/share MIME.
+- Saved per-camera calibration/selection and format with legacy gain fallback; full recipe catalogue and user data preserved.
+- New policy, frame-matching, lifecycle ownership, preference, storage and native UI tests. Real sensor/DNG/firmware validation remains open; see [testing](docs/TESTING.md).
+- Same package/key, versionCode 11. Owner-authorised regular Latest release; retire prior binary downloads only after the new APK and website are verified, keeping source tags/history.
+
 ## Project publication update — 2026-10-27
 
 - Promoted the existing `v0.2.0-beta.1` entry to a regular **Latest GitHub Release** by owner request. No app version/code, APK bytes, tag or signing key changed; no new stable-version build was created.

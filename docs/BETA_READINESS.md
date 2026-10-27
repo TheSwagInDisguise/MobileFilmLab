@@ -1,36 +1,32 @@
-# Public-beta scope and validation status
+# Public testing and validation status
 
-**Candidate:** `v0.2.0-beta.1` / code **10** / `com.mobilefilmlab.camera`
-**Scope:** first signed **public-testing beta**, not a stable release or stock-camera parity claim.
+**Feature release:** `v0.2.0-beta.2` / code **11** / `com.mobilefilmlab.camera`.
 
-The existing entry has since been promoted to a regular Latest GitHub Release by owner request; the app version and validation scope are unchanged. [Publication status](PUBLIC_RELEASE.md).
+The owner explicitly authorised dynamic Camera2 lens controls and RAW/DNG formats, a new regular Latest GitHub Release after checks, an updated website and withdrawal of the previous binary downloads while preserving tags. The beta-version app remains a public-testing build, not universal hardware certification.
 
-The owner reported alpha.9 working well on the primary handset and explicitly authorised the first public beta. This supersedes the earlier alpha-only publication restriction. It does **not** establish that every item in the historical hardware matrix was tested. The [old pre-beta tracker](archive/ALPHA_9_BETA_GATES.md) is retained as history, not silently checked off.
+## Implemented scope
 
-## Accepted release scope
+- Existing photos-only AUTO/PRO, full 77-recipe upstream catalogue plus three baselines, custom recipes/favourites, JPEG editing and local gallery/interchange.
+- Dynamic rear Camera2 photo routes with exact-ID selection and reported focal labels. Logical Auto routes are not additional physical lenses; firmware-hidden IDs are not promised.
+- Capability-gated JPEG / RAW DNG / RAW+JPEG; RAW-only has no still-JPEG target. Sensor images are timestamp-matched to metadata and streamed to DNG without app edits. RAW modes are standard/native/uncropped 1×, not OEM/fusion/ZSL emulations.
+- Camera-ID calibration preferences with legacy fallback; pending-file/rollback handling, retained RAW reader/image ownership and DNG-aware sharing/editor access.
+- Same package/key, increased code, regression tests/lint, signed-APK identity/integrity verification and exact-tag publication approval.
 
-- Primary development/testing target: **Oppo Find X9 Ultra**.
-- Broader-device compatibility will expand through beta tester reports and follow-up fixes. No universal support claim.
-- Preserve the working alpha.9 capture implementation; beta.1 primarily adds repository/documentation polish, truthful UI renders, AI disclosure and beta-aware release checks.
-- Keep all 77 upstream recipes plus three independent Camera2 baselines.
-- Expose only advertised camera capabilities; unavailable lenses/processing remain unavailable or visibly fall back.
-- Ship with the established release package and certificate, higher versionCode, tests/lint, APK integrity verification and immutable prerelease assets.
-- Scope publication approval to the exact tag `v0.2.0-beta.1`. No stable release is authorised by this approval.
-
-## Evidence and open work
+## Evidence boundaries
 
 | Area | Status |
 |---|---|
-| Initial owner handset smoke feedback | Accepted: owner reported alpha.9 working well. Not a detailed per-feature validation report. |
-| Automated regression/native-graphics tests and lint | Required by both CI and signed-release workflow. See [beta.1 QA evidence](QA_BETA_1.md) and tagged workflow results. |
-| APK identity/signature/checksum/alignment | Required before publication; same established certificate and package. |
-| Upgrade/data retention | Same identity and increasing code support in-place upgrades. Actual recipe/favourite retention still needs tester confirmation; do not uninstall to upgrade. |
-| Every exposed lens, flash, manual control, focus/crop/orientation | Ongoing handset/firmware matrix; no assumption that one smoke test proves every combination. |
-| Exact stock-camera colour/processing or native maximum resolution | Not claimed. Public Camera2 baseline and available streams only; optional enlargement is interpolation. |
-| Measured per-lens chart calibration | Pending. Identity defaults/user controls are not factory calibration. |
-| OEM HDR/Night, fusion and reprocessing ZSL | Experimental, capability-dependent; quality, latency and firmware behaviour remain under testing. |
-| Long soak, memory, heat and battery acceptance | Pending broader stress testing; no zero-crash/zero-lag guarantee. |
-| Other Android devices | Unverified until reports arrive; use the compatibility issue form. |
-| Security review | No independent audit. AI assistance is [explicitly disclosed](AI_DISCLOSURE.md). |
+| Prior primary-handset feedback | Alpha.9 worked well according to the owner. This is not a detailed report for the new RAW/session paths. |
+| Automated suite / native UI renders / lint | Required before publication; see [beta.2 QA](QA_BETA_2.md) and tagged workflow results. |
+| Sensor RAW capture and DNG validity | Must be verified on actual hardware/firmware in a RAW-capable editor. JVM storage tests use controlled payloads, not a simulated sensor. |
+| Physical/logical route access | Advertised/discovered via public Camera2; opening and stream combinations remain firmware-dependent. |
+| Per-lens measured colour calibration | Not completed. Identity/user JPEG gains are not a proprietary factory profile; RAW pixels are not graded. |
+| Exact stock processing, maximum sensor mode, AI-free firmware | Not claimed. No app-added ML/generative enhancement; device processing remains outside that guarantee. |
+| Long RAW write / lifecycle / low storage / heat | New lease, timeout and rollback logic is tested as software behaviour; real device stress testing remains open. |
+| Other devices | Unverified until reports arrive. Primary target remains **Oppo Find X9 Ultra**. |
+| Upgrade/user-data retention | Same identity and increased code support in-place upgrade. Confirm custom recipes, favourites, camera selection and calibration on device. |
+| Independent security audit | Not performed. AI-assisted development remains explicitly disclosed. |
 
-The beta is public **to collect this evidence**, not because all hardware work is complete. Report failures via the [testing guide](TESTING.md). Do not promote to stable, declare proprietary parity or mark pending validation complete without new evidence.
+The release is public to collect this evidence, not because every hardware combination is known to work. [Testing guide](TESTING.md) · [Dynamic cameras / RAW](DYNAMIC_CAMERAS_AND_RAW.md) · [Known limitations](../KNOWN_LIMITATIONS.md).
+
+Historical records: [alpha.9 gates](archive/ALPHA_9_BETA_GATES.md), [beta.1 QA](QA_BETA_1.md).

@@ -11,14 +11,14 @@ Description: |-
   and capability-gated experimental processing. Not a proprietary stock camera
   replacement. Public beta; broader handset validation is ongoing.
 Builds:
-  - versionName: 0.2.0-beta.1
-    versionCode: 10
-    commit: v0.2.0-beta.1
+  - versionName: 0.2.0-beta.2
+    versionCode: 11
+    commit: v0.2.0-beta.2
     subdir: app
     gradle:
       - yes
 AutoUpdateMode: None
 UpdateCheckMode: None
-CurrentVersion: 0.2.0-beta.1
-CurrentVersionCode: 10
+CurrentVersion: 0.2.0-beta.2
+CurrentVersionCode: 11
 # Starter metadata only; not submitted to or verified by F-Droid.

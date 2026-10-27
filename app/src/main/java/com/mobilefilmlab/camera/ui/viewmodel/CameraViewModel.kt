@@ -50,6 +50,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     val focusMode=MutableStateFlow("AF-C")
     val isRecipeSheetOpen=MutableStateFlow(false)
     val isSettingsOpen=MutableStateFlow(false)
+    val isFormatPickerOpen=MutableStateFlow(false)
+    val pendingCamera=MutableStateFlow<CameraSpec?>(null)
     val isDiagnosticsOpen=MutableStateFlow(false)
     val isAboutOpen=MutableStateFlow(false)
     val isGalleryOpen=MutableStateFlow(false)
@@ -71,12 +73,28 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     } else null
 
     init {
+        store.selectedCameraId()?.let { saved ->
+            if(cameraEngine.cameraSpecs.value.any { it.cameraId==saved && it.isBackFacing }) cameraEngine.selectCamera(saved)
+            else userNotice.value="The previous camera ID is not exposed after this firmware change; review the detected camera list."
+        }
+        val initial=cameraEngine.activeCameraSpec.value
+        val loaded=store.load(initial?.lensType ?: LensType.WIDE,initial?.cameraId)
+        settings.value=CaptureFormatPolicy.normalize(loaded)
+        if(initial!=null && !CaptureFormatPolicy.supported(settings.value.format,initial)) {
+            settings.value=CaptureFormatPolicy.normalize(loaded.copy(format=if(initial.hasJpegSupport) CaptureFormat.JPEG else CaptureFormat.RAW))
+            userNotice.value="Saved file format is not available on this camera; using ${settings.value.format.label}."
+        }
         cameraEngine.configure(settings.value)
         viewModelScope.launch { cameraEngine.cameraError.filterNotNull().collect { userNotice.value=it } }
         viewModelScope.launch { cameraEngine.activeCameraSpec.collect { spec ->
-            if(spec!=null) { activeLens.value=spec.lensType; updateFraming() }
+            if(spec!=null) {
+                activeLens.value=spec.lensType
+                settings.value=settings.value.copy(calibration=store.load(spec.lensType,spec.cameraId).calibration)
+                cameraEngine.configure(settings.value); updateFraming()
+            }
         } }
         viewModelScope.launch { cameraEngine.captureSize.collect { updateFraming() } }
+        viewModelScope.launch { cameraEngine.rawCaptureSize.collect { updateFraming() } }
         val listener=thermalListener
         if(Build.VERSION.SDK_INT>=29 && listener!=null) {
             runCatching {
@@ -90,7 +108,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     fun onPermissionGranted() { cameraEngine.refreshCameraList(); refreshPhotos(); if(foreground && !isGalleryOpen.value) cameraEngine.openCamera() }
     fun onResume() { foreground=true; if(!isGalleryOpen.value) cameraEngine.openCamera() }
     fun onPause() { foreground=false; cameraEngine.closeCamera() }
-    fun hardwareShutterAllowed(): Boolean = foreground && !isGalleryOpen.value && !isRecipeSheetOpen.value && !isSettingsOpen.value && !isAboutOpen.value && !isDiagnosticsOpen.value
+    fun hardwareShutterAllowed(): Boolean = foreground && !isGalleryOpen.value && !isRecipeSheetOpen.value && !isSettingsOpen.value && !isFormatPickerOpen.value && pendingCamera.value==null && !isAboutOpen.value && !isDiagnosticsOpen.value
     private fun haptic(strong: Boolean=false) {
         if(!settings.value.haptics) return
         runCatching {
@@ -122,45 +140,73 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         else flashMode.value=next
         cameraEngine.setFlashMode(flashMode.value); haptic()
     }
-    fun selectLens(lens: LensType) {
+    fun selectCamera(cameraId: String) {
         if(!editable()) return
-        if(cameraEngine.cameraSpecs.value.none { it.isBackFacing && it.lensType==lens }) { userNotice.value="${lens.label} is not exposed to Camera2 on this firmware"; return }
-        activeLens.value=lens
-        val calibration=store.load(lens).calibration
-        settings.value=settings.value.copy(calibration=calibration)
-        cameraEngine.configure(settings.value)
-        cameraEngine.selectLens(lens,cropFactor.value); updateFraming(); haptic()
+        val spec=CameraOptions.rear(cameraEngine.cameraSpecs.value).firstOrNull { it.cameraId==cameraId }
+            ?: run { userNotice.value="That camera ID is no longer exposed by the firmware"; return }
+        if(!CaptureFormatPolicy.supported(settings.value.format,spec)) { pendingCamera.value=spec; return }
+        applyCamera(spec)
+    }
+    private fun applyCamera(spec: CameraSpec) {
+        activeLens.value=spec.lensType
+        settings.value=settings.value.copy(calibration=store.load(spec.lensType,spec.cameraId).calibration)
+        store.save(settings.value,spec.lensType,spec.cameraId)
+        cameraEngine.configure(settings.value); cameraEngine.selectCamera(spec.cameraId,cropFactor.value)
+        updateFraming(); haptic()
+    }
+    fun confirmCameraFormatSwitch() {
+        if(!editable()) return
+        val spec=pendingCamera.value ?: return
+        pendingCamera.value=null
+        val format=if(spec.hasJpegSupport) CaptureFormat.JPEG else CaptureFormat.RAW
+        settings.value=CaptureFormatPolicy.normalize(settings.value.copy(format=format))
+        cropFactor.value=1f; applyCamera(spec)
+        userNotice.value="${CameraOptions.label(spec)} uses ${format.label}; no unsupported file format was silently substituted."
     }
     fun setCrop(factor: Float) {
         if(!editable()) return
+        if(!CaptureFormatPolicy.allowsCrop(settings.value.format)) { userNotice.value="RAW modes use uncropped 1× framing so the sensor data and JPEG pair stay aligned."; return }
         if(settings.value.pipeline in listOf(CapturePipeline.OEM_HDR,CapturePipeline.OEM_NIGHT) && factor!=1f) {
             updateSettings(settings.value.copy(pipeline=CapturePipeline.STANDARD)); userNotice.value="Cropped framing uses Camera2 natural"
         }
         cropFactor.value=factor.coerceIn(1f,3f)
-        cameraEngine.selectLens(activeLens.value,cropFactor.value); updateFraming(); haptic()
+        cameraEngine.activeCameraSpec.value?.cameraId?.let { cameraEngine.selectCamera(it,cropFactor.value) }
+        updateFraming(); haptic()
     }
     fun toggle2xCrop() { setCrop(if(cropFactor.value==2f) 1f else 2f) }
     private fun updateFraming() {
         val spec=cameraEngine.activeCameraSpec.value
-        val native=cameraEngine.captureSize.value.let { it.width.toLong()*it.height/1_000_000f }.takeIf { it>0 } ?: spec?.maxResolutionMp ?: 0f
+        val dimensions=if(settings.value.format==CaptureFormat.RAW) cameraEngine.rawCaptureSize.value else cameraEngine.captureSize.value
+        val native=dimensions.let { it.width.toLong()*it.height/1_000_000f }.takeIf { it>0 }
+            ?: if(settings.value.format==CaptureFormat.RAW) spec?.rawSizes?.firstOrNull()?.area?.div(1_000_000f) ?: 0f else spec?.maxResolutionMp ?: 0f
         framingConfig.value=FramingConfig(
             lensSlot=activeLens.value,cropFactor=cropFactor.value,is2xActive=cropFactor.value>1f,
-            effectiveFocalLength35mm=((spec?.equivalentFocalLength35mm ?: activeLens.value.approxFocalLength35mm)*cropFactor.value).roundToInt(),
+            effectiveFocalLength35mm=((spec?.equivalentFocalLength35mm ?: 0)*cropFactor.value).roundToInt(),
             cropStatus=if(settings.value.outputSize==OutputSize.UPSCALE_28 && native<28.1f) HonestCropStatus.DIGITALLY_RESAMPLED else if(cropFactor.value>1f) HonestCropStatus.NATIVE_NO_RESAMPLE else HonestCropStatus.FULL_SENSOR,
             estimatedResolutionMp=native/(cropFactor.value*cropFactor.value)
         )
     }
-    fun updateSettings(s: CaptureSettings) {
+    fun updateSettings(requested: CaptureSettings) {
         if(!editable()) return
-        val oem=s.pipeline in listOf(CapturePipeline.OEM_HDR,CapturePipeline.OEM_NIGHT)
-        val enteringOem=oem && settings.value.pipeline!=s.pipeline
+        val spec=cameraEngine.activeCameraSpec.value
+        if(requested.format!=settings.value.format && !CaptureFormatPolicy.supported(requested.format,spec)) {
+            userNotice.value="${requested.format.label} is not exposed on this camera. ${spec?.rawUnavailableReason.orEmpty()}"; return
+        }
+        val s=CaptureFormatPolicy.normalize(requested).let { if(!it.format.writesJpeg) it.copy(compare=false) else it }
+        val enteringRaw=s.format.writesRaw && settings.value.format!=s.format
+        val enteringOem=s.pipeline in listOf(CapturePipeline.OEM_HDR,CapturePipeline.OEM_NIGHT) && settings.value.pipeline!=s.pipeline
         settings.value=s
+        if(enteringRaw) {
+            cropFactor.value=1f; isRecipeSheetOpen.value=false
+            userNotice.value="${s.format.label}: native uncropped sensor data, standard Camera2. Looks affect JPEG only."
+        }
         if(enteringOem) {
             mode.value=CameraMode.AUTO; iso.value="AUTO"; shutterSpeed.value="AUTO"; whiteBalanceKelvin.value=0
             flashMode.value=FlashMode.OFF; cropFactor.value=1f; cameraEngine.resetAuto(); cameraEngine.setFlashMode(FlashMode.OFF)
-            cameraEngine.selectLens(activeLens.value,1f)
         }
-        store.save(s,activeLens.value); cameraEngine.configure(s); updateFraming(); haptic()
+        store.save(s,activeLens.value,spec?.cameraId); cameraEngine.configure(s)
+        if(enteringRaw || enteringOem) spec?.cameraId?.let { cameraEngine.selectCamera(it,1f) }
+        updateFraming(); haptic()
     }
     private fun requireManualSensor(): Boolean {
         if(!editable()) return false
@@ -229,23 +275,38 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         val recipe=tunedRecipe(); val captureSettings=settings.value; val factor=cropFactor.value
         haptic(true)
         viewModelScope.launch {
+            var captured: CaptureBundle?=null
             isShutterFlashing.value=true
             launch { delay(75); isShutterFlashing.value=false }
             try {
                 val heavy=Build.VERSION.SDK_INT<29 || runCatching { power.currentThermalStatus<PowerManager.THERMAL_STATUS_SEVERE }.getOrDefault(true)
                 if(!heavy && captureSettings.pipeline in listOf(CapturePipeline.OEM_HDR,CapturePipeline.OEM_NIGHT)) error("Phone is hot. Choose Camera2 natural or let it cool before an OEM HDR/Night capture.")
                 if(!heavy && (captureSettings.pipeline==CapturePipeline.BURST || captureSettings.zsl)) userNotice.value="Phone is hot: using a single standard capture"
-                val captured=cameraEngine.capturePhoto(factor,heavy).getOrThrow()
-                processingProgress.value=if(captured.frames.size==3) "Aligning and merging frames…" else "Saving photo…"
-                val output=withContext(Dispatchers.Default) { ImageProcessor.processCapture(getApplication(),captured,recipe,captureSettings) }
-                val uri=MediaStoreSaver.savePhoto(getApplication(),output.bytes,recipe.name).getOrThrow()
-                lastCapturedUri.value=uri
-                userNotice.value="Saved ${output.width} × ${output.height} · ${recipe.name}"
-                refreshPhotos(uri)
+                val bundle=cameraEngine.capturePhoto(factor,heavy).getOrThrow(); captured=bundle
+                if(captureSettings.format.writesRaw) {
+                    val raw=bundle.raw ?: error("RAW image missing; no JPEG-only replacement was saved")
+                    processingProgress.value="Writing native DNG…"
+                    val saved=RawMediaStoreSaver.save(getApplication(),captureSettings.format,raw.width,raw.height,
+                        writeRaw={ stream -> try { raw.writeTo(stream) } finally { raw.close() } },
+                        makeJpeg={
+                            processingProgress.value="Saving paired JPEG…"
+                            withContext(Dispatchers.Default) { ImageProcessor.processCapture(getApplication(),bundle,recipe,captureSettings) }
+                        }).getOrThrow()
+                    lastCapturedUri.value=saved.preferred
+                    userNotice.value=if(saved.jpeg!=null) "Saved RAW + JPEG pair · DNG ${saved.rawWidth} × ${saved.rawHeight}; JPEG ${saved.jpegWidth} × ${saved.jpegHeight}"
+                        else "Saved ungraded RAW DNG · ${saved.rawWidth} × ${saved.rawHeight}"
+                    refreshPhotos(saved.preferred)
+                } else {
+                    processingProgress.value=if(bundle.frames.size==3) "Aligning and merging frames…" else "Saving photo…"
+                    val output=withContext(Dispatchers.Default) { ImageProcessor.processCapture(getApplication(),bundle,recipe,captureSettings) }
+                    val uri=MediaStoreSaver.savePhoto(getApplication(),output.bytes,recipe.name).getOrThrow()
+                    lastCapturedUri.value=uri; userNotice.value="Saved ${output.width} × ${output.height} · ${recipe.name}"
+                    refreshPhotos(uri)
+                }
             } catch(e: CancellationException) { throw e }
-            catch(e: OutOfMemoryError) { userNotice.value="Not enough image memory. Try native output with single-frame capture." }
+            catch(e: OutOfMemoryError) { userNotice.value="Not enough image memory. Try JPEG or a smaller advertised RAW stream/lens." }
             catch(e: Exception) { userNotice.value="Photo not saved: ${e.message ?: e.javaClass.simpleName}" }
-            finally { processingProgress.value=""; isCapturing.value=false; isShutterFlashing.value=false }
+            finally { runCatching { captured?.close() }; processingProgress.value=""; isCapturing.value=false; isShutterFlashing.value=false }
         }
     }
     fun refreshPhotos(preferred: Uri?=null) {
@@ -257,7 +318,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                     runCatching { withContext(Dispatchers.IO) {
                         if(Build.VERSION.SDK_INT>=29) getApplication<Application>().contentResolver.loadThumbnail(uri,Size(160,160),null)
                         else ImageDecoder.decodeBitmap(ImageDecoder.createSource(getApplication<Application>().contentResolver,uri)) { d,_,_ -> d.setTargetSize(160,160); d.allocator=ImageDecoder.ALLOCATOR_SOFTWARE }
-                    } }.onSuccess { lastCapturedThumbnail.value=it }
+                    } }.onSuccess { lastCapturedThumbnail.value=it }.onFailure { lastCapturedThumbnail.value=null }
                 } else { lastCapturedUri.value=null; lastCapturedThumbnail.value=null }
             }.onFailure { userNotice.value="Gallery is unavailable: ${it.message}" }
         }
@@ -314,6 +375,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         "\n${cameraEngine.diagnosticSummary()}\nThermal: ${thermalStatus.value}\nBuild: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n"+
         "Default: neutral Camera2 ISP JPEG, not proprietary Oppo stock-app processing.\n"+
         "Active calibration (user-adjustable, unmeasured): ${settings.value.calibration}\n"+
+        "Files: ${settings.value.format.label}\nCamera ID: ${cameraEngine.activeCameraSpec.value?.cameraId}\n"+
         "Output: ${settings.value.outputSize.label}\nPipeline request: ${settings.value.pipeline.label}\n"
     override fun onCleared() {
         val listener=thermalListener
