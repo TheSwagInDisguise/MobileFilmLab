@@ -2,7 +2,7 @@
 
 # Beta-readiness tracker
 
-**Test candidate:** `v0.1.0-alpha.9` / versionCode **9** / `com.mobilefilmlab.camera`  
+**Test candidate:** `v0.1.0-alpha.9` / versionCode **9** / `com.mobilefilmlab.camera`
 **Release channel:** alpha prerelease only. No beta build/tag is authorised or created by this work.
 
 “Implemented” below means there is a wired code path, not that a phone-dependent feature has been verified. **Handset results are still pending.** Exact stock-camera processing cannot be recreated from public Camera2 alone.
