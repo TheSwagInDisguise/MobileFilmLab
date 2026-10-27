@@ -1,0 +1,14 @@
+{
+  "version": "0.2.0-beta.1",
+  "tag": "v0.2.0-beta.1",
+  "versionCode": 10,
+  "releaseUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.1",
+  "apkUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/download/v0.2.0-beta.1/MobileFilmLab-v0.2.0-beta.1-signed.apk",
+  "sha256": "8904258029217377606696654685deaa8c58f0d32b689bab9b0a7f437b729dc7",
+  "bytes": 40808802,
+  "minimumAndroid": "9",
+  "package": "com.mobilefilmlab.camera",
+  "license": "GPL-3.0-or-later",
+  "classification": "regular-release",
+  "primaryDevice": "Oppo Find X9 Ultra"
+}

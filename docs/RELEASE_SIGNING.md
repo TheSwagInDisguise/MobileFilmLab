@@ -13,9 +13,9 @@ The certificate fingerprint is public; the keystore, passwords and repository cr
 ## Approval and immutable releases
 
 - The source version, version-specific release notes, tag and tagged commit must agree.
-- Alpha tags can remain test prereleases. Any **non-alpha tag requires `APPROVED_RELEASE_TAG` to equal that exact tag**. A beta approval cannot approve a stable tag or a different beta.
+- The current publication workflow requires **`APPROVED_RELEASE_TAG` to equal the exact tag before checking out any historical release source**. The Python identity helper also blocks unapproved non-alpha publication. A beta approval cannot approve another beta or a stable tag; withdrawn old downloads must not be recreated.
 - The owner explicitly authorised **`v0.2.0-beta.1`** for public testing. Set the repository variable to that tag only after authorisation; no broad stable-release approval is implied.
-- Tags containing a prerelease suffix publish with GitHub's **prerelease** flag and are not marked latest stable.
+- New prerelease-version tags default to GitHub prereleases. By explicit owner request, the existing **v0.2.0-beta.1** entry was promoted to a regular **Latest** release without changing its APK, tag or app version. This is not a new stable-version build. See [publication status](PUBLIC_RELEASE.md).
 - The workflow refuses to overwrite an existing release. Fixes require a new version/code/tag, not replacement of published APKs or moving a tag.
 - Main-branch CI verifies source identity, release-guard tests, documentation links, Android tests, lint and debug assembly. Signed-release CI repeats release checks, tests, lint, build and APK verification.
 

@@ -23,6 +23,10 @@ python3 scripts/check_docs.py
 
 The native-graphics suite includes actual UI documentation rendering. See [screenshot reproduction](docs/SCREENSHOTS.md); do not present mockups or simulated scenes as handset captures.
 
+## Project website
+
+The static project site lives in `site/` and deploys through GitHub Pages. Run `python3 scripts/check_site.py`; see [website development](docs/WEBSITE.md). Preserve the distinction between no app-added AI enhancement, device ISP processing and AI-assisted development.
+
 ## Pull requests
 
 - Keep changes focused and add tests for behaviour, failure paths and migration/format changes.

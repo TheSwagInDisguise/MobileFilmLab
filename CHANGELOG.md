@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Project publication update — 2026-10-27
+
+- Promoted the existing `v0.2.0-beta.1` entry to a regular **Latest GitHub Release** by owner request. No app version/code, APK bytes, tag or signing key changed; no new stable-version build was created.
+- Withdrew nine previous release entries/assets and nine old signed-APK workflow artifacts. Kept all version tags and source history as requested; external copies cannot be revoked.
+- Added the GitHub Pages showcase with native UI renders, downloads, compatibility information, privacy and explicit processing/development disclosures.
+- Prominent natural-capture selling point: no generative/ML enhancement or cloud processing added by the app. Clearly distinguish Camera2/ISP JPEG output from RAW/DNG and unknown proprietary firmware processing.
+
 ## [0.2.0-beta.1] - 2026-10-27
 
 ### First public-testing beta

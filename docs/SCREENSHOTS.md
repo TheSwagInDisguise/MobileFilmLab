@@ -31,6 +31,10 @@ The test renders Android windows, including the real modal bottom sheet, into PN
 
 The demo input is supplied through an inspection-only composition provider. It requires a **debug build AND `LocalInspectionMode`**, has no intent, user setting or release-mode entry point, and never replaces the real camera path in a signed release. The scene is in `docs/`, not Android assets, so it is not bundled in the APK.
 
+## Website copies
+
+The project site uses lossless WebP copies in `site/assets/app-*.webp`. Their decoded pixels were checked against these original PNG renders; the format conversion does not invent or alter the interface. The same demo-scene disclosures appear on the website.
+
 ## Assets
 
 - `docs/assets/demo-scene.png`: AI-generated demonstration landscape, 896 × 1200 pixels; created for this documentation. No user photographs or vendor artwork used.

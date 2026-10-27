@@ -4,19 +4,25 @@
 
 # MobileFilmLab
 
-**A photos-only Android camera with film-inspired looks and a spacious AUTO / PRO workflow.** Open source · GPL-3.0-or-later · Android 9+
+**Natural photos, with no AI enhancement added by the app.** A hardware-first, photos-only Android camera with optional film-inspired looks and a spacious AUTO / PRO workflow. Open source · GPL-3.0-or-later · Android 9+
 
 [![CI](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/workflows/ci.yml/badge.svg)](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/workflows/ci.yml)
 
-## First public beta
+## Current public release
 
-**[Download v0.2.0-beta.1](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.1)** · [Testing guide](docs/TESTING.md) · [Report a bug](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose)
+**[Explore the project website](https://theswagindisguise.github.io/MobileFilmLab/)** · **[Download v0.2.0-beta.1](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.1)** · [Testing guide](docs/TESTING.md) · [Report a bug](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose)
 
 ### Built primarily for the Oppo Find X9 Ultra
 
 The **Oppo Find X9 Ultra is the primary development and testing target**. We plan to expand compatibility to more devices with help from beta testers. Other phones may run the app, but camera access, lens availability and processing modes vary by device and firmware. Please share a [device compatibility report](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new?template=device_support.yml) to help improve support.
 
-This beta builds on a successful initial handset test of alpha.9. It is **ready for public testing, not a stable or universally validated release**. Keep another camera available for important photos; see [known limitations](KNOWN_LIMITATIONS.md).
+The existing **v0.2.0-beta.1** build is now the **Latest regular GitHub Release**, with its APK, version and signing key unchanged. It remains a beta-version app for public testing—not a newly built stable version or universal hardware validation. Older release downloads were withdrawn; source tags remain. [Publication details](docs/PUBLIC_RELEASE.md).
+
+## Natural capture. No app-added AI.
+
+MobileFilmLab adds **no generative image model, neural/ML photo enhancement or cloud photo processing**. It starts with the hardware’s exposed Camera2 JPEG; the default unedited 1× Natural path preserves its pixel data. Creative colour, sharpening, grain and fusion use optional, conventional algorithms.
+
+**Hardware-first does not mean unprocessed RAW.** The device ISP still processes images; proprietary firmware and optional manufacturer modes may use techniques we cannot inspect or rule out. This version saves JPEG, not RAW/DNG. [What our no-app-added-AI promise means](docs/NATURAL_CAPTURE.md).
 
 ## Features
 

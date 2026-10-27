@@ -1,7 +1,10 @@
 # Documentation
 
-## Public beta
+## Current release and project
 
+- [Live project website](https://theswagindisguise.github.io/MobileFilmLab/) and [website development/deployment](WEBSITE.md).
+- [Natural capture and no-app-added-AI processing](NATURAL_CAPTURE.md).
+- [Publication status and historical download withdrawal](PUBLIC_RELEASE.md).
 - [Public testing guide](TESTING.md) — installation, checks and useful bug reports.
 - [Compatibility and validation status](BETA_READINESS.md) — what is accepted for public testing and what is still unverified.
 - [Known limitations](../KNOWN_LIMITATIONS.md) — camera access, rendering and experimental features.

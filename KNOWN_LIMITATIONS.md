@@ -1,5 +1,9 @@
 # Known limitations — public beta
 
+## No app-added AI does not mean no device processing
+
+MobileFilmLab adds no generative or neural/ML photo enhancement and sends no photos to a cloud processor. Its own optional editing/fusion is conventional. The device camera/ISP and optional OEM extensions may still use proprietary or AI-based processing we cannot inspect or rule out. This release captures JPEG, not RAW/DNG or a bare sensor stream. [Natural-capture scope](docs/NATURAL_CAPTURE.md).
+
 ## Proprietary stock processing is not replicated
 
 Exact proprietary sensor/processing internals, frame counts, algorithms and SNR gains cannot be inferred from JPEG/MakerNote metadata alone. Earlier explanations overstated those details. Multi-frame processing, sharpening, denoising, exposure/focus and stream limits can all contribute to differences from the stock app.

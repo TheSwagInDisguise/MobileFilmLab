@@ -3,6 +3,8 @@
 **Candidate:** `v0.2.0-beta.1` / code **10** / `com.mobilefilmlab.camera`
 **Scope:** first signed **public-testing beta**, not a stable release or stock-camera parity claim.
 
+The existing entry has since been promoted to a regular Latest GitHub Release by owner request; the app version and validation scope are unchanged. [Publication status](PUBLIC_RELEASE.md).
+
 The owner reported alpha.9 working well on the primary handset and explicitly authorised the first public beta. This supersedes the earlier alpha-only publication restriction. It does **not** establish that every item in the historical hardware matrix was tested. The [old pre-beta tracker](archive/ALPHA_9_BETA_GATES.md) is retained as history, not silently checked off.
 
 ## Accepted release scope

@@ -8,7 +8,7 @@ MobileFilmLab was developed **substantially with AI assistance**. AI-generated o
 - Generated code, tests and documentation can contain mistakes or unsupported assumptions. Passing tests does not prove real-camera behaviour or establish image quality.
 - Recipe translations approximate looks. They do not reproduce proprietary colour science or private camera pipelines.
 - Please review source, report reproducible problems and keep another camera available for important or irreplaceable photographs.
-- No AI service is called to process your photographs. The app's image processing is local; its only network feature is a manually requested public release check.
+- MobileFilmLab adds no generative image model, neural/ML photo enhancement or cloud photo processing. Optional app-side edits use conventional algorithms. Device firmware/ISP and optional manufacturer modes remain outside that guarantee; see [natural capture](NATURAL_CAPTURE.md). The app’s only network feature is a manually requested public release check.
 
 ## Images and screenshots
 
