@@ -2,6 +2,9 @@
 
 ## Current release and project
 
+- [Pro sliders and settings readability](PRO_CONTROLS.md).
+- [Beta.3 QA boundaries](QA_BETA_3.md).
+
 - [Dynamic cameras and RAW formats](DYNAMIC_CAMERAS_AND_RAW.md).
 - [Beta.2 QA boundaries](QA_BETA_2.md).
 

@@ -56,7 +56,7 @@ class DocumentationScreenshotsTest {
             equivalentFocalLength35mm = 23, sensorWidthMm = 9f, sensorHeightMm = 12f,
             apertureFNumber = 1.8f, activeArrayWidth = scene.width, activeArrayHeight = scene.height,
             maxResolutionMp = scene.width * scene.height / 1_000_000f, hasRawSupport = true,
-            lensType = LensType.WIDE, displayName = "Documentation demo only", manualSensor = true, manualWb = true, rawSizes = listOf(StreamSize(scene.width,scene.height)), rawUnavailableReason = "")
+            lensType = LensType.WIDE, displayName = "Documentation demo only", manualSensor = true, manualWb = true, focusModes = listOf("AF-C","AF-S","MACRO"), rawSizes = listOf(StreamSize(scene.width,scene.height)), rawUnavailableReason = "")
         // Private test-only state injection; there is no shipping demo switch or fake camera implementation.
         flow<List<CameraSpec>>(engine, "_cameraSpecs").value = listOf(spec.copy(cameraId="demo-ultra",equivalentFocalLength35mm=14,hasRawSupport=false,rawSizes=emptyList(),rawUnavailableReason="Illustrative JPEG-only route"),spec, spec.copy(cameraId="demo-tele",equivalentFocalLength35mm=83,lensType=LensType.TELEPHOTO))
         flow<CameraSpec?>(engine, "_activeCameraSpec").value = spec
@@ -117,15 +117,17 @@ class DocumentationScreenshotsTest {
                 view.draw(canvas)
                 canvas.restore()
             }
-            val samples = (100..1800 step 40).map { bitmap.getPixel(432, it) }.toSet()
-            assertTrue("Render unexpectedly blank", samples.size > 6)
+            // A text-only settings Surface can have a nearly uniform centre column.
+            // Sample across the whole native window, not only down its centreline.
+            val samples = (72..792 step 48).flatMap { x -> (100..1800 step 40).map { y -> bitmap.getPixel(x,y) } }.toSet()
+            assertTrue("Render unexpectedly blank: $name", samples.size > 6)
             File(output, name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
         }
         try {
             capture("auto.png")
             vm.mode.value = CameraMode.PRO
-            vm.iso.value = "200"; vm.shutterSpeed.value = "1/125"; vm.whiteBalanceKelvin.value = 5600
+            vm.iso.value = 200; vm.exposureTimeNs.value = 8_000_000L; vm.whiteBalanceKelvin.value = 5600
             vm.selectRecipe(warm)
             capture("pro.png")
             vm.isRecipeSheetOpen.value = true
@@ -133,14 +135,19 @@ class DocumentationScreenshotsTest {
             vm.isRecipeSheetOpen.value = false
             vm.isFormatPickerOpen.value = true
             capture("formats.png")
+            vm.isFormatPickerOpen.value = false
+            vm.isSettingsOpen.value = true
+            capture("settings.png")
         } finally {
             vm.isRecipeSheetOpen.value = false
             vm.isFormatPickerOpen.value = false
+            vm.isSettingsOpen.value = false
             controller.pause().stop().destroy()
             shadowOf(Looper.getMainLooper()).idle()
         }
         assertTrue(File(output, "recipes.png").length() > 20_000)
         assertTrue(File(output, "formats.png").length() > 20_000)
+        assertTrue(File(output, "settings.png").length() > 20_000)
     }
     private fun exact(size: Int) = View.MeasureSpec.makeMeasureSpec(size, View.MeasureSpec.EXACTLY)
     private fun <T> flow(engine: CameraEngine, name: String): MutableStateFlow<T> = ReflectionHelpers.getField(engine, name)

@@ -1,10 +1,12 @@
 # Public testing and validation status
 
-**Feature release:** `v0.2.0-beta.2` / code **11** / `com.mobilefilmlab.camera`.
+**Feature release:** `v0.2.0-beta.3` / code **12** / `com.mobilefilmlab.camera`.
 
-The owner explicitly authorised dynamic Camera2 lens controls and RAW/DNG formats, a new regular Latest GitHub Release after checks, an updated website and withdrawal of the previous binary downloads while preserving tags. The beta-version app remains a public-testing build, not universal hardware certification.
+The owner explicitly authorised the readability/Pro-slider update, retaining dynamic Camera2 lens controls and RAW/DNG formats, a new regular Latest GitHub Release after checks, an updated website and withdrawal of the previous binary downloads while preserving tags. The beta-version app remains a public-testing build, not universal hardware certification.
 
 ## Implemented scope
+
+- Readable high-contrast Settings with persistent Done access; hardware-bounded EV/ISO/shutter/WB sliders, explicit Auto/metered states and supported discrete AF choices. [Pro controls and limits](PRO_CONTROLS.md).
 
 - Existing photos-only AUTO/PRO, full 77-recipe upstream catalogue plus three baselines, custom recipes/favourites, JPEG editing and local gallery/interchange.
 - Dynamic rear Camera2 photo routes with exact-ID selection and reported focal labels. Logical Auto routes are not additional physical lenses; firmware-hidden IDs are not promised.
@@ -17,7 +19,7 @@ The owner explicitly authorised dynamic Camera2 lens controls and RAW/DNG format
 | Area | Status |
 |---|---|
 | Prior primary-handset feedback | Alpha.9 worked well according to the owner. This is not a detailed report for the new RAW/session paths. |
-| Automated suite / native UI renders / lint | Required before publication; see [beta.2 QA](QA_BETA_2.md) and tagged workflow results. |
+| Automated suite / native UI renders / lint | Required before publication; see [beta.3 QA](QA_BETA_3.md) and tagged workflow results. |
 | Sensor RAW capture and DNG validity | Must be verified on actual hardware/firmware in a RAW-capable editor. JVM storage tests use controlled payloads, not a simulated sensor. |
 | Physical/logical route access | Advertised/discovered via public Camera2; opening and stream combinations remain firmware-dependent. |
 | Per-lens measured colour calibration | Not completed. Identity/user JPEG gains are not a proprietary factory profile; RAW pixels are not graded. |

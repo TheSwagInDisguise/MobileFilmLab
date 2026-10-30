@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-beta.3] - 2026-10-30
+
+- Fixed inherited black-on-dark text with a light theme content default and correctly scoped Settings Surface; brighter body/helper tokens and larger, wrapping settings labels.
+- Settings now has a scrolling body with persistent title/Done access, including at increased font scales.
+- Replaced repeated-tap Pro cycling with one-active-editor EV, ISO, shutter and white-balance sliders, explicit Auto/metered states and direct supported AF choices.
+- EV snaps to reported steps; ISO/time use logarithmic scales and current-route bounds. Shutter obeys exposure/frame limits and a 30-second app cap, with a corresponding long-exposure deadline.
+- Re-bound controls on camera changes; clearly distinguish a metered-and-held companion axis from genuine priority-auto exposure. Retained real RAW/DNG, dynamic exact-ID cameras, recipe catalogue and user-data compatibility.
+- Added slider interaction, capability/Auto state, control mapping, camera-switch, contrast and large-font settings tests, plus an actual native Settings render. 116 Android tests pass locally; release lint and six approval tests are publication gates.
+- Same package/key, versionCode 12. Owner-authorised regular Latest release; update/verify the replacement and website before withdrawing beta.2 binary downloads, preserving all tags/history.
+
 ## [0.2.0-beta.2] - 2026-10-27
 
 - Replaced four fixed rear lens slots with all exposed photo-capable rear Camera2 routes, exact-ID selection, detected focal labels and explicit logical Auto labels.

@@ -37,5 +37,7 @@ data class CameraSpec(
     val rawSizes: List<StreamSize> = emptyList(),
     val hasJpegSupport: Boolean = true,
     val rawUnavailableReason: String = "RAW_SENSOR is not advertised by this camera",
-    val availableFocalLengthsMm: List<Float> = emptyList()
+    val availableFocalLengthsMm: List<Float> = emptyList(),
+    val maxFrameDurationNs: Long? = null,
+    val focusModes: List<String> = emptyList()
 )

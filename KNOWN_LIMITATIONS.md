@@ -38,7 +38,7 @@ All 77 upstream definitions remain present. Creative Style, monochrome filters, 
 
 The live preview shares the colour matrix but not final grain, sharpening or every OEM still-processing step. Split comparison samples the baseline periodically; it is not frame-synchronized dual-sensor video. Live preview correctness, orientation and latency require physical-device checking. UI remains portrait; JPEG orientation follows device orientation.
 
-Kelvin WB is an approximate manual gain model, not measured per-sensor colour science. Manual values are hardware-clamped. Setting just ISO/shutter freezes the companion from a recent result, not a full priority-mode AE algorithm. Unsupported AF modes can fall back to the device's supported mode. Flash operation must be verified on hardware; selecting On alone is never treated as proof the flash fired.
+Kelvin WB is an approximate manual gain model, not measured per-sensor colour science. Manual values are hardware-clamped. Setting just ISO/shutter freezes the companion from a recent result, not a full priority-mode AE algorithm. The Pro UI exposes only advertised selectable AF modes; native requests still have a supported-mode fallback. EV compensation is unavailable while either exposure axis is manual. Shutter is capped by sensor/frame limits and a 30-second app safety limit. [Slider details](docs/PRO_CONTROLS.md). Flash operation must be verified on hardware; selecting On alone is never treated as proof the flash fired.
 
 ## Gallery, interchange and release checks
 

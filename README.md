@@ -10,13 +10,13 @@
 
 ## Current public release
 
-**[Explore the project website](https://theswagindisguise.github.io/MobileFilmLab/)** · **[Download v0.2.0-beta.2](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.2)** · [Testing guide](docs/TESTING.md) · [Report a bug](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose)
+**[Explore the project website](https://theswagindisguise.github.io/MobileFilmLab/)** · **[Download v0.2.0-beta.3](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.3)** · [Testing guide](docs/TESTING.md) · [Report a bug](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose)
 
 ### Built primarily for the Oppo Find X9 Ultra
 
 The **Oppo Find X9 Ultra is the primary development and testing target**. We plan to expand compatibility to more devices with help from beta testers. Other phones may run the app, but camera access, lens availability and processing modes vary by device and firmware. Please share a [device compatibility report](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new?template=device_support.yml) to help improve support.
 
-**v0.2.0-beta.2 / code 11** adds dynamic Camera2 camera selection and RAW formats, with the same package/signing key for in-place upgrades. It is an owner-authorised regular Latest GitHub Release, but still a beta-version app—not universal hardware validation. Older binary downloads are withdrawn after the replacement is verified; source tags remain. [Publication details](docs/PUBLIC_RELEASE.md).
+**v0.2.0-beta.3 / code 12** improves settings readability and adds Pro sliders, retaining dynamic Camera2 camera selection and RAW formats, with the same package/signing key for in-place upgrades. It is an owner-authorised regular Latest GitHub Release, but still a beta-version app—not universal hardware validation. Older binary downloads are withdrawn after the replacement is verified; source tags remain. [Publication details](docs/PUBLIC_RELEASE.md).
 
 ## Natural capture. No app-added AI.
 
@@ -26,7 +26,7 @@ MobileFilmLab adds **no generative image model, neural/ML photo enhancement or c
 
 ## Features
 
-- **AUTO and PRO** — uncluttered photo capture, tap-to-focus/meter, flash controls and hardware-limited manual exposure, white balance and focus.
+- **AUTO and PRO** — uncluttered photo capture, tap-to-focus/meter, flash controls and hardware-limited EV/ISO/shutter/WB sliders, explicit Auto/metered states and directly selectable focus modes. [Pro controls](docs/PRO_CONTROLS.md).
 - **Device-driven camera controls** — all exposed photo-capable rear Camera2 routes, selected by exact ID and labelled with detected focal lengths. Logical Auto routes are distinguished from physical lenses. JPEG supports four digital framing levels.
 - **JPEG / RAW DNG / RAW+JPEG** — capability-gated file formats. RAW comes from the sensor stream without app grading, crop or interpolation; paired JPEG looks remain optional. RAW uses standard Camera2 and uncropped native 1×. [Details and limitations](docs/DYNAMIC_CAMERAS_AND_RAW.md).
 - **80 built-in looks** — the complete 77-recipe upstream catalogue plus three independent camera baselines. Live colour previews, favourites and custom presets.
@@ -43,12 +43,12 @@ MobileFilmLab adds **no generative image model, neural/ML photo enhancement or c
 <table>
   <tr>
     <td align="center"><img src="docs/screenshots/auto.png" width="240" alt="Actual AUTO interface rendered with a labelled demonstration scene"><br><strong>AUTO</strong></td>
-    <td align="center"><img src="docs/screenshots/pro.png" width="240" alt="Actual PRO interface with illustrative manual controls and custom look"><br><strong>PRO</strong></td>
+    <td align="center"><img src="docs/screenshots/pro.png" width="240" alt="Actual PRO interface with an ISO slider, illustrative manual values and custom look"><br><strong>PRO</strong></td>
     <td align="center"><img src="docs/screenshots/recipes.png" width="240" alt="Actual recipe drawer with live colour tiles and Tone Warmth pad"><br><strong>Recipe editing</strong></td>
   </tr>
 </table>
 
-[View the RAW / JPEG format dialog](docs/screenshots/formats.png) · [Camera2 and RAW implementation/limits](docs/DYNAMIC_CAMERAS_AND_RAW.md)
+[View the settings panel](docs/screenshots/settings.png) · [View the RAW / JPEG format dialog](docs/screenshots/formats.png) · [Camera2 and RAW implementation/limits](docs/DYNAMIC_CAMERAS_AND_RAW.md)
 
 ## Install and test
 

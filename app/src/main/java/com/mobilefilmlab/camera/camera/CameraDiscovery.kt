@@ -88,7 +88,14 @@ class CameraDiscovery(context: Context) {
             manualWb=caps.contains(CC.REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING),
             privateReprocessing=parentCaps.contains(CC.REQUEST_AVAILABLE_CAPABILITIES_PRIVATE_REPROCESSING), extensionModes=modes,
             rawSizes=rawSizes, hasJpegSupport=sizes.isNotEmpty(), rawUnavailableReason=rawReason,
-            availableFocalLengthsMm=c.get(CC.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)?.toList().orEmpty()
+            availableFocalLengthsMm=c.get(CC.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)?.toList().orEmpty(),
+            maxFrameDurationNs=c.get(CC.SENSOR_INFO_MAX_FRAME_DURATION),
+            focusModes=buildList {
+                val af=c.get(CC.CONTROL_AF_AVAILABLE_MODES) ?: intArrayOf()
+                if(CC.CONTROL_AF_MODE_CONTINUOUS_PICTURE in af || CC.CONTROL_AF_MODE_CONTINUOUS_VIDEO in af) add("AF-C")
+                if(CC.CONTROL_AF_MODE_AUTO in af) add("AF-S")
+                if(CC.CONTROL_AF_MODE_MACRO in af) add("MACRO")
+            }
         )
     }
 }

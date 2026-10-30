@@ -44,8 +44,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     val puckTone=MutableStateFlow(0f)
     val puckColor=MutableStateFlow(0f)
     val evCompensation=MutableStateFlow(0f)
-    val iso=MutableStateFlow("AUTO")
-    val shutterSpeed=MutableStateFlow("AUTO")
+    val iso=MutableStateFlow<Int?>(null)
+    val exposureTimeNs=MutableStateFlow<Long?>(null)
     val whiteBalanceKelvin=MutableStateFlow(0)
     val focusMode=MutableStateFlow("AF-C")
     val isRecipeSheetOpen=MutableStateFlow(false)
@@ -89,6 +89,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch { cameraEngine.activeCameraSpec.collect { spec ->
             if(spec!=null) {
                 activeLens.value=spec.lensType
+                reconcileProControls(spec)
                 settings.value=settings.value.copy(calibration=store.load(spec.lensType,spec.cameraId).calibration)
                 cameraEngine.configure(settings.value); updateFraming()
             }
@@ -126,7 +127,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         }
         mode.value=new
         if(new==CameraMode.AUTO) {
-            iso.value="AUTO"; shutterSpeed.value="AUTO"; whiteBalanceKelvin.value=0; focusMode.value="AF-C"; evCompensation.value=0f
+            iso.value=null; exposureTimeNs.value=null; whiteBalanceKelvin.value=0; focusMode.value=cameraEngine.activeCameraSpec.value?.focusModes?.firstOrNull() ?: "N/A"; evCompensation.value=0f
             cameraEngine.resetAuto()
         }
         haptic()
@@ -136,7 +137,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         if(cameraEngine.activeCameraSpec.value?.hasFlash!=true) { userNotice.value="Flash is not available on this camera"; return }
         if(settings.value.pipeline in listOf(CapturePipeline.OEM_HDR,CapturePipeline.OEM_NIGHT)) { userNotice.value="OEM HDR/Night controls its own flash; choose Camera2 natural for manual flash"; return }
         val next=when(flashMode.value) { FlashMode.OFF->FlashMode.AUTO; FlashMode.AUTO->FlashMode.ON; FlashMode.ON->FlashMode.TORCH; FlashMode.TORCH->FlashMode.OFF }
-        if((iso.value!="AUTO" || shutterSpeed.value!="AUTO") && next in listOf(FlashMode.AUTO,FlashMode.ON)) { userNotice.value="Auto/forced flash needs auto exposure. Torch is available."; flashMode.value=FlashMode.TORCH }
+        if((iso.value!=null || exposureTimeNs.value!=null) && next in listOf(FlashMode.AUTO,FlashMode.ON)) { userNotice.value="Auto/forced flash needs auto exposure. Torch is available."; flashMode.value=FlashMode.TORCH }
         else flashMode.value=next
         cameraEngine.setFlashMode(flashMode.value); haptic()
     }
@@ -201,7 +202,8 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             userNotice.value="${s.format.label}: native uncropped sensor data, standard Camera2. Looks affect JPEG only."
         }
         if(enteringOem) {
-            mode.value=CameraMode.AUTO; iso.value="AUTO"; shutterSpeed.value="AUTO"; whiteBalanceKelvin.value=0
+            mode.value=CameraMode.AUTO; iso.value=null; exposureTimeNs.value=null; whiteBalanceKelvin.value=0
+            focusMode.value=spec?.focusModes?.firstOrNull() ?: "N/A"; evCompensation.value=0f
             flashMode.value=FlashMode.OFF; cropFactor.value=1f; cameraEngine.resetAuto(); cameraEngine.setFlashMode(FlashMode.OFF)
         }
         store.save(s,activeLens.value,spec?.cameraId); cameraEngine.configure(s)
@@ -213,46 +215,58 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
         if(cameraEngine.activeCameraSpec.value?.manualSensor!=true) { userNotice.value="Manual sensor exposure is not exposed on this lens"; return false }
         return true
     }
-    fun cycleEvCompensation() {
-        if(!editable()) return
+    fun setEvCompensation(value: Float) {
+        if(!editable() || !value.isFinite()) return
         val spec=cameraEngine.activeCameraSpec.value ?: return
-        if(iso.value!="AUTO" || shutterSpeed.value!="AUTO") { userNotice.value="EV compensation applies to auto exposure; manual ISO/shutter are active"; return }
-        if(spec.evStep<=0 || spec.minEv==spec.maxEv) { userNotice.value="EV compensation unavailable"; return }
-        val desired=listOf(-2f,-1f,-1f/3,0f,1f/3,1f,2f).map { (it/spec.evStep).roundToInt().coerceIn(spec.minEv,spec.maxEv) }.distinct()
-        val current=(evCompensation.value/spec.evStep).roundToInt(); val next=desired[(desired.indexOf(current)+1).coerceAtLeast(0)%desired.size]
-        evCompensation.value=next*spec.evStep; cameraEngine.updateEvCompensation(next); haptic()
+        if(iso.value!=null || exposureTimeNs.value!=null) return
+        if(!ProControlMath.hasEv(spec)) return
+        val steps=ProControlMath.evSteps(value,spec)
+        evCompensation.value=steps*spec.evStep
+        cameraEngine.updateEvCompensation(steps)
     }
-    fun cycleIso() {
+    fun setIso(value: Int?) {
         if(!requireManualSensor()) return
-        val spec=cameraEngine.activeCameraSpec.value!!
-        val options=listOf("AUTO")+listOf(50,100,200,400,800,1600,3200,6400).filter { it in spec.minIso..spec.maxIso }.map { it.toString() }
-        iso.value=options[(options.indexOf(iso.value)+1).coerceAtLeast(0)%options.size]
-        cameraEngine.updateManualIso(iso.value.toIntOrNull()); manualFlashGuard(); haptic()
+        val spec=cameraEngine.activeCameraSpec.value ?: return
+        iso.value=value?.coerceIn(ProControlMath.isoRange(spec))
+        cameraEngine.updateManualIso(iso.value)
+        manualFlashGuard()
     }
-    fun cycleShutter() {
+    fun setShutter(value: Long?) {
         if(!requireManualSensor()) return
-        val spec=cameraEngine.activeCameraSpec.value!!
-        val times=listOf("1/4000" to 250_000L,"1/2000" to 500_000L,"1/1000" to 1_000_000L,"1/500" to 2_000_000L,"1/250" to 4_000_000L,"1/125" to 8_000_000L,"1/60" to 16_666_667L,"1/30" to 33_333_333L)
-            .filter { it.second in spec.minExposureNs..spec.maxExposureNs }
-        val names=listOf("AUTO")+times.map { it.first }
-        shutterSpeed.value=names[(names.indexOf(shutterSpeed.value)+1).coerceAtLeast(0)%names.size]
-        cameraEngine.updateManualShutter(times.firstOrNull { it.first==shutterSpeed.value }?.second); manualFlashGuard(); haptic()
+        val spec=cameraEngine.activeCameraSpec.value ?: return
+        exposureTimeNs.value=value?.coerceIn(ProControlMath.exposureRange(spec))
+        cameraEngine.updateManualShutter(exposureTimeNs.value)
+        manualFlashGuard()
     }
     private fun manualFlashGuard() {
-        if((iso.value!="AUTO" || shutterSpeed.value!="AUTO") && flashMode.value in listOf(FlashMode.AUTO,FlashMode.ON)) { flashMode.value=FlashMode.OFF; cameraEngine.setFlashMode(FlashMode.OFF) }
+        if((iso.value!=null || exposureTimeNs.value!=null) && flashMode.value in listOf(FlashMode.AUTO,FlashMode.ON)) {
+            flashMode.value=FlashMode.OFF; cameraEngine.setFlashMode(FlashMode.OFF)
+        }
     }
-    fun cycleWhiteBalance() {
-        if(!editable()) return
-        if(cameraEngine.activeCameraSpec.value?.manualWb!=true) { userNotice.value="Manual white balance not exposed on this lens. Use the recipe Warmth pad instead."; return }
-        val options=listOf(0,3200,4000,5600,6500,7500)
-        whiteBalanceKelvin.value=options[(options.indexOf(whiteBalanceKelvin.value)+1).coerceAtLeast(0)%options.size]
-        cameraEngine.updateManualKelvin(whiteBalanceKelvin.value); haptic()
+    fun setWhiteBalance(value: Int) {
+        if(!editable() || cameraEngine.activeCameraSpec.value?.manualWb!=true) return
+        whiteBalanceKelvin.value=if(value==0) 0 else ProControlMath.kelvin(value)
+        cameraEngine.updateManualKelvin(whiteBalanceKelvin.value)
     }
-    fun cycleFocus() {
-        if(!editable()) return
-        val options=listOf("AF-C","AF-S","MACRO")
-        focusMode.value=options[(options.indexOf(focusMode.value)+1).coerceAtLeast(0)%options.size]
-        cameraEngine.updateFocusMode(focusMode.value); haptic()
+    fun setFocusMode(value: String) {
+        if(!editable() || value !in cameraEngine.activeCameraSpec.value?.focusModes.orEmpty()) return
+        focusMode.value=value
+        cameraEngine.updateFocusMode(value)
+    }
+    fun finishProAdjustment() { if(editable()) haptic() }
+
+    /** Lens changes cannot leave an old sensor's out-of-range value in the UI or request. */
+    private fun reconcileProControls(spec: CameraSpec) {
+        iso.value=if(spec.manualSensor) iso.value?.coerceIn(ProControlMath.isoRange(spec)) else null
+        exposureTimeNs.value=if(spec.manualSensor) exposureTimeNs.value?.coerceIn(ProControlMath.exposureRange(spec)) else null
+        if(!spec.manualWb) whiteBalanceKelvin.value=0
+        val ev=ProControlMath.evSteps(evCompensation.value,spec)
+        evCompensation.value=if(ProControlMath.hasEv(spec)) ev*spec.evStep else 0f
+        if(focusMode.value !in spec.focusModes) focusMode.value=spec.focusModes.firstOrNull() ?: "N/A"
+        cameraEngine.updateManualIso(iso.value); cameraEngine.updateManualShutter(exposureTimeNs.value)
+        cameraEngine.updateManualKelvin(whiteBalanceKelvin.value); cameraEngine.updateEvCompensation(ev)
+        cameraEngine.updateFocusMode(focusMode.value)
+        manualFlashGuard()
     }
     fun tunedRecipe(): Recipe = activeRecipe.value.copy(puckTone=puckTone.value,puckColor=puckColor.value)
     fun selectRecipe(recipe: Recipe) {

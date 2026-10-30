@@ -481,7 +481,7 @@ class CameraEngine(private val context: Context) {
             spec.physicalOutputId?.let { id -> if(k in physicalKeys) runCatching { b.setPhysicalCameraKey(k,v,id) } }
         }
         val afs=(c.get(CameraCharacteristics.CONTROL_AF_AVAILABLE_MODES) ?: intArrayOf())
-        val desired=when(focusMode) { "AF-S" -> CaptureRequest.CONTROL_AF_MODE_AUTO; "MACRO" -> CaptureRequest.CONTROL_AF_MODE_MACRO; else -> CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE }
+        val desired=when(focusMode) { "AF-S" -> CaptureRequest.CONTROL_AF_MODE_AUTO; "MACRO" -> CaptureRequest.CONTROL_AF_MODE_MACRO; else -> if(CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE in afs) CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_PICTURE else CaptureRequest.CONTROL_AF_MODE_CONTINUOUS_VIDEO }
         set(CaptureRequest.CONTROL_AF_MODE, if (desired in afs) desired else afs.firstOrNull() ?: CaptureRequest.CONTROL_AF_MODE_OFF)
         focusRegion?.let { rect ->
             if ((p.get(CameraCharacteristics.CONTROL_MAX_REGIONS_AF) ?: 0) > 0) set(CaptureRequest.CONTROL_AF_REGIONS,arrayOf(rect))
@@ -492,8 +492,8 @@ class CameraEngine(private val context: Context) {
         val base=spec.physicalOutputId?.let { latest?.physicalCameraResults?.get(it) } ?: latest
         val aeModes=(p.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES) ?: intArrayOf())
         if (isManual || (bracketEv != 0 && spec.manualSensor)) {
-            val iso=(manualIso ?: base?.get(CaptureResult.SENSOR_SENSITIVITY) ?: spec.minIso).coerceIn(spec.minIso,spec.maxIso)
-            val time=((manualTime ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 16_666_667L) * 2.0.pow(bracketEv)).toLong().coerceIn(spec.minExposureNs,spec.maxExposureNs)
+            val iso=(manualIso ?: base?.get(CaptureResult.SENSOR_SENSITIVITY) ?: spec.minIso).coerceIn(ProControlMath.isoRange(spec))
+            val time=((manualTime ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 16_666_667L) * 2.0.pow(bracketEv)).toLong().coerceIn(ProControlMath.exposureRange(spec))
             set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_OFF)
             set(CaptureRequest.SENSOR_SENSITIVITY,iso); set(CaptureRequest.SENSOR_EXPOSURE_TIME,time)
             val maxFrame=c.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION) ?: max(time,33_333_333L)
@@ -559,7 +559,7 @@ class CameraEngine(private val context: Context) {
     fun updateManualIso(iso: Int?) { handler.post { manualIso=iso; updateRepeatingInternal() } }
     fun updateManualShutter(ns: Long?) { handler.post { manualTime=ns; updateRepeatingInternal() } }
     fun updateManualKelvin(value: Int) { handler.post { kelvin=value; updateRepeatingInternal() } }
-    fun resetAuto() { handler.post { manualIso=null; manualTime=null; kelvin=0; focusMode="AF-C"; evSteps=0; focusRegion=null; updateRepeatingInternal() } }
+    fun resetAuto() { handler.post { manualIso=null; manualTime=null; kelvin=0; focusMode=activeCameraSpec.value?.focusModes?.firstOrNull() ?: "N/A"; evSteps=0; focusRegion=null; updateRepeatingInternal() } }
     fun triggerFocusAndMetering(x: Float, y: Float, viewAspect: Float=0.75f) {
         handler.post {
             if (extensionSession != null) { _cameraError.value="Tap metering is controlled by the OEM extension in this mode"; return@post }
@@ -722,7 +722,10 @@ class CameraEngine(private val context: Context) {
         }
         var delivered=false
         try {
-            val captured=withTimeout(if(extension) 60_000L else 15_000L) { shot.deferred.await() }
+            val latest=latestResult.value
+            val base=spec.physicalOutputId?.let { latest?.physicalCameraResults?.get(it) } ?: latest
+            val exposure=if(manualIso!=null || manualTime!=null) manualTime ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) else null
+            val captured=withTimeout(ProControlMath.captureTimeoutMs(exposure,extension)) { shot.deferred.await() }
             delivered=true; return captured
         } finally {
             pending.remove(shot); shot.rawImage?.close(); shot.rawImage=null

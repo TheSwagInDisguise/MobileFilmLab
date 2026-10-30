@@ -1,16 +1,31 @@
-# MobileFilmLab beta.2 public-release testing
+# MobileFilmLab beta.3 public-release testing
 
-**Version:** `0.2.0-beta.2` · code **11** · package `com.mobilefilmlab.camera`
+**Version:** `0.2.0-beta.3` · code **12** · package `com.mobilefilmlab.camera`
 **Primary target:** **Oppo Find X9 Ultra** · Android 9 / API 28 minimum
 
 This beta-version build is published as a regular Latest GitHub Release at the owner's request. That classification is not broad-device certification. The new RAW/session paths need real handset testing; there is no connected camera in the JVM/CI test environment.
 
 ## Install safely
 
-1. Download `MobileFilmLab-v0.2.0-beta.2-signed.apk` from the [current release](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/latest).
+1. Download `MobileFilmLab-v0.2.0-beta.3-signed.apk` from the [current release](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/latest).
 2. Verify the attached checksum and optionally the [established signing certificate](RELEASE_SIGNING.md).
-3. Install **over** code 10 to retain app data; do not uninstall. Debug builds are separate apps. Back up important photos and export custom recipes.
+3. Install **over** beta.2 / code 11 to retain app data; do not uninstall. Debug builds are separate apps. Back up important photos and export custom recipes.
 4. Grant camera permission; Android 9 also needs legacy storage permission. Photos go to `Pictures/MobileFilmLab/`.
+
+## Readability and Pro sliders
+
+- [ ] Open Settings. Read the output-size choices, composition switches, helper text and RGB gain labels: no black text on dark panels. The gold Done button correctly uses black text.
+- [ ] Increase Android font size/display scaling. Scroll the settings body; the title and Done action should remain reachable. Check long labels wrap rather than overlap switches.
+- [ ] Enter PRO. Tap EV / ISO / SEC / WB / FOCUS: this opens an editor without changing its value.
+- [ ] Drag EV in Auto exposure. Confirm it snaps to the route's reported Camera2 steps and reaches both displayed endpoints. Reset returns to zero.
+- [ ] Turn ISO Auto off and drag its logarithmic slider. Confirm the displayed value and saved exposure metadata respond within this lens's bounds; switch back to Auto explicitly.
+- [ ] Repeat for SEC, including a supported longer exposure on a tripod. Wait for the exposure to finish before assuming a stalled shutter; preview may also slow. The app caps the range at 30 seconds and the sensor/frame-duration limit.
+- [ ] When either ISO or shutter is manual, EV is inactive with a reason. An unspecified companion is labelled Metered and held, not continuously priority-auto controlled. Set both to Auto to restore AE/EV.
+- [ ] Adjust WB with its Auto switch and slider; values are approximate gain-model Kelvin, not a calibrated temperature reading. Choose a supported AF mode directly, without cycling.
+- [ ] Switch routes. Values must re-bound to the new sensor, and unsupported controls show a reason. During capture, Pro controls are disabled.
+- [ ] Repeat basic manual settings with JPEG, RAW and RAW+JPEG where advertised; validate actual ISO/exposure in a compatible editor.
+
+[Control details and limitations](PRO_CONTROLS.md) · [Automated QA scope](QA_BETA_3.md)
 
 ## Dynamic-camera checks
 

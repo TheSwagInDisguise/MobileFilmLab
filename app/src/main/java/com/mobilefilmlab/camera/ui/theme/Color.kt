@@ -13,5 +13,5 @@ val AccentBlue = Color(0xFF3498DB)
 val AccentGreen = Color(0xFF2ECC71)
 
 val TextPrimary = Color(0xFFF0F2F5)
-val TextSecondary = Color(0xFF8E929E)
-val TextMuted = Color(0xFF555A6B)
+val TextSecondary = Color(0xFFB4BCCB)
+val TextMuted = Color(0xFF8A94A5)

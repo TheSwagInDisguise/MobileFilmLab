@@ -11,8 +11,8 @@ android {
         applicationId = "com.mobilefilmlab.camera"
         minSdk = 28
         targetSdk = 34
-        versionCode = 11
-        versionName = "0.2.0-beta.2"
+        versionCode = 12
+        versionName = "0.2.0-beta.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -99,6 +99,8 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3")
 
     testImplementation("junit:junit:4.13.2")
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
     testImplementation("org.robolectric:robolectric:4.12.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.8.0")
 }

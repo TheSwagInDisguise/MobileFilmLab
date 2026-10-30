@@ -44,7 +44,7 @@ fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
     val selectedCamera by viewModel.cameraEngine.activeCameraSpec.collectAsState(); val crop by viewModel.cropFactor.collectAsState()
     val framing by viewModel.framingConfig.collectAsState(); val recipe by viewModel.activeRecipe.collectAsState()
     val recipes by viewModel.allRecipes.collectAsState(); val tone by viewModel.puckTone.collectAsState(); val color by viewModel.puckColor.collectAsState()
-    val ev by viewModel.evCompensation.collectAsState(); val iso by viewModel.iso.collectAsState(); val shutter by viewModel.shutterSpeed.collectAsState()
+    val ev by viewModel.evCompensation.collectAsState(); val iso by viewModel.iso.collectAsState(); val shutter by viewModel.exposureTimeNs.collectAsState()
     val kelvin by viewModel.whiteBalanceKelvin.collectAsState(); val focus by viewModel.focusMode.collectAsState()
     val recipeOpen by viewModel.isRecipeSheetOpen.collectAsState(); val settingsOpen by viewModel.isSettingsOpen.collectAsState()
     val diagnosticsOpen by viewModel.isDiagnosticsOpen.collectAsState(); val aboutOpen by viewModel.isAboutOpen.collectAsState()
@@ -110,7 +110,9 @@ fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
                 }
                 Box(Modifier.weight(1f),contentAlignment=Alignment.Center) { HonestCropBadge(framing) }
             }
-            if(mode==CameraMode.PRO) ManualControlStrip(ev,iso,shutter,kelvin,focus,viewModel::cycleEvCompensation,viewModel::cycleIso,viewModel::cycleShutter,viewModel::cycleWhiteBalance,viewModel::cycleFocus)
+            if(mode==CameraMode.PRO) ManualControlStrip(ev,iso,shutter,kelvin,focus,selectedCamera,!busy,
+                viewModel::setEvCompensation,viewModel::setIso,viewModel::setShutter,
+                viewModel::setWhiteBalance,viewModel::setFocusMode,viewModel::finishProAdjustment)
             if(settings.format.writesJpeg) FilmLookPill(recipe,onClick={ if(!busy) viewModel.isRecipeSheetOpen.value=true })
             else Text("RAW sensor data · no recipe applied · Camera2 preview",color=TextSecondary,fontSize=10.sp)
             if(busy) Text(processing.ifBlank { captureProgress.ifBlank { "Capturing…" } },fontSize=11.sp,color=AccentGold)

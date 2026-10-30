@@ -22,14 +22,14 @@ fun CaptureFormatChoices(selected: CaptureFormat, camera: CameraSpec?, onSelect:
             Row(Modifier.fillMaxWidth().clickable(enabled=supported) { onSelect(format) }, verticalAlignment=Alignment.CenterVertically) {
                 RadioButton(selected==format,onClick={ onSelect(format) },enabled=supported)
                 Column(Modifier.weight(1f).padding(vertical=7.dp)) {
-                    Text(format.label,fontSize=13.sp,color=if(supported) MaterialTheme.colorScheme.onSurface else TextSecondary)
+                    Text(format.label,fontSize=15.sp,lineHeight=20.sp,color=if(supported) MaterialTheme.colorScheme.onSurface else TextSecondary)
                     val explanation=when(format) {
                         CaptureFormat.JPEG -> "Camera JPEG, with optional recipe processing"
                         CaptureFormat.RAW_JPEG -> "One exposure · ungraded DNG + optional-look JPEG"
                         CaptureFormat.RAW -> "Sensor DNG only · no still-JPEG stream or saved JPEG"
                     }
-                    Text(explanation,fontSize=10.sp,color=TextSecondary)
-                    if(!supported) Text(if(format.writesRaw && camera?.hasRawSupport!=true) camera?.rawUnavailableReason ?: "Camera capability unavailable" else "JPEG output not exposed on this route",fontSize=10.sp,color=TextSecondary)
+                    Text(explanation,fontSize=12.sp,lineHeight=16.sp,color=TextSecondary)
+                    if(!supported) Text(if(format.writesRaw && camera?.hasRawSupport!=true) camera?.rawUnavailableReason ?: "Camera capability unavailable" else "JPEG output not exposed on this route",fontSize=12.sp,lineHeight=16.sp,color=TextSecondary)
                 }
             }
         }
@@ -39,8 +39,8 @@ fun CaptureFormatChoices(selected: CaptureFormat, camera: CameraSpec?, onSelect:
 @Composable
 fun CaptureFormatDialog(selected: CaptureFormat,camera: CameraSpec?,onSelect: (CaptureFormat)->Unit,onDismiss: ()->Unit) {
     AlertDialog(onDismissRequest=onDismiss,title={ Text("Photo file format") },text={ Column(verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        Text(camera?.let { "${CameraOptions.label(it)} · ID ${it.cameraId}" } ?: "Camera capability unavailable",fontSize=11.sp,color=TextSecondary)
+        Text(camera?.let { "${CameraOptions.label(it)} · ID ${it.cameraId}" } ?: "Camera capability unavailable",fontSize=13.sp,lineHeight=18.sp,color=TextSecondary)
         CaptureFormatChoices(selected,camera,onSelect)
-        Text("RAW availability is lens/firmware-dependent. RAW uses standard Camera2, native pixels and uncropped 1× framing; no fusion, OEM HDR/Night or ZSL. Looks, grain and RGB gains apply to JPEG only. A RAW-capable editor may be needed to view DNG files.",fontSize=11.sp,color=TextSecondary)
+        Text("RAW availability is lens/firmware-dependent. RAW uses standard Camera2, native pixels and uncropped 1× framing; no fusion, OEM HDR/Night or ZSL. Looks, grain and RGB gains apply to JPEG only. A RAW-capable editor may be needed to view DNG files.",fontSize=13.sp,lineHeight=18.sp,color=TextSecondary)
     } },confirmButton={ TextButton(onDismiss) { Text("Done") } })
 }
