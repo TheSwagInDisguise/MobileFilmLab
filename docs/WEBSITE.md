@@ -14,6 +14,8 @@ A static, mobile-friendly showcase of MobileFilmLab's natural-capture philosophy
 - `scripts/check_site.py` — dependency-free checks for local links/assets, anchors, release consistency and required disclosures.
 - `.github/workflows/pages.yml` — validate, upload and deploy `site/` to the `github-pages` environment.
 
+The five native UI states include the beta.3 ISO-slider editor and readable Settings. Screenshot assets were regenerated as pixel-identical lossless WebPs.
+
 The screenshots use a labelled AI-generated scene and illustrative camera/control state. They are not handset captures or app-photo quality examples. [Provenance](SCREENSHOTS.md).
 
 ## Local development
@@ -31,10 +33,14 @@ Changes to `site/`, the site checker or the Pages workflow on `main` trigger dep
 
 Keep `site/release.json` and the visible HTML version, APK links, checksum, file size and code in sync with the actual verified release. The checker compares the release version/code with Gradle and rejects stale or unexpected download CTAs. Do not link withdrawn historical APKs.
 
-The current app remains **v0.2.0-beta.2 / code 11**, published as the next regular Latest GitHub Release with the established package/key and increased code. Classification is not a new stable-version build or universal hardware validation. See [publication policy](PUBLIC_RELEASE.md).
+The current app remains **v0.2.0-beta.3 / code 12**, published as the next regular Latest GitHub Release with the established package/key and increased code. Classification is not a new stable-version build or universal hardware validation. See [publication policy](PUBLIC_RELEASE.md).
 
 ## Privacy and honest wording
 
 No advertising, analytics, third-party JavaScript, remote fonts or cookies are added by this site. GitHub Pages receives normal hosting requests; following GitHub links or downloading the APK contacts GitHub. The website does not process camera images.
 
 The central promise is **no AI enhancement added by MobileFilmLab**. Camera firmware/ISP and optional manufacturer modes may still use proprietary processing we cannot inspect. JPEG is not an unprocessed sensor dump; supported RAW formats save actual RAW_SENSOR DNG without app editing, but hardware/firmware corrections may still be present. Preserve those distinctions when editing the marketing copy. See [natural capture](NATURAL_CAPTURE.md).
+
+## Beta.3 site checks
+
+The updated site was checked in Chromium at 1440, 768, 390 and 320 pixel widths: no horizontal overflow, JavaScript/HTTP errors or automated WCAG A/AA violations were detected. All five native UI image dialogs, Escape dismissal, mobile navigation, expanded FAQs and checksum feedback passed. These are automated checks, not a full accessibility certification. The site points only to the independently verified beta.3 signed APK/hash.

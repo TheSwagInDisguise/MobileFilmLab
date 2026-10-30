@@ -1,15 +1,16 @@
 {
-  "version": "0.2.0-beta.2",
-  "tag": "v0.2.0-beta.2",
-  "versionCode": 11,
-  "releaseUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.2",
-  "apkUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/download/v0.2.0-beta.2/MobileFilmLab-v0.2.0-beta.2-signed.apk",
-  "sha256": "b85473ac25aeea56c52a44de731b3712835c8db715ed39ba391bfb203bdd210b",
-  "bytes": 40904070,
+  "version": "0.2.0-beta.3",
+  "tag": "v0.2.0-beta.3",
+  "versionCode": 12,
+  "releaseUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.3",
+  "apkUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/download/v0.2.0-beta.3/MobileFilmLab-v0.2.0-beta.3-signed.apk",
+  "sha256": "5f1dfb769e66b73218d4102c77ff5038c045f5542356ea89394ceade3af0893d",
+  "bytes": 40947054,
   "minimumAndroid": "9",
   "package": "com.mobilefilmlab.camera",
   "license": "GPL-3.0-or-later",
   "classification": "regular-release",
   "primaryDevice": "Oppo Find X9 Ultra",
-  "rawCapture": "Camera2 RAW_SENSOR DNG where advertised; hardware validation remains device-dependent"
+  "rawCapture": "Camera2 RAW_SENSOR DNG where advertised; hardware validation remains device-dependent",
+  "proControls": "Capability-bounded EV/ISO/shutter/WB sliders with explicit Auto/metered states; readable dark settings"
 }

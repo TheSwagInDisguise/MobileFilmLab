@@ -12,8 +12,16 @@ APK bytes are immutable after publication. Bugs require a new code/version/tag, 
 
 ## Checks and evidence boundaries
 
-The local Android suite passes **116 tests in 24 classes**, including production Compose slider interactions, larger-text Settings scrolling and five native documentation renders. Release lint passes. Exact-tag approval tests, remote CI, signed release checks and independent downloaded-APK verification are required before delivery. [Beta.3 QA scope](QA_BETA_3.md).
+The local Android suite passes **116 tests in 24 classes**, including production Compose slider interactions, larger-text Settings scrolling and five native documentation renders. Release lint passes. The exact tag also passed remote CI, signed-release checks and independent downloaded-APK verification. [Beta.3 QA scope](QA_BETA_3.md).
 
 A physical camera is not connected here. Real handset slider response, long exposures and actual sensor DNG validity still require device/editor testing. Native UI renders contain a labelled generated scene and illustrative state, not handset captures.
 
 Historical [beta.2 publication record](archive/PUBLIC_RELEASE_BETA_2.md) · [beta.1 publication record](archive/PUBLIC_RELEASE_BETA_1.md) · [Signing](RELEASE_SIGNING.md) · [Validation status](BETA_READINESS.md)
+
+## Verified beta.3 build
+
+- Immutable app source tag: `8746d4094b6d4c2e2f203886d9fd9002f0431bb7`.
+- [Main CI](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/runs/41060051050) and [signed release](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/runs/41060737213) succeeded.
+- 116 Android tests / 24 classes and six approval tests passed; release lint and downloaded APK package/version/alignment/established-certificate checks passed.
+- APK: 40,947,054 bytes; SHA-256 `5f1dfb769e66b73218d4102c77ff5038c045f5542356ea89394ceade3af0893d`.
+- The site is updated separately without rebuilding/replacing these immutable APK bytes. Older binaries are retired only after hosted-site verification.

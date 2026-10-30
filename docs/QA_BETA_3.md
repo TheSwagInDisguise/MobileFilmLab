@@ -1,10 +1,10 @@
 # Beta.3 validation scope
 
-**Candidate:** `v0.2.0-beta.3` / code **12**, same package and signing key. Owner-authorised for publication as the next regular Latest release after checks, with the website updated before withdrawing superseded binaries. Source tags and history remain immutable.
+**Release:** `v0.2.0-beta.3` / code **12**, same package and signing key. Owner-authorised for publication as the next regular Latest release after checks, with the website updated before withdrawing superseded binaries. Source tags and history remain immutable.
 
 ## Local execution
 
-116 Android tests in 24 classes pass with zero failures/errors/skips. Release lint passes. The native screenshot test produces five actual UI states; slider interaction and compact-screen 1.5× font-scale Settings checks run against production components. Remote publication/integrity gates below still apply.
+116 Android tests in 24 classes pass with zero failures/errors/skips. Release lint passes. The native screenshot test produces five actual UI states; slider interaction and compact-screen 1.5× font-scale Settings checks run against production components. The exact-tag remote CI and signed-release gates also passed, followed by independent downloaded-APK verification.
 
 ## Automated gates
 
@@ -28,3 +28,7 @@ No physical camera is attached to the automated environment. Verify readable tex
 RAW sensor buffers and DNG rendering must still be validated in a compatible editor on actual hardware. The storage suite uses controlled payloads and UI fixtures use illustrative metadata; neither proves a sensor DNG was captured. No new measured image-quality or stock-pipeline equivalence claim is made.
 
 [Pro controls / limits](PRO_CONTROLS.md) · [Public checklist](TESTING.md) · [RAW implementation boundaries](QA_BETA_2.md) · [Provenance](SCREENSHOTS.md)
+
+## Exact-tag execution
+
+[Main CI](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/runs/41060051050) · [Signed release](https://github.com/TheSwagInDisguise/MobileFilmLab/actions/runs/41060737213) · source `8746d4094b6d4c2e2f203886d9fd9002f0431bb7`. Remote QA confirms 116 tests / 24 classes with zero failures/errors/skips, five native UI renders and no release-lint errors. APK integrity/signing details are recorded in [publication evidence](PUBLIC_RELEASE.md#verified-beta3-build).
