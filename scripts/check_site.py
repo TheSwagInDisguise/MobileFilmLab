@@ -76,6 +76,8 @@ def main():
     assert 'pro-controls' in parser.ids and 'assets/app-settings.webp' in html and 'logarithmic' in html, 'Missing beta.3 Pro/readability showcase'
     assert 'RAW_SENSOR' in html and 'RAW + JPEG' in html and 'ISP' in html and 'firmware' in html, 'Missing RAW capability/firmware disclosure'
     assert 'AI-generated demo scene' in html and 'AI-assisted development' in html, 'Missing provenance disclosure'
+    assert 'disclaimer' in parser.ids and 'docs/DISCLAIMER.md' in html and 'bricked devices' in html, 'Missing visible warranty/liability disclaimer'
+    assert 'maximum extent permitted by applicable law' in html and 'cannot lawfully be excluded or limited' in html, 'Missing applicable-law/non-excludable-rights qualifications'
     for filename in ('styles.css', 'app.js', 'robots.txt', 'sitemap.xml', '.nojekyll'):
         assert (SITE / filename).is_file(), f'Missing site file: {filename}'
     forbidden = {'.apk', '.jks', '.keystore', '.pem', '.key', '.env'}

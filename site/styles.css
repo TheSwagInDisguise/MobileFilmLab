@@ -19,3 +19,7 @@ h1,h2,h3{margin:0;font-weight:500}h1,h2{font-family:var(--serif);letter-spacing:
 
 /* Beta.3: readable native settings and direct Pro editors. */
 .pro-controls-section{border-bottom:1px solid #282e36;background:radial-gradient(ellipse at 10% 45%,#77532c10,transparent 60%),#0e1217}
+
+/* A visible download-area notice, not an extra licence restriction or consent gate. */
+.disclaimer-notice{margin-top:28px;padding-top:25px;border-top:1px solid #3b4048}.disclaimer-notice h3{font-size:17px;color:var(--text)}.disclaimer-notice p{max-width:1000px;margin-top:12px;font-size:12px;line-height:1.9;color:#b4bbc5}.disclaimer-notice strong{font-weight:600;color:#e0e3e8}.disclaimer-notice .small-link{margin-top:16px}
+@media(max-width:640px){.disclaimer-notice{margin-top:24px;padding-top:21px}.disclaimer-notice h3{font-size:16px}.disclaimer-notice p{font-size:12px;line-height:1.9}.disclaimer-notice .small-link{font-size:11px}}

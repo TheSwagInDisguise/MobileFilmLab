@@ -56,6 +56,14 @@ Download the **signed APK** from the release above and allow installation from y
 
 No analytics, advertising or photo uploads. Photos and recipe processing stay on-device; network access is used only when you explicitly check for releases. [Privacy](docs/PRIVACY.md) · [Signing and verification](docs/RELEASE_SIGNING.md)
 
+## Disclaimer — use at your own risk
+
+**MobileFilmLab is provided “as is”, without warranty of any kind, to the maximum extent permitted by applicable law.** You use it at your own risk. To that same extent, the developers, maintainers, contributors and copyright holders are not liable for bricked devices, device damage, instability, overheating, battery drain, lost or corrupted photos/data, missed captures or other loss or damage arising from use of, modification of, or inability to use the app.
+
+Nothing in this notice excludes or limits rights, warranties, remedies or liability that cannot lawfully be excluded or limited, or overrides a separate written warranty or liability agreement. The GPL-3.0-or-later licence is unchanged; see its warranty/liability provisions in sections 15–17.
+
+Back up important data and keep another camera available for important photos. [Full warranty and liability disclaimer](docs/DISCLAIMER.md).
+
 ## Build and contribute
 
 Use **JDK 17**, Android SDK/build tools **34** and the included Gradle wrapper. Minimum Android 9 / API 28. Direct APK distribution; no app-store availability claim.

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Documentation update — 2026-11-04
+
+- Added a use-at-your-own-risk, warranty and liability disclaimer to the README, public testing documentation and website, explicitly covering bricked devices, other device damage and data loss, with applicable-law/non-excludable-rights qualifications.
+- The GPL licence, beta.3 APK bytes, version/code, signing identity and release tags are unchanged. This is a documentation/website update, not a new app release or an in-app notice change.
+
 ## [0.2.0-beta.3] - 2026-10-30
 
 - Fixed inherited black-on-dark text with a light theme content default and correctly scoped Settings Surface; brighter body/helper tokens and larger, wrapping settings labels.

@@ -5,6 +5,8 @@
 
 This beta-version build is published as a regular Latest GitHub Release at the owner's request. That classification is not broad-device certification. The new RAW/session paths need real handset testing; there is no connected camera in the JVM/CI test environment.
 
+**Use at your own risk.** The app is provided “as is”, subject to the applicable-law and non-excludable-rights qualifications in the [warranty and liability disclaimer](DISCLAIMER.md). Back up important data before testing or updating.
+
 ## Install safely
 
 1. Download `MobileFilmLab-v0.2.0-beta.3-signed.apk` from the [current release](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/latest).

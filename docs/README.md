@@ -18,6 +18,7 @@
 - [AI-development disclosure](AI_DISCLOSURE.md).
 - [Third-party names and independence](THIRD_PARTY_NAMES.md).
 - [Privacy](PRIVACY.md).
+- [Use-at-your-own-risk, warranty and liability disclaimer](DISCLAIMER.md).
 - [Release signing and verification](RELEASE_SIGNING.md).
 - [Beta.1 QA evidence](QA_BETA_1.md).
 
