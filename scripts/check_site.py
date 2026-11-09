@@ -74,6 +74,8 @@ def main():
     assert len(downloads) >= 2 and set(downloads) == {release['apkUrl']}, 'Stale download CTA'
     assert release['sha256'] in html and release['primaryDevice'] in html
     assert 'pro-controls' in parser.ids and 'assets/app-settings.webp' in html and 'logarithmic' in html, 'Missing beta.3 Pro/readability showcase'
+    assert 'fold5' in parser.ids and 'assets/app-fold5-cover.webp' in html and 'assets/app-fold5-inner.webp' in html, 'Missing beta.4 Fold5/layout showcase'
+    assert 'Balanced detail + noise' in html and 'handset certification' in html and 'SM-F946' in html, 'Missing processing choice / evidence boundaries'
     assert 'RAW_SENSOR' in html and 'RAW + JPEG' in html and 'ISP' in html and 'firmware' in html, 'Missing RAW capability/firmware disclosure'
     assert 'AI-generated demo scene' in html and 'AI-assisted development' in html, 'Missing provenance disclosure'
     assert 'disclaimer' in parser.ids and 'docs/DISCLAIMER.md' in html and 'bricked devices' in html, 'Missing visible warranty/liability disclaimer'

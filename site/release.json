@@ -1,16 +1,18 @@
 {
-  "version": "0.2.0-beta.3",
-  "tag": "v0.2.0-beta.3",
-  "versionCode": 12,
-  "releaseUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.3",
-  "apkUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/download/v0.2.0-beta.3/MobileFilmLab-v0.2.0-beta.3-signed.apk",
-  "sha256": "5f1dfb769e66b73218d4102c77ff5038c045f5542356ea89394ceade3af0893d",
-  "bytes": 40947054,
+  "version": "0.2.0-beta.4",
+  "tag": "v0.2.0-beta.4",
+  "versionCode": 13,
+  "releaseUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.4",
+  "apkUrl": "https://github.com/TheSwagInDisguise/MobileFilmLab/releases/download/v0.2.0-beta.4/MobileFilmLab-v0.2.0-beta.4-signed.apk",
+  "sha256": "337b2fffe31afef405cfacd945ade6ada14f224ca08d5b71e9537c009cef031a",
+  "bytes": 40976138,
   "minimumAndroid": "9",
   "package": "com.mobilefilmlab.camera",
   "license": "GPL-3.0-or-later",
   "classification": "regular-release",
   "primaryDevice": "Oppo Find X9 Ultra",
   "rawCapture": "Camera2 RAW_SENSOR DNG where advertised; hardware validation remains device-dependent",
-  "proControls": "Capability-bounded EV/ISO/shutter/WB sliders with explicit Auto/metered states; readable dark settings"
+  "proControls": "Capability-bounded EV/ISO/shutter/WB sliders with explicit Auto/metered states; readable dark settings",
+  "fold5": "SM-F946* capability-driven native-size policy; handset quality/folding validation pending",
+  "jpegRendering": "Original default; optional conventional balanced detail/noise/tone; DNG untouched"
 }

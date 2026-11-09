@@ -20,6 +20,9 @@
     button.addEventListener('click', () => {
       if (!dialog || !image || !title) return;
       opener = button;
+      const source = button.querySelector('img');
+      image.width = Number(source.getAttribute('width')) || 864;
+      image.height = Number(source.getAttribute('height')) || 1920;
       image.src = button.dataset.screen;
       image.alt = button.querySelector('img').alt;
       title.textContent = button.dataset.title;
