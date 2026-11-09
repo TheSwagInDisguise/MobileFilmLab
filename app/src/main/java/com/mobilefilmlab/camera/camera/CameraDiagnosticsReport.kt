@@ -2,6 +2,7 @@ package com.mobilefilmlab.camera.camera
 
 import android.os.Build
 import com.mobilefilmlab.camera.BuildConfig
+import com.mobilefilmlab.camera.data.model.DeviceProfile
 import com.mobilefilmlab.camera.data.model.CameraSpec
 
 object CameraDiagnosticsReport {
@@ -11,6 +12,7 @@ object CameraDiagnosticsReport {
         sb.append("=========================================\n")
         sb.append("MobileFilmLab Camera Hardware Diagnostics\n")
         sb.append("Target Device: ${Build.MANUFACTURER} ${Build.MODEL} (${Build.DEVICE})\n")
+        sb.append("Device policy: ${DeviceProfile.detect(Build.MANUFACTURER,Build.MODEL).label} (not measured sensor calibration)\n")
         sb.append("Android Version: ${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})\n")
         sb.append("Total Exposed Camera2 IDs/routes: ${specs.size} (logical routes are not extra physical lenses)\n")
         sb.append("=========================================\n\n")

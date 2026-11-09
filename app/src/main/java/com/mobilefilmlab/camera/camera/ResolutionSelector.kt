@@ -2,7 +2,7 @@ package com.mobilefilmlab.camera.camera
 
 /** Uses actual HAL sizes only. No invented fallback buffers or automatic upscaling. */
 object ResolutionSelector {
-    data class Candidate(val width: Int, val height: Int, val maximumMode: Boolean = false) {
+    data class Candidate(val width: Int, val height: Int, val maximumMode: Boolean = false, val highResolution: Boolean = false) {
         val area: Long get() = width.toLong() * height
     }
     fun select(candidates: List<Candidate>, limit: Long = 55_000_000L): Candidate? {

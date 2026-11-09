@@ -65,7 +65,7 @@ fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
     val importQr=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { it?.let { uri -> viewModel.importRecipes(uri,true) } }
     LaunchedEffect(notice) { notice?.let { Toast.makeText(context,it,Toast.LENGTH_LONG).show(); viewModel.userNotice.value=null } }
     Box(modifier.fillMaxSize().background(BgDark).systemBarsPadding()) {
-        Column(Modifier.fillMaxSize().padding(horizontal=14.dp,vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
+        Column(Modifier.widthIn(max=600.dp).fillMaxHeight().fillMaxWidth().align(Alignment.TopCenter).padding(horizontal=14.dp,vertical=6.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(6.dp)) {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically) {
                 IconButton(onClick=viewModel::toggleFlash,enabled=!busy) {
                     val icon=when(flash) { FlashMode.OFF->Icons.Default.FlashOff; FlashMode.AUTO->Icons.Default.FlashAuto; FlashMode.ON->Icons.Default.FlashOn; FlashMode.TORCH->Icons.Default.Bolt }

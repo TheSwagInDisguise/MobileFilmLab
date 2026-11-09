@@ -1,5 +1,14 @@
 # Known limitations — public beta
 
+## Fold5 / beta.4 processing
+
+- Fold5 capture was reported working with poor quality, but no firmware, capability report or sample originals were supplied. Device-aware stream selection and optional conventional filtering are not a measured factory colour profile, proven quality improvement or stock-camera substitute.
+- Original JPEG remains the default. Balanced saved-JPEG rendering trades noise against texture and can change tone; preview shows recipe colour only. DNG is not app-filtered. Native-size budgets select only advertised streams, not marketing resolutions or upscaled detail.
+- Experimental JPEG fusion needs real exposure metadata and stable/registered scenes; RGB motion rejection does not solve parallax or all ghosts. No handset latency, thermal, folding or sensor/DNG/editor result is claimed.
+
+[Setup, choices and hardware checklist](docs/GALAXY_Z_FOLD5.md) · [QA boundaries](docs/QA_BETA_4.md).
+
+
 ## No app-added AI does not mean no device processing
 
 MobileFilmLab adds no generative or neural/ML photo enhancement and sends no photos to a cloud processor. Its own optional editing/fusion is conventional. The device camera/ISP and optional OEM extensions may still use proprietary or AI-based processing we cannot inspect or rule out. JPEG uses the device ISP. Beta.2 also exports actual RAW_SENSOR DNG where exposed, but that is still the firmware-provided sensor stream, not a guarantee of an untouched electrical signal. [Natural-capture scope](docs/NATURAL_CAPTURE.md).

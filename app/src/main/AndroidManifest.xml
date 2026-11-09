@@ -24,7 +24,8 @@
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden"
+            android:resizeableActivity="true"
             android:screenOrientation="portrait"
             android:theme="@style/Theme.MobileFilmLab">
             <intent-filter>

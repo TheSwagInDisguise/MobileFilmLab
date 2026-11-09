@@ -1,10 +1,12 @@
 # Public testing and validation status
 
-**Feature release:** `v0.2.0-beta.3` / code **12** / `com.mobilefilmlab.camera`.
+**Feature release:** `v0.2.0-beta.4` / code **13** / `com.mobilefilmlab.camera`.
 
-The owner explicitly authorised the readability/Pro-slider update, retaining dynamic Camera2 lens controls and RAW/DNG formats, a new regular Latest GitHub Release after checks, an updated website and withdrawal of the previous binary downloads while preserving tags. The beta-version app remains a public-testing build, not universal hardware certification.
+The owner explicitly authorised Fold5 compatibility and all offered processing areas (natural balance, detail/colour, HDR/low light and speed/reliability), retaining Oppo support, original JPEG and RAW/DNG formats, a new regular Latest GitHub Release after checks, an updated website and withdrawal of the previous binary downloads while preserving tags. The beta-version app remains a public-testing build, not universal hardware certification.
 
 ## Implemented scope
+
+- [Fold5-aware native size, optional balanced JPEG and safer experimental fusion](GALAXY_Z_FOLD5.md), without claiming measured calibration/quality gains or stock-camera parity.
 
 - Readable high-contrast Settings with persistent Done access; hardware-bounded EV/ISO/shutter/WB sliders, explicit Auto/metered states and supported discrete AF choices. [Pro controls and limits](PRO_CONTROLS.md).
 
@@ -19,12 +21,13 @@ The owner explicitly authorised the readability/Pro-slider update, retaining dyn
 | Area | Status |
 |---|---|
 | Prior primary-handset feedback | Alpha.9 worked well according to the owner. This is not a detailed report for the new RAW/session paths. |
-| Automated suite / native UI renders / lint | Required before publication; see [beta.3 QA](QA_BETA_3.md) and tagged workflow results. |
+| Automated suite / native UI renders / lint | Required before publication; see [beta.4 QA](QA_BETA_4.md) and tagged workflow results. |
 | Sensor RAW capture and DNG validity | Must be verified on actual hardware/firmware in a RAW-capable editor. JVM storage tests use controlled payloads, not a simulated sensor. |
 | Physical/logical route access | Advertised/discovered via public Camera2; opening and stream combinations remain firmware-dependent. |
 | Per-lens measured colour calibration | Not completed. Identity/user JPEG gains are not a proprietary factory profile; RAW pixels are not graded. |
 | Exact stock processing, maximum sensor mode, AI-free firmware | Not claimed. No app-added ML/generative enhancement; device processing remains outside that guarantee. |
 | Long RAW write / lifecycle / low storage / heat | New lease, timeout and rollback logic is tested as software behaviour; real device stress testing remains open. |
+| Fold5 | Capture reported working but poor quality. Beta.4 policy/processing changes have no supplied firmware/report/sample or real handset validation yet. |
 | Other devices | Unverified until reports arrive. Primary target remains **Oppo Find X9 Ultra**. |
 | Upgrade/user-data retention | Same identity and increased code support in-place upgrade. Confirm custom recipes, favourites, camera selection and calibration on device. |
 | Independent security audit | Not performed. AI-assisted development remains explicitly disclosed. |

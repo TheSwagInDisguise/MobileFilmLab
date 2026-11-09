@@ -41,7 +41,19 @@ import java.time.Duration
 @Config(sdk = [34], qualifiers = "w432dp-h960dp-xhdpi")
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 class DocumentationScreenshotsTest {
-    @Test(timeout = 90000) fun rendersActualAutoProAndRecipeUiForDocumentation() {
+    @Test(timeout = 90000) fun rendersActualAutoProAndRecipeUiForDocumentation() = renderDocumentation()
+    @Test(timeout = 90000)
+    @Config(sdk=[34],qualifiers="w336dp-h840dp-xhdpi")
+    fun rendersNarrowFold5CoverLayout() = renderDocumentation(672,1680,"fold5-cover-",true)
+    @Test(timeout = 90000)
+    @Config(sdk=[34],qualifiers="w700dp-h840dp-xhdpi")
+    fun rendersWideFold5InnerLayout() = renderDocumentation(1400,1680,"fold5-inner-",true)
+
+    private fun renderDocumentation(width: Int=864,height: Int=1920,prefix: String="",fold5: Boolean=false) {
+        if(fold5) {
+            ReflectionHelpers.setStaticField(android.os.Build::class.java,"MANUFACTURER","samsung")
+            ReflectionHelpers.setStaticField(android.os.Build::class.java,"MODEL","SM-F946B")
+        }
         val root = File("..").takeIf { File(it, "docs/assets/demo-scene.png").isFile } ?: File(".")
         val scene = BitmapFactory.decodeFile(File(root, "docs/assets/demo-scene.png").absolutePath)
         checkNotNull(scene) { "Missing documented demonstration image" }
@@ -81,22 +93,22 @@ class DocumentationScreenshotsTest {
             }
         }
         fun settle() {
-            activity.window.decorView.measure(exact(864), exact(1920))
-            activity.window.decorView.layout(0, 0, 864, 1920)
+            activity.window.decorView.measure(exact(width), exact(height))
+            activity.window.decorView.layout(0, 0, width, height)
             shadowOf(Looper.getMainLooper()).idleFor(Duration.ofMillis(1600))
-            activity.window.decorView.measure(exact(864), exact(1920))
-            activity.window.decorView.layout(0, 0, 864, 1920)
+            activity.window.decorView.measure(exact(width), exact(height))
+            activity.window.decorView.layout(0, 0, width, height)
         }
         fun capture(name: String) {
             settle()
-            val bitmap = Bitmap.createBitmap(864, 1920, Bitmap.Config.ARGB_8888)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
             val canvas = Canvas(bitmap)
             canvas.drawColor(android.graphics.Color.BLACK)
             val global = ReflectionHelpers.callStaticMethod<Any>(Class.forName("android.view.WindowManagerGlobal"), "getInstance")
             val roots = ReflectionHelpers.getField<List<View>>(global, "mViews").toList()
             assertTrue("Actual Android window must be present", roots.isNotEmpty())
             roots.filter { it.visibility == View.VISIBLE }.forEach { view ->
-                if (view.width == 0 || view.height == 0) { view.measure(exact(864), exact(1920)); view.layout(0, 0, 864, 1920) }
+                if (view.width == 0 || view.height == 0) { view.measure(exact(width), exact(height)); view.layout(0, 0, width, height) }
                 canvas.save()
                 val position = IntArray(2)
                 view.getLocationOnScreen(position)
@@ -104,13 +116,13 @@ class DocumentationScreenshotsTest {
                 // real window gravity instead of moving the app's AlertDialog to the top.
                 val params=view.layoutParams as? WindowManager.LayoutParams
                 val x=when(params?.gravity?.and(Gravity.HORIZONTAL_GRAVITY_MASK)) {
-                    Gravity.CENTER_HORIZONTAL -> (864-view.width)/2+(params.x)
-                    Gravity.RIGHT -> 864-view.width-(params.x)
+                    Gravity.CENTER_HORIZONTAL -> (width-view.width)/2+(params.x)
+                    Gravity.RIGHT -> width-view.width-(params.x)
                     else -> position[0]
                 }
                 val y=when(params?.gravity?.and(Gravity.VERTICAL_GRAVITY_MASK)) {
-                    Gravity.CENTER_VERTICAL -> (1920-view.height)/2+(params.y)
-                    Gravity.BOTTOM -> 1920-view.height-(params.y)
+                    Gravity.CENTER_VERTICAL -> (height-view.height)/2+(params.y)
+                    Gravity.BOTTOM -> height-view.height-(params.y)
                     else -> position[1]
                 }
                 canvas.translate(x.toFloat(), y.toFloat())
@@ -119,9 +131,9 @@ class DocumentationScreenshotsTest {
             }
             // A text-only settings Surface can have a nearly uniform centre column.
             // Sample across the whole native window, not only down its centreline.
-            val samples = (72..792 step 48).flatMap { x -> (100..1800 step 40).map { y -> bitmap.getPixel(x,y) } }.toSet()
+            val samples = (24 until width-24 step 48).flatMap { x -> (60 until height-60 step 40).map { y -> bitmap.getPixel(x,y) } }.toSet()
             assertTrue("Render unexpectedly blank: $name", samples.size > 6)
-            File(output, name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            File(output, prefix+name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
         }
         try {
@@ -130,12 +142,14 @@ class DocumentationScreenshotsTest {
             vm.iso.value = 200; vm.exposureTimeNs.value = 8_000_000L; vm.whiteBalanceKelvin.value = 5600
             vm.selectRecipe(warm)
             capture("pro.png")
-            vm.isRecipeSheetOpen.value = true
-            capture("recipes.png")
-            vm.isRecipeSheetOpen.value = false
-            vm.isFormatPickerOpen.value = true
-            capture("formats.png")
-            vm.isFormatPickerOpen.value = false
+            if(!fold5) {
+                vm.isRecipeSheetOpen.value = true
+                capture("recipes.png")
+                vm.isRecipeSheetOpen.value = false
+                vm.isFormatPickerOpen.value = true
+                capture("formats.png")
+                vm.isFormatPickerOpen.value = false
+            } else vm.updateSettings(vm.settings.value.copy(jpegRendering=com.mobilefilmlab.camera.settings.JpegRendering.BALANCED))
             vm.isSettingsOpen.value = true
             capture("settings.png")
         } finally {
@@ -145,9 +159,11 @@ class DocumentationScreenshotsTest {
             controller.pause().stop().destroy()
             shadowOf(Looper.getMainLooper()).idle()
         }
-        assertTrue(File(output, "recipes.png").length() > 20_000)
-        assertTrue(File(output, "formats.png").length() > 20_000)
-        assertTrue(File(output, "settings.png").length() > 20_000)
+        if(!fold5) {
+            assertTrue(File(output, "recipes.png").length() > 20_000)
+            assertTrue(File(output, "formats.png").length() > 20_000)
+        }
+        assertTrue(File(output, prefix+"settings.png").length() > 20_000)
     }
     private fun exact(size: Int) = View.MeasureSpec.makeMeasureSpec(size, View.MeasureSpec.EXACTLY)
     private fun <T> flow(engine: CameraEngine, name: String): MutableStateFlow<T> = ReflectionHelpers.getField(engine, name)

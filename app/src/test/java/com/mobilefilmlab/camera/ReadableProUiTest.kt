@@ -11,6 +11,9 @@ import androidx.compose.ui.unit.Density
 import com.mobilefilmlab.camera.camera.ProControlMath
 import com.mobilefilmlab.camera.settings.CaptureSettings
 import com.mobilefilmlab.camera.settings.OutputSize
+import com.mobilefilmlab.camera.settings.JpegRendering
+import com.mobilefilmlab.camera.settings.CaptureResolution
+import com.mobilefilmlab.camera.settings.CaptureFormat
 import com.mobilefilmlab.camera.ui.components.ManualControlStrip
 import com.mobilefilmlab.camera.ui.components.SettingsDialog
 import com.mobilefilmlab.camera.ui.theme.MobileFilmLabTheme
@@ -104,6 +107,29 @@ class ReadableProUiTest {
         compose.onNodeWithText("Done").assertIsDisplayed()
         compose.onNodeWithText("Output pixels").performScrollTo().assertIsDisplayed()
         compose.onNodeWithText(OutputSize.NATIVE.label).performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Done").assertIsDisplayed()
+    }
+    @Test fun optionalJpegRenderingAndNativeSizeCanBeSelectedWithoutAHiddenDefaultChange() {
+        var settings by mutableStateOf(CaptureSettings())
+        compose.setContent { MobileFilmLabTheme {
+            SettingsDialog(settings,proTestCamera(),1,"Standard Camera2","Normal","Not checked",null,{settings=it},{},{},{})
+        } }
+        compose.runOnIdle {assertEquals(JpegRendering.CAMERA_ORIGINAL,settings.jpegRendering)}
+        compose.onNodeWithText(JpegRendering.BALANCED.label).performScrollTo().performClick()
+        compose.runOnIdle {assertEquals(JpegRendering.BALANCED,settings.jpegRendering)}
+        compose.onNodeWithText(CaptureResolution.MAXIMUM_NATIVE.label).performScrollTo().performClick()
+        compose.runOnIdle {assertEquals(CaptureResolution.MAXIMUM_NATIVE,settings.captureResolution)}
+        compose.onNodeWithText(JpegRendering.CAMERA_ORIGINAL.label).performScrollTo().performClick()
+        compose.runOnIdle {assertEquals(JpegRendering.CAMERA_ORIGINAL,settings.jpegRendering)}
+        compose.onNodeWithText("Done").assertIsDisplayed()
+    }
+    @Test fun rawOnlyMakesJpegRenderingAndJpegNativeSizeChoicesNonInteractive() {
+        val settings=CaptureSettings(format=CaptureFormat.RAW)
+        compose.setContent { MobileFilmLabTheme {
+            SettingsDialog(settings,proTestCamera(),1,"Standard Camera2","Normal","Not checked",null,{fail("Disabled RAW control changed JPEG settings")},{},{},{})
+        } }
+        compose.onNodeWithText(JpegRendering.BALANCED.label).performScrollTo().assertIsNotEnabled()
+        compose.onNodeWithText(CaptureResolution.MAXIMUM_NATIVE.label).performScrollTo().assertIsNotEnabled()
         compose.onNodeWithText("Done").assertIsDisplayed()
     }
 }

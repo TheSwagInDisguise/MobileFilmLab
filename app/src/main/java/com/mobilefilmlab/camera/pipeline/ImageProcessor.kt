@@ -145,7 +145,7 @@ object ImageProcessor {
     }
     fun canPreserveOriginal(recipe: Recipe, settings: CaptureSettings, crop: Float): Boolean =
         recipe.id == "stock_oppo_natural" && recipe.puckTone==0f && recipe.puckColor==0f &&
-            settings.grain==0 && settings.outputSize==OutputSize.NATIVE && settings.calibration.isIdentity && crop==1f
+            settings.jpegRendering==JpegRendering.CAMERA_ORIGINAL && settings.grain==0 && settings.outputSize==OutputSize.NATIVE && settings.calibration.isIdentity && crop==1f
 
     data class Output(val bytes: ByteArray, val width: Int, val height: Int, val note: String)
 
@@ -179,10 +179,25 @@ object ImageProcessor {
                 if(cropped !== bitmap) bitmap.recycle()
                 bitmap=cropped; note+="; ${capture.cropFactor}× native-pixel crop (once)"
             }
-            val graded=Bitmap.createBitmap(bitmap.width,bitmap.height,Bitmap.Config.ARGB_8888)
-            Canvas(graded).drawBitmap(bitmap,0f,0f,Paint(Paint.FILTER_BITMAP_FLAG).apply { colorFilter=ColorMatrixColorFilter(previewMatrix(recipe,settings.calibration)) })
-            bitmap.recycle(); bitmap=graded
-            applyPhotographicSharpening(bitmap,recipe.sharp.coerceIn(0,3),originalMeta.iso ?: 100)
+            if(!bitmap.isMutable) {
+                val mutable=bitmap.copy(Bitmap.Config.ARGB_8888,true) ?: error("Cannot allocate writable JPEG pixels")
+                bitmap.recycle();bitmap=mutable
+            }
+            val balanced=settings.jpegRendering==JpegRendering.BALANCED
+            val balancedIso=originalMeta.iso?.coerceAtLeast(50) ?: 800
+            if(balanced) {
+                applyBalancedJpeg(bitmap,balancedIso)
+                note+="; balanced JPEG: edge-aware luma/chroma noise reduction + mild adaptive tone"
+            }
+            val matrix=previewMatrix(recipe,settings.calibration)
+            // Natural/crop/balanced exports need no second full-size bitmap for an identity grade.
+            if(!matrix.array.contentEquals(ColorMatrix().array)) {
+                val graded=Bitmap.createBitmap(bitmap.width,bitmap.height,Bitmap.Config.ARGB_8888)
+                Canvas(graded).drawBitmap(bitmap,0f,0f,Paint(Paint.FILTER_BITMAP_FLAG).apply { colorFilter=ColorMatrixColorFilter(matrix) })
+                bitmap.recycle(); bitmap=graded
+            }
+            val sharpen=maxOf(recipe.sharp.coerceIn(0,3),if(balanced) BalancedJpegMath.strength(balancedIso).sharpen else 0)
+            applyPhotographicSharpening(bitmap,sharpen,if(balanced) balancedIso else originalMeta.iso ?: 100)
             if(settings.grain>0) applyFilmGrain(bitmap,settings.grain,originalMeta.captureTimestampMs.toInt())
             if(settings.outputSize==OutputSize.UPSCALE_28) {
                 // Preserve aspect ratio; explicitly interpolation, never labelled super-resolution.
@@ -200,6 +215,32 @@ object ImageProcessor {
             val bytes=writeExif(context,stream.toByteArray(),recipe,originalMeta,bitmap.width to bitmap.height,note,settings.grain)
             return Output(bytes,bitmap.width,bitmap.height,note)
         } finally { bitmap?.takeUnless { it.isRecycled }?.recycle() }
+    }
+    /** In-place JPEG-only processing with four scanline buffers, never a full image-sized pixel array. */
+    fun applyBalancedJpeg(bitmap: Bitmap,iso: Int): Bitmap {
+        if(bitmap.width<3 || bitmap.height<3) return bitmap
+        check(bitmap.isMutable)
+        val w=bitmap.width;val strength=BalancedJpegMath.strength(iso)
+        var top=IntArray(w);var row=IntArray(w);var bottom=IntArray(w);val out=IntArray(w)
+        bitmap.getPixels(top,0,w,0,0,w,1);bitmap.getPixels(row,0,w,0,1,w,1)
+        for(y in 1 until bitmap.height-1) {
+            bitmap.getPixels(bottom,0,w,0,y+1,w,1)
+            BalancedJpegMath.denoiseRow(top,row,bottom,out,strength)
+            bitmap.setPixels(out,0,w,0,y,w,1)
+            val old=top;top=row;row=bottom;bottom=old
+        }
+        val histogram=IntArray(256)
+        for(y in 0 until bitmap.height step 8) {
+            bitmap.getPixels(row,0,w,0,y,w,1)
+            for(x in 0 until w step 8) histogram[PixelFilters.luma(row[x])]++
+        }
+        val table=BalancedJpegMath.toneTable(histogram,iso)
+        if(table.indices.any { table[it]!=it }) for(y in 0 until bitmap.height) {
+            bitmap.getPixels(row,0,w,0,y,w,1)
+            for(x in row.indices) row[x]=BalancedJpegMath.applyTone(row[x],table)
+            bitmap.setPixels(row,0,w,0,y,w,1)
+        }
+        return bitmap
     }
     /** In-place rows avoid a second 112MB pixel array. Threshold adapts to the reported ISO. */
     fun applyPhotographicSharpening(bitmap: Bitmap, strength: Int, iso: Int=100): Bitmap {

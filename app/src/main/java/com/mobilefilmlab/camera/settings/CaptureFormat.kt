@@ -12,7 +12,8 @@ enum class CaptureFormat(val label: String, val writesJpeg: Boolean, val writesR
 /** RAW must correspond to one standard exposure; no pretend RAW of a processed stack. */
 object CaptureFormatPolicy {
     fun normalize(settings: CaptureSettings): CaptureSettings = if (settings.format.writesRaw) {
-        settings.copy(pipeline = CapturePipeline.STANDARD, zsl = false, outputSize = OutputSize.NATIVE)
+        settings.copy(pipeline = CapturePipeline.STANDARD, zsl = false, outputSize = OutputSize.NATIVE,
+            jpegRendering = if(settings.format.writesJpeg) settings.jpegRendering else JpegRendering.CAMERA_ORIGINAL)
     } else settings
 
     fun supported(format: CaptureFormat, camera: com.mobilefilmlab.camera.data.model.CameraSpec?): Boolean = camera!=null &&

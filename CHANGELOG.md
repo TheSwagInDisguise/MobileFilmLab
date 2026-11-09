@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0-beta.4]
+
+- Added Samsung SM-F946* compatibility policy: prefer actual, normal-mode ~12.6MP-budget JPEG streams; maximum advertised native size is opt-in within the 55MP ceiling. Bounded session fallbacks no longer retry larger buffers. Other devices retain their existing native preference.
+- Added optional conventional balanced JPEG rendering: ISO-aware edge-preserving luma/chroma denoise, mild high-contrast tone balancing and restrained low-ISO detail. Original rendering stays the default; no forced vendor colour bias, model enhancement or invented detail.
+- Kept Natural recipe IDs/catalogue/custom names; Fold5 uses a truthful Camera2 display alias. RAW-only disables JPEG rendering and RAW+JPEG affects only the JPEG; untouched sensor DNG is retained.
+- Made all manual bracket frames use a frozen metered baseline and consistent bounded/physical-key request settings; compensation routes briefly await reported AE settling. Fusion requires actual exposure metadata, uses IEC sRGB transfer, retains highlight headroom until tone mapping and rejects RGB as well as luma motion.
+- Reused the fusion middle bitmap, added scanline-bounded filtering and skipped full-image identity grading. These are allocation safeguards, not measured handset speed/battery claims.
+- Added resize-aware centred portrait controls for a wide inner display, narrow/wide native illustrative UI renders and genuine numerical/policy/JPEG/HDR/motion/persistence regressions.
+- Same package/key, versionCode 13; owner-authorised regular Latest after automated gates. Real Fold5 image quality, firmware/RAW and fold transitions remain unverified; no samples/report were supplied. Update/verify the APK and website before withdrawing beta.3 binaries; preserve tags/history.
+
 ## Documentation update — 2026-11-04
 
 - Added a use-at-your-own-risk, warranty and liability disclaimer to the README, public testing documentation and website, explicitly covering bricked devices, other device damage and data loss, with applicable-law/non-excludable-rights qualifications.

@@ -10,11 +10,20 @@
 | [settings.png](screenshots/settings.png) | Actual high-contrast Settings Surface with independently scrolling content and persistent Done footer. |
 | [formats.png](screenshots/formats.png) | Actual JPEG / RAW / RAW+JPEG dialog with illustrative advertised RAW capability. |
 
-These are **production Android/Jetpack Compose components rendered by Robolectric native graphics (API 34)** at **864 × 1920** pixels. The interface is not AI-invented, hand-redrawn in HTML or composited from design mockups. The same screen, drawer, controls, typography and colour-matrix implementation used by the app are exercised by `DocumentationScreenshotsTest`.
+Additional beta.4 layout fixtures use the Samsung SM-F946B build-model label only to exercise the Fold5 policy and display alias. They **do not simulate its camera hardware**:
+
+| Layout | Native UI renders | Raster / logical size |
+| --- | --- | --- |
+| Narrow cover | [AUTO](screenshots/fold5-cover-auto.png) · [PRO](screenshots/fold5-cover-pro.png) · [Settings](screenshots/fold5-cover-settings.png) | 672 × 1680 / 336 × 840dp |
+| Wide inner | [AUTO](screenshots/fold5-inner-auto.png) · [PRO](screenshots/fold5-inner-pro.png) · [Settings](screenshots/fold5-inner-settings.png) | 1400 × 1680 / 700 × 840dp |
+
+These are illustrative viewport tests, not literal Fold5 panel resolutions, real fold transitions or photographs. Camera routes/RAW/manual metadata remain injected demo inputs.
+
+These are **production Android/Jetpack Compose components rendered by Robolectric native graphics (API 34)** at **864 × 1920** pixels for the five standard portrait images, with the additional sizes above. The interface is not AI-invented, hand-redrawn in HTML or composited from design mockups. The same screen, drawer, controls, typography and colour-matrix implementation used by the app are exercised by `DocumentationScreenshotsTest`.
 
 **Important:** no handset is connected to this rendering workflow. The camera scene is an **AI-generated coastal landscape**, not a camera capture or a verified photograph of a specific location. Demo camera availability, focal length, resolution, ISO, shutter and white balance are illustrative; they do not prove any device capability. The displayed demo resolution is derived from the source image, not an advertised sensor resolution. `Coastal Gold` and `Soft Monochrome` are test-created custom presets demonstrating the app's existing save workflow, not extra built-in catalogue entries. The generated scene says nothing about real-camera image quality, HDR, fusion or ZSL performance.
 
-A `DEMO SCENE` badge appears in the viewfinder. Beta.3 fixtures retain three illustrative rear routes labelled 14mm, 23mm and 83mm; these are test inputs, not a verified lens list for any phone. The format dialog uses explicitly simulated RAW capability and does not prove that a DNG was captured. Floating windows use their Android window gravity in the headless compositor; rendering can still differ from actual handset window metrics.
+A `DEMO SCENE` badge appears in the viewfinder. Beta.4 fixtures retain three illustrative rear routes labelled 14mm, 23mm and 83mm; these are test inputs, not a verified lens list for any phone. The format dialog uses explicitly simulated RAW capability and does not prove that a DNG was captured. Floating windows use their Android window gravity in the headless compositor; rendering can still differ from actual handset window metrics.
 
 ## Reproduce
 
@@ -29,7 +38,7 @@ cp app/build/outputs/documentation-screenshots/*.png docs/screenshots/
 python3 scripts/check_docs.py
 ```
 
-The beta.3 test renders five Android windows/states, including the real modal bottom sheet, into PNGs and rejects unexpectedly blank output. It also runs in the ordinary unit-test suite; CI uploads its renders with QA reports. System fonts/rendering differences can change pixels across environments; these are documentation renders, not a claim of bit-for-bit handset screenshot parity.
+The beta.4 tests render eleven Android windows/states (five standard portrait states plus AUTO/PRO/Settings on narrow cover and wide inner layouts), including the real modal bottom sheet, into PNGs and rejects unexpectedly blank output. It also runs in the ordinary unit-test suite; CI uploads its renders with QA reports. System fonts/rendering differences can change pixels across environments; these are documentation renders, not a claim of bit-for-bit handset screenshot parity.
 
 The demo input is supplied through an inspection-only composition provider. It requires a **debug build AND `LocalInspectionMode`**, has no intent, user setting or release-mode entry point, and never replaces the real camera path in a signed release. The scene is in `docs/`, not Android assets, so it is not bundled in the APK.
 

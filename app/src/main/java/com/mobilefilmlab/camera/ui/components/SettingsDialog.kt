@@ -1,6 +1,8 @@
 package com.mobilefilmlab.camera.ui.components
 
 import android.content.Intent
+import android.os.Build
+import com.mobilefilmlab.camera.data.model.DeviceProfile
 import android.net.Uri
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.*
@@ -36,6 +38,7 @@ fun SettingsDialog(
     onChange: (CaptureSettings)->Unit,onCheckUpdates: ()->Unit,onDiagnostics: ()->Unit,onDismiss: ()->Unit
 ) {
     val context=LocalContext.current
+    val profile=remember { DeviceProfile.detect(Build.MANUFACTURER,Build.MODEL) }
     Dialog(onDismiss,properties=DialogProperties(usePlatformDefaultWidth=false)) {
         Surface(
             modifier=Modifier.padding(16.dp).widthIn(max=560.dp).fillMaxWidth()
@@ -47,7 +50,26 @@ fun SettingsDialog(
                 Text("${BuildConfig.VERSION_NAME} · PUBLIC BETA",color=AccentGold,fontSize=12.sp)
                 HorizontalDivider(color=BorderDark)
                 Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-                    SettingsNote("Default: Oppo Natural (Camera2), without an added film grade. This is not the proprietary stock camera pipeline.")
+                    SettingsNote("Default: ${profile.naturalLabel ?: "Oppo Natural (Camera2)"}, without an added film grade. This uses the selected device’s exposed Camera2 ISP, not a proprietary stock-app pipeline.")
+                    SectionTitle("Device & JPEG rendering")
+                    SettingsNote("${profile.label}\nOriginal rendering stays the default. Balanced is optional and not measured Samsung/Oppo factory calibration.")
+                    JpegRendering.values().forEach { rendering ->
+                        val enabled=settings.format.writesJpeg
+                        Row(Modifier.fillMaxWidth().heightIn(min=48.dp).selectable(selected=settings.jpegRendering==rendering,enabled=enabled,role=Role.RadioButton) { onChange(settings.copy(jpegRendering=rendering)) },verticalAlignment=Alignment.CenterVertically) {
+                            RadioButton(settings.jpegRendering==rendering,onClick=null,enabled=enabled)
+                            Text(rendering.label,fontSize=14.sp,lineHeight=20.sp,modifier=Modifier.weight(1f).padding(start=12.dp,top=10.dp,bottom=10.dp))
+                        }
+                    }
+                    SettingsNote("Balanced adds ISO-aware edge-preserving noise reduction, mild shadow/highlight tone balancing and restrained detail sharpening to saved JPEGs. It cannot recover clipped detail or reproduce a stock-camera pipeline. RAW is untouched; preview shows recipe colour only.")
+                    SectionTitle("Native capture size")
+                    CaptureResolution.values().forEach { resolution ->
+                        val enabled=!settings.format.writesRaw
+                        Row(Modifier.fillMaxWidth().heightIn(min=48.dp).selectable(selected=settings.captureResolution==resolution,enabled=enabled,role=Role.RadioButton) { onChange(settings.copy(captureResolution=resolution)) },verticalAlignment=Alignment.CenterVertically) {
+                            RadioButton(settings.captureResolution==resolution,onClick=null,enabled=enabled)
+                            Text(resolution.label,fontSize=14.sp,lineHeight=20.sp,modifier=Modifier.weight(1f).padding(start=12.dp,top=10.dp,bottom=10.dp))
+                        }
+                    }
+                    SettingsNote("Fold5 device-balanced capture prefers advertised normal-mode streams up to ~12.6MP for speed/noise trade-offs; other devices keep their existing native preference. Maximum is opt-in, within a 55MP safety ceiling. No invented sizes or upscaling. RAW uses its own native session. HDR fusion/ZSL remain bounded. Edited high-resolution JPEGs can be downsampled for memory safety.")
                     SectionTitle("Photo file format")
                     CaptureFormatChoices(settings.format,camera) { onChange(settings.copy(format=it)) }
                     SettingsNote("RAW is a real DNG from RAW_SENSOR, ungraded and uncropped. RAW + JPEG uses the same exposure; looks affect only its JPEG. RAW-only does not request a still JPEG. RAW modes lock native 1× framing and standard Camera2; no fusion, OEM HDR/Night, ZSL or enlargement.")

@@ -7,6 +7,12 @@ enum class CapturePipeline(val label: String) {
     STANDARD("Camera2 natural"), BURST("3-frame fusion · experimental"),
     OEM_HDR("OEM HDR · if available"), OEM_NIGHT("OEM Night · if available")
 }
+enum class JpegRendering(val label: String) {
+    CAMERA_ORIGINAL("Camera original / recipe only · fastest"), BALANCED("Balanced detail + noise · optional")
+}
+enum class CaptureResolution(val label: String) {
+    DEVICE_BALANCED("Device-balanced native capture"), MAXIMUM_NATIVE("Maximum advertised native pixels")
+}
 enum class GridMode(val label: String) {
     OFF("Off"), THIRDS("Rule of thirds"), GOLDEN("Golden ratio"), SQUARE("Square framing guide")
 }
@@ -26,7 +32,9 @@ data class CaptureSettings(
     val zsl: Boolean = false,
     val outputSize: OutputSize = OutputSize.NATIVE,
     val compare: Boolean = false,
-    val calibration: LensCalibration = LensCalibration()
+    val calibration: LensCalibration = LensCalibration(),
+    val jpegRendering: JpegRendering = JpegRendering.CAMERA_ORIGINAL,
+    val captureResolution: CaptureResolution = CaptureResolution.DEVICE_BALANCED
 )
 
 class SettingsStore(context: Context) {
@@ -35,6 +43,8 @@ class SettingsStore(context: Context) {
         pipeline = enumValue(prefs.getString("pipeline", null), CapturePipeline.STANDARD),
         format = enumValue(prefs.getString("format", null), CaptureFormat.JPEG),
         grid = enumValue(prefs.getString("grid", null), GridMode.THIRDS),
+        jpegRendering = enumValue(prefs.getString("jpeg_rendering", null), JpegRendering.CAMERA_ORIGINAL),
+        captureResolution = enumValue(prefs.getString("capture_resolution", null), CaptureResolution.DEVICE_BALANCED),
         showLevel = prefs.getBoolean("level", true), grain = prefs.getInt("grain", 0).coerceIn(0, 3),
         haptics = prefs.getBoolean("haptics", true), zsl = prefs.getBoolean("zsl", false),
         outputSize = enumValue(prefs.getString("output", null), OutputSize.NATIVE),
@@ -53,6 +63,7 @@ class SettingsStore(context: Context) {
     fun selectedCameraId(): String? = prefs.getString("selected_camera_id",null)
     fun save(s: CaptureSettings, lens: LensType, cameraId: String? = null) {
         prefs.edit().putString("pipeline", s.pipeline.name).putString("format",s.format.name)
+            .putString("jpeg_rendering",s.jpegRendering.name).putString("capture_resolution",s.captureResolution.name)
             .putString("selected_camera_id",cameraId ?: prefs.getString("selected_camera_id",null)).putString("grid", s.grid.name)
             .putBoolean("level", s.showLevel).putInt("grain", s.grain).putBoolean("haptics", s.haptics)
             .putBoolean("zsl", s.zsl).putString("output", s.outputSize.name)

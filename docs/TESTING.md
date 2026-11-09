@@ -1,6 +1,6 @@
-# MobileFilmLab beta.3 public-release testing
+# MobileFilmLab beta.4 public-release testing
 
-**Version:** `0.2.0-beta.3` · code **12** · package `com.mobilefilmlab.camera`
+**Version:** `0.2.0-beta.4` · code **13** · package `com.mobilefilmlab.camera`
 **Primary target:** **Oppo Find X9 Ultra** · Android 9 / API 28 minimum
 
 This beta-version build is published as a regular Latest GitHub Release at the owner's request. That classification is not broad-device certification. The new RAW/session paths need real handset testing; there is no connected camera in the JVM/CI test environment.
@@ -9,10 +9,20 @@ This beta-version build is published as a regular Latest GitHub Release at the o
 
 ## Install safely
 
-1. Download `MobileFilmLab-v0.2.0-beta.3-signed.apk` from the [current release](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/latest).
+1. Download `MobileFilmLab-v0.2.0-beta.4-signed.apk` from the [current release](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/latest).
 2. Verify the attached checksum and optionally the [established signing certificate](RELEASE_SIGNING.md).
-3. Install **over** beta.2 / code 11 to retain app data; do not uninstall. Debug builds are separate apps. Back up important photos and export custom recipes.
+3. Install **over** beta.3 / code 12 to retain app data; do not uninstall. Debug builds are separate apps. Back up important photos and export custom recipes.
 4. Grant camera permission; Android 9 also needs legacy storage permission. Photos go to `Pictures/MobileFilmLab/`.
+
+## Fold5 and JPEG processing
+
+- [ ] Follow the [Fold5 guide](GALAXY_Z_FOLD5.md). Record build model, Android/One UI version and selected camera ID; quality/folding are not yet hardware-validated.
+- [ ] Confirm the default **Camera original / recipe only** still preserves unedited Natural 1× JPEG pixel data. On a detected Fold5, the baseline label is **Fold5 Natural (Camera2)**; IDs/favourites/custom names must be retained.
+- [ ] Compare Original and optional **Balanced detail + noise** on daylight texture, neutral/skin colours, backlit interiors and low-light scenes using original files/EXIF. Look for noise/detail trade-offs, colour casts, excessive smoothing/sharpening and brightness shifts. Preview shows recipe colour, not final denoise/tone.
+- [ ] Compare device-balanced and opt-in maximum native sizes; record actual dimensions and latency. No upscaling is implicit; edited images may be memory-bounded.
+- [ ] Test experimental fusion separately, with flash Off and ISO/shutter Auto, first on a static high-contrast scene then with movement. Check ghosting, clipped highlight detail and the recorded fallback/processing note. No motion-free or stock-parity guarantee is made.
+- [ ] Test narrow cover and unfolded inner displays, app foreground/background, route/format changes, focus touch mapping and saved orientation. Simulated layout renders do not establish real fold transitions.
+- [ ] RAW-only disables balanced JPEG processing. With RAW+JPEG, test Balanced on/off: the paired JPEG may change; the DNG must remain genuine sensor data without app filtering.
 
 ## Readability and Pro sliders
 
@@ -27,7 +37,7 @@ This beta-version build is published as a regular Latest GitHub Release at the o
 - [ ] Switch routes. Values must re-bound to the new sensor, and unsupported controls show a reason. During capture, Pro controls are disabled.
 - [ ] Repeat basic manual settings with JPEG, RAW and RAW+JPEG where advertised; validate actual ISO/exposure in a compatible editor.
 
-[Control details and limitations](PRO_CONTROLS.md) · [Automated QA scope](QA_BETA_3.md)
+[Control details and limitations](PRO_CONTROLS.md) · [Automated QA scope](QA_BETA_4.md)
 
 ## Dynamic-camera checks
 

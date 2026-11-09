@@ -28,7 +28,8 @@ import kotlin.math.roundToInt
 enum class CameraMode { AUTO, PRO }
 
 class CameraViewModel(application: Application) : AndroidViewModel(application) {
-    val repository=RecipeRepository(application)
+    val deviceProfile=DeviceProfile.detect(Build.MANUFACTURER,Build.MODEL)
+    val repository=RecipeRepository(application,deviceProfile.naturalLabel)
     val cameraEngine=CameraEngine(application)
     val photoRepository=PhotoRepository(application)
     private val store=SettingsStore(application)

@@ -2,6 +2,9 @@
 
 ## Current release and project
 
+- [Galaxy Z Fold5 and balanced JPEG processing](GALAXY_Z_FOLD5.md).
+- [Beta.4 QA boundaries](QA_BETA_4.md).
+
 - [Pro sliders and settings readability](PRO_CONTROLS.md).
 - [Beta.3 QA boundaries](QA_BETA_3.md).
 

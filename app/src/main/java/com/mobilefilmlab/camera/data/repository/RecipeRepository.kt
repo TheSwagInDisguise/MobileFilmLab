@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import java.util.UUID
 
-class RecipeRepository(context: Context) {
+class RecipeRepository(context: Context,private val naturalLabel: String?=null) {
     private val db=RecipeDbHelper(context)
     private val prefs=context.getSharedPreferences("recipe_defaults",Context.MODE_PRIVATE)
     private val _recipes=MutableStateFlow<List<Recipe>>(emptyList())
@@ -25,10 +25,10 @@ class RecipeRepository(context: Context) {
     }
     fun refresh() {
         val favs=db.getFavouriteIds()
-        _recipes.value=(RecipeCatalog.ALL_RECIPES+db.getAllCustomRecipes()).map { it.copy(isFavourite=it.id in favs) }
+        _recipes.value=(RecipeCatalog.ALL_RECIPES+db.getAllCustomRecipes()).map { it.copy(isFavourite=it.id in favs,name=if(it.id==RecipeCatalog.STOCK_OPPO_NATURAL.id && naturalLabel!=null) naturalLabel else it.name) }
         _recipes.value.firstOrNull { it.id==_activeRecipe.value.id }?.let { _activeRecipe.value=it }
     }
-    fun setActiveRecipe(recipe: Recipe) { _activeRecipe.value=recipe }
+    fun setActiveRecipe(recipe: Recipe) { _activeRecipe.value=if(recipe.id==RecipeCatalog.STOCK_OPPO_NATURAL.id && naturalLabel!=null) recipe.copy(name=naturalLabel) else recipe }
     fun toggleFavourite(recipe: Recipe) { db.setFavourite(recipe.id,!recipe.isFavourite); refresh() }
     fun saveCustomRecipe(recipe: Recipe) { RecipeJsonSerializer.validate(recipe); db.saveRecipe(recipe); refresh(); setActiveRecipe(recipe) }
     fun importRecipes(recipes: List<Recipe>): List<Recipe> {

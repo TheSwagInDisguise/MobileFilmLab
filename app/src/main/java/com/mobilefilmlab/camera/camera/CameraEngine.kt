@@ -21,6 +21,7 @@ import android.util.Size
 import android.view.Surface
 import androidx.core.content.ContextCompat
 import androidx.exifinterface.media.ExifInterface
+import com.mobilefilmlab.camera.data.model.DeviceProfile
 import com.mobilefilmlab.camera.data.model.CameraSpec
 import com.mobilefilmlab.camera.data.model.LensType
 import com.mobilefilmlab.camera.data.model.RawStreamSelector
@@ -49,6 +50,7 @@ enum class FlashMode { OFF, AUTO, ON, TORCH }
 class CameraEngine(private val context: Context) {
     private val manager = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
     private val discovery = CameraDiscovery(context)
+    private val deviceProfile = DeviceProfile.detect(Build.MANUFACTURER,Build.MODEL)
     private val thread = HandlerThread("MobileFilmLab-Camera").apply { start() }
     private val handler = Handler(thread.looper)
     private val dispatcher = handler.asCoroutineDispatcher("Camera2")
@@ -90,6 +92,7 @@ class CameraEngine(private val context: Context) {
     private var previewBuilder: CaptureRequest.Builder? = null
     @Volatile private var settings = CaptureSettings()
     @Volatile private var cropFactor = 1f
+    private var bracketBaseline: Pair<Int,Long>? = null
     @Volatile private var deviceOrientation = 0
     fun updateDeviceOrientation(degrees: Int) { if(degrees>=0) deviceOrientation=degrees }
     private fun jpegOrientation()=CaptureOrientation.jpeg(getSensorOrientation(),deviceOrientation,activeCameraSpec.value?.isBackFacing==false)
@@ -231,7 +234,7 @@ class CameraEngine(private val context: Context) {
     fun configure(s: CaptureSettings) {
         handler.post {
             val next=CaptureFormatPolicy.normalize(s)
-            val reconfigure = settings.pipeline != next.pipeline || settings.zsl != next.zsl || settings.format != next.format
+            val reconfigure = settings.pipeline != next.pipeline || settings.zsl != next.zsl || settings.format != next.format || settings.captureResolution != next.captureResolution
             settings=next
             if(next.format.writesRaw) cropFactor=1f
             if (reconfigure && resumed) restartInternal()
@@ -289,8 +292,11 @@ class CameraEngine(private val context: Context) {
                     candidates+=ResolutionSelector.Candidate(it.width,it.height)
                 }
             } else {
-                (map?.getOutputSizes(ImageFormat.JPEG)?.toList().orEmpty()+map?.getHighResolutionOutputSizes(ImageFormat.JPEG)?.toList().orEmpty()).forEach {
+                map?.getOutputSizes(ImageFormat.JPEG)?.forEach {
                     candidates+=ResolutionSelector.Candidate(it.width,it.height)
+                }
+                map?.getHighResolutionOutputSizes(ImageFormat.JPEG)?.forEach {
+                    candidates+=ResolutionSelector.Candidate(it.width,it.height,highResolution=true)
                 }
                 if (Build.VERSION.SDK_INT >= 31 && !settings.format.writesRaw && !settings.zsl && settings.pipeline != CapturePipeline.BURST) {
                     chars().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP_MAXIMUM_RESOLUTION)?.let { maxMap ->
@@ -300,9 +306,8 @@ class CameraEngine(private val context: Context) {
                     }
                 }
             }
-            val limit=if (settings.pipeline == CapturePipeline.BURST || settings.zsl) 12_600_000L else 55_000_000L
-            val best=ResolutionSelector.select(candidates,limit) ?: throw IllegalStateException("No JPEG output exposed")
-            attempts=(listOf(best)+candidates.filter { it != best && !it.maximumMode }.sortedByDescending { it.area }).distinctBy { Triple(it.width,it.height,it.maximumMode) }
+            attempts=NativeCapturePolicy.attempts(candidates,settings,deviceProfile)
+            check(attempts.isNotEmpty()) { "No usable JPEG output within the 55MP memory-safety limit" }
             val selected=attempts.getOrElse(attemptIndex) { attempts.last() }
             useMaximumMode=selected.maximumMode
             _captureSize.value=Size(selected.width,selected.height)
@@ -472,7 +477,7 @@ class CameraEngine(private val context: Context) {
         zslImages.remove(ts); previewResults.remove(ts)
         zslRing.addLast(ZslFrame(im,result)); while (zslRing.size > 3) zslRing.removeFirst().image.close()
     }
-    private fun applySettings(b: CaptureRequest.Builder, preview: Boolean, bracketEv: Int = 0) {
+    private fun applySettings(b: CaptureRequest.Builder, preview: Boolean, bracketEv: Int = 0, bracket: Boolean = false) {
         val c=chars(); val p=parentChars(); val spec=activeCameraSpec.value ?: return
         val keys=p.availableCaptureRequestKeys.toSet()
         val physicalKeys=p.availablePhysicalCameraRequestKeys?.toSet().orEmpty()
@@ -491,9 +496,9 @@ class CameraEngine(private val context: Context) {
         val latest=latestResult.value
         val base=spec.physicalOutputId?.let { latest?.physicalCameraResults?.get(it) } ?: latest
         val aeModes=(p.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES) ?: intArrayOf())
-        if (isManual || (bracketEv != 0 && spec.manualSensor)) {
-            val iso=(manualIso ?: base?.get(CaptureResult.SENSOR_SENSITIVITY) ?: spec.minIso).coerceIn(ProControlMath.isoRange(spec))
-            val time=((manualTime ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 16_666_667L) * 2.0.pow(bracketEv)).toLong().coerceIn(ProControlMath.exposureRange(spec))
+        if (isManual || (bracket && spec.manualSensor)) {
+            val iso=(manualIso ?: (if(bracket) bracketBaseline?.first else null) ?: base?.get(CaptureResult.SENSOR_SENSITIVITY) ?: spec.minIso).coerceIn(ProControlMath.isoRange(spec))
+            val time=((manualTime ?: (if(bracket) bracketBaseline?.second else null) ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 16_666_667L) * 2.0.pow(bracketEv)).toLong().coerceIn(ProControlMath.exposureRange(spec))
             set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_OFF)
             set(CaptureRequest.SENSOR_SENSITIVITY,iso); set(CaptureRequest.SENSOR_EXPOSURE_TIME,time)
             val maxFrame=c.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION) ?: max(time,33_333_333L)
@@ -628,16 +633,37 @@ class CameraEngine(private val context: Context) {
                             prepare3A()
                             val burst=settings.pipeline==CapturePipeline.BURST && allowHeavy && flash==FlashMode.OFF && manualIso==null && manualTime==null
                             if(burst) {
-                                for((i,ev) in listOf(-1,0,1).withIndex()) {
-                                    _progress.value="Capturing frame ${i+1}/3…"
-                                    if(!spec.manualSensor) {
-                                        val old=evSteps
-                                        try {
-                                            evSteps=(old+if(spec.evStep>0) (ev/spec.evStep).roundToInt() else 0).coerceIn(spec.minEv,spec.maxEv)
-                                            updateRepeatingInternal(); delay(220); frames+=captureOne(spec,factor,0)
-                                        } finally { evSteps=old; updateRepeatingInternal() }
-                                    } else frames+=captureOne(spec,factor,ev,bracket=true)
-                                }
+                                val latest=latestResult.value
+                                val metered=spec.physicalOutputId?.let {latest?.physicalCameraResults?.get(it)} ?: latest
+                                val meteredIso=metered?.get(CaptureResult.SENSOR_SENSITIVITY)
+                                val meteredTime=metered?.get(CaptureResult.SENSOR_EXPOSURE_TIME)
+                                bracketBaseline=if(meteredIso!=null && meteredIso>0 && meteredTime!=null && meteredTime>0) meteredIso to meteredTime else null
+                                if(spec.manualSensor && bracketBaseline==null) {
+                                    _progress.value="No metered exposure; using one native frame…"
+                                    frames+=captureOne(spec,factor,0)
+                                } else try {
+                                    for((i,ev) in listOf(-1,0,1).withIndex()) {
+                                        _progress.value="Capturing frame ${i+1}/3…"
+                                        if(!spec.manualSensor) {
+                                            val old=evSteps
+                                            try {
+                                                val timestamp=latestResult.value?.get(CaptureResult.SENSOR_TIMESTAMP) ?: 0L
+                                                evSteps=(old+if(spec.evStep>0) (ev/spec.evStep).roundToInt() else 0).coerceIn(spec.minEv,spec.maxEv)
+                                                updateRepeatingInternal()
+                                                // Prefer actual AE settling to a blind fixed delay; metadata still decides fusion.
+                                                withTimeoutOrNull(650) {
+                                                    latestResult.filterNotNull().first {
+                                                        val state=it.get(CaptureResult.CONTROL_AE_STATE)
+                                                        (it.get(CaptureResult.SENSOR_TIMESTAMP) ?: 0)>timestamp &&
+                                                            it.get(CaptureResult.CONTROL_AE_EXPOSURE_COMPENSATION)==evSteps &&
+                                                            state in listOf(CaptureResult.CONTROL_AE_STATE_CONVERGED,CaptureResult.CONTROL_AE_STATE_LOCKED,CaptureResult.CONTROL_AE_STATE_FLASH_REQUIRED)
+                                                    }
+                                                }
+                                                frames+=captureOne(spec,factor,0)
+                                            } finally {evSteps=old;updateRepeatingInternal()}
+                                        } else frames+=captureOne(spec,factor,ev,bracket=true)
+                                    }
+                                } finally {bracketBaseline=null}
                             } else {
                                 _progress.value="Capturing…"
                                 val zsl=if(settings.zsl && allowHeavy && flash==FlashMode.OFF && manualIso==null && manualTime==null && factor==1f) selectZsl() else null
@@ -698,13 +724,7 @@ class CameraEngine(private val context: Context) {
                 b.set(CaptureRequest.JPEG_QUALITY,98.toByte()); b.set(CaptureRequest.JPEG_ORIENTATION,jpegOrientation())
                 try { writer!!.queueInputImage(zsl.image) } catch (e: Exception) { zsl.image.close(); throw e }
             } else {
-                applySettings(b,false,ev)
-                if (bracket && spec.manualSensor && ev == 0) {
-                    val baseline=latestResult.value
-                    b.set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_OFF)
-                    b.set(CaptureRequest.SENSOR_SENSITIVITY,(baseline?.get(CaptureResult.SENSOR_SENSITIVITY) ?: spec.minIso).coerceIn(spec.minIso,spec.maxIso))
-                    b.set(CaptureRequest.SENSOR_EXPOSURE_TIME,(baseline?.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 16_666_667L).coerceIn(spec.minExposureNs,spec.maxExposureNs))
-                }
+                applySettings(b,false,ev,bracket)
             }
             session!!.capture(b.build(),object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureStarted(s: CameraCaptureSession,r: CaptureRequest,timestamp: Long,frame: Long) {
@@ -724,7 +744,7 @@ class CameraEngine(private val context: Context) {
         try {
             val latest=latestResult.value
             val base=spec.physicalOutputId?.let { latest?.physicalCameraResults?.get(it) } ?: latest
-            val exposure=if(manualIso!=null || manualTime!=null) manualTime ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) else null
+            val exposure=if(manualIso!=null || manualTime!=null) manualTime ?: (if(bracket) bracketBaseline?.second else null) ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) else null
             val captured=withTimeout(ProControlMath.captureTimeoutMs(exposure,extension)) { shot.deferred.await() }
             delivered=true; return captured
         } finally {
@@ -826,5 +846,5 @@ class CameraEngine(private val context: Context) {
             manualExposure=s.manual,manualWhiteBalance=s.manualWb
         )
     }
-    fun diagnosticSummary(): String = "Pipeline: ${pipelineStatus.value}\nSelected JPEG stream: ${captureSize.value}\nCapture files: ${settings.format.label}; RAW_SENSOR stream: ${rawCaptureSize.value}\nCrop factor: $cropFactor (software once)\nZSL ring: ${zslRing.size}/3; PRIVATE input: ${privateReader?.let { "${it.width}x${it.height}" } ?: "none"}\nNo synthetic captures; actual native sizes only."
+    fun diagnosticSummary(): String = "Device policy: ${deviceProfile.label}; resolution choice: ${settings.captureResolution.label}\nJPEG rendering: ${settings.jpegRendering.label}\nPipeline: ${pipelineStatus.value}\nSelected JPEG stream: ${captureSize.value}\nCapture files: ${settings.format.label}; RAW_SENSOR stream: ${rawCaptureSize.value}\nCrop factor: $cropFactor (software once)\nZSL ring: ${zslRing.size}/3; PRIVATE input: ${privateReader?.let { "${it.width}x${it.height}" } ?: "none"}\nNo synthetic captures; actual native sizes only."
 }

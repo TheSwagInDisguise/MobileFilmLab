@@ -38,4 +38,20 @@ class CaptureSettingsPersistenceTest {
         assertEquals(.92f,store.load(LensType.WIDE,"0").calibration.blue,.0001f)
         assertEquals(1.09f,store.load(LensType.WIDE,"1").calibration.blue,.0001f)
     }
+    @Test fun jpegRenderingAndNativeResolutionChoicesSurviveUpgradeAndCameraSwitch() {
+        val context=context();context.getSharedPreferences("capture_settings",Context.MODE_PRIVATE).edit().clear().commit()
+        val store=SettingsStore(context)
+        assertEquals(JpegRendering.CAMERA_ORIGINAL,store.load(LensType.WIDE).jpegRendering)
+        assertEquals(CaptureResolution.DEVICE_BALANCED,store.load(LensType.WIDE).captureResolution)
+        store.save(CaptureSettings(jpegRendering=JpegRendering.BALANCED,captureResolution=CaptureResolution.MAXIMUM_NATIVE),LensType.WIDE,"samsung/actual-id")
+        val loaded=SettingsStore(context).load(LensType.TELEPHOTO,"another-actual-id")
+        assertEquals(JpegRendering.BALANCED,loaded.jpegRendering);assertEquals(CaptureResolution.MAXIMUM_NATIVE,loaded.captureResolution)
+    }
+    @Test fun unknownFutureRenderingPreferencesFallBackToSafeOriginalAndDeviceBalanced() {
+        context().getSharedPreferences("capture_settings",Context.MODE_PRIVATE).edit().clear()
+            .putString("jpeg_rendering","FUTURE").putString("capture_resolution","UNKNOWN").commit()
+        val loaded=SettingsStore(context()).load(LensType.WIDE)
+        assertEquals(JpegRendering.CAMERA_ORIGINAL,loaded.jpegRendering)
+        assertEquals(CaptureResolution.DEVICE_BALANCED,loaded.captureResolution)
+    }
 }

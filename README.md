@@ -10,17 +10,23 @@
 
 ## Current public release
 
-**[Explore the project website](https://theswagindisguise.github.io/MobileFilmLab/)** · **[Download v0.2.0-beta.3](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.3)** · [Testing guide](docs/TESTING.md) · [Report a bug](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose)
+**[Explore the project website](https://theswagindisguise.github.io/MobileFilmLab/)** · **[Download v0.2.0-beta.4](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.4)** · [Testing guide](docs/TESTING.md) · [Report a bug](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose)
 
 ### Built primarily for the Oppo Find X9 Ultra
 
 The **Oppo Find X9 Ultra is the primary development and testing target**. We plan to expand compatibility to more devices with help from beta testers. Other phones may run the app, but camera access, lens availability and processing modes vary by device and firmware. Please share a [device compatibility report](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new?template=device_support.yml) to help improve support.
 
-**v0.2.0-beta.3 / code 12** improves settings readability and adds Pro sliders, retaining dynamic Camera2 camera selection and RAW formats, with the same package/signing key for in-place upgrades. It is an owner-authorised regular Latest GitHub Release, but still a beta-version app—not universal hardware validation. Older binary downloads are withdrawn after the replacement is verified; source tags remain. [Publication details](docs/PUBLIC_RELEASE.md).
+**v0.2.0-beta.4 / code 13** adds a Fold5-aware native-size policy, optional balanced JPEG detail/noise/tone processing and safer experimental HDR fusion, retaining readable Settings, Pro sliders, dynamic cameras and untouched RAW, with the same package/signing key for in-place upgrades. It is an owner-authorised regular Latest GitHub Release, but still a beta-version app—not universal hardware validation. Older binary downloads are withdrawn after the replacement is verified; source tags remain. [Publication details](docs/PUBLIC_RELEASE.md).
+
+### Galaxy Z Fold5 compatibility work
+
+A Fold5 user reports working capture but poor image quality. Beta.4 adds capability-driven improvements for balanced natural output, detail/colour, HDR/low light and allocation/speed safeguards—not a measured stock-camera calibration or guaranteed quality gain. No firmware/capability report or sample originals were supplied; real Fold5 validation is still pending. [Setup, processing choices and limitations](docs/GALAXY_Z_FOLD5.md) · [QA scope](docs/QA_BETA_4.md).
+
+**Try it:** Settings → **Balanced detail + noise**, **Device-balanced native capture**, **Native pixels**. Start with the Natural look, 1× and Camera2 natural. **Camera original stays the default**, and DNG is never app-filtered.
 
 ## Natural capture. No app-added AI.
 
-MobileFilmLab adds **no generative image model, neural/ML photo enhancement or cloud photo processing**. It starts with the hardware’s exposed Camera2 JPEG; the default unedited 1× Natural path preserves its pixel data. Creative colour, sharpening, grain and fusion use optional, conventional algorithms.
+MobileFilmLab adds **no generative image model, neural/ML photo enhancement or cloud photo processing**. It starts with the hardware’s exposed Camera2 JPEG; the default unedited 1× Natural path preserves its pixel data. Creative colour, ISO-aware noise filtering, adaptive tone, sharpening, grain and fusion use optional, conventional algorithms.
 
 **RAW when the hardware exposes it.** Choose ungraded sensor DNG, JPEG, or both. JPEG still passes through the device ISP, and even exposed RAW can contain firmware corrections; we cannot rule out all proprietary processing. [What our no-app-added-AI promise means](docs/NATURAL_CAPTURE.md).
 
@@ -31,6 +37,7 @@ MobileFilmLab adds **no generative image model, neural/ML photo enhancement or c
 - **JPEG / RAW DNG / RAW+JPEG** — capability-gated file formats. RAW comes from the sensor stream without app grading, crop or interpolation; paired JPEG looks remain optional. RAW uses standard Camera2 and uncropped native 1×. [Details and limitations](docs/DYNAMIC_CAMERAS_AND_RAW.md).
 - **80 built-in looks** — the complete 77-recipe upstream catalogue plus three independent camera baselines. Live colour previews, favourites and custom presets.
 - **Hands-on look editing** — a two-dimensional Tone / Warmth pad, live before/after comparison and optional film grain.
+- **Optional balanced JPEG rendering** — edge-aware noise reduction, mild adaptive tone and restrained low-ISO detail, without a forced colour cast. A Fold5-aware native stream policy avoids automatic high-resolution capture; maximum native size remains opt-in. [Details](docs/GALAXY_Z_FOLD5.md).
 - **Native output by default** — no mandatory enlargement. Unedited, uncropped baseline captures preserve the exposed camera JPEG pixel data; optional enlarged exports are labelled interpolation.
 - **Composition and capture tools** — grids, a sensor-driven level, hardware shutter keys and optional haptic feedback. Photos only; no video mode.
 - **Local gallery and recipe sharing** — swipe, zoom, inspect metadata, share or delete saved photos; import/export recipe files and QR images.
@@ -48,7 +55,7 @@ MobileFilmLab adds **no generative image model, neural/ML photo enhancement or c
   </tr>
 </table>
 
-[View the settings panel](docs/screenshots/settings.png) · [View the RAW / JPEG format dialog](docs/screenshots/formats.png) · [Camera2 and RAW implementation/limits](docs/DYNAMIC_CAMERAS_AND_RAW.md)
+[Fold5 cover layout](docs/screenshots/fold5-cover-pro.png) · [Fold5 inner layout](docs/screenshots/fold5-inner-auto.png) · [View the settings panel](docs/screenshots/settings.png) · [View the RAW / JPEG format dialog](docs/screenshots/formats.png) · [Camera2 and RAW implementation/limits](docs/DYNAMIC_CAMERAS_AND_RAW.md)
 
 ## Install and test
 

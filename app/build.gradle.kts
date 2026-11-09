@@ -11,8 +11,8 @@ android {
         applicationId = "com.mobilefilmlab.camera"
         minSdk = 28
         targetSdk = 34
-        versionCode = 12
-        versionName = "0.2.0-beta.3"
+        versionCode = 13
+        versionName = "0.2.0-beta.4"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {

@@ -8,11 +8,13 @@ MobileFilmLab aims to take natural photographs from the camera hardware rather t
 - No neural/ML photo-enhancement model bundled or invoked by the app.
 - No cloud photo processing, photo upload, analytics or automatic background release check.
 
-Optional JPEG recipe colour transforms, sharpening, procedural grain and JPEG-domain three-frame fusion use conventional, non-ML algorithms. They are creative/processing options, not a claim that editing is disabled in every JPEG mode.
+Optional JPEG recipe colour transforms, ISO-aware edge-preserving noise filtering, adaptive tone, sharpening, procedural grain and JPEG-domain three-frame fusion use conventional, non-ML algorithms. They are creative/processing options, not a claim that editing is disabled in every JPEG mode.
 
 ## Natural JPEG by default
 
 The compatibility default remains JPEG, Natural baseline, standard Camera2, native pixel dimensions, no grain and identity lens gains. At 1× with that unedited configuration, the app preserves the exposed original JPEG pixel data and adds capture/recipe EXIF. It does not mandate a film look or enlarge output to advertise a higher pixel count.
+
+Beta.4 keeps **Camera original / recipe only** as the default. Optional **Balanced detail + noise** is conventional, saved-JPEG-only processing, not a sensor/stock-camera calibration; it decodes/re-encodes and never touches DNG. A Fold5-aware stream policy favours smaller advertised native JPEGs, not fabricated detail. [Choices and limits](GALAXY_Z_FOLD5.md).
 
 Selecting a recipe, crop, JPEG lens calibration, grain or a different JPEG processing mode changes the JPEG output. Edited images may require decoding/re-encoding and memory-bounded dimensions.
 
