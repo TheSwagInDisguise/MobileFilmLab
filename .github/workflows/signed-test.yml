@@ -1,0 +1,93 @@
+name: Signed HDR Test Candidate
+on:
+  workflow_dispatch:
+    inputs:
+      expected_source_sha:
+        description: Exact owner-approved candidate commit (no tag or public release is created)
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: signed-hdr-test-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - name: Require exact candidate source and keep the public release unchanged
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+        run: |
+          test "$GITHUB_SHA" = "$EXPECTED_SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          python3 - <<'PY'
+          import json,re
+          from pathlib import Path
+          source=Path('app/build.gradle.kts').read_text()
+          assert re.search(r'versionName\s*=\s*"([^"]+)"',source).group(1)=='0.2.0-beta.5'
+          assert int(re.search(r'versionCode\s*=\s*(\d+)',source).group(1))==14
+          public=json.loads(Path('site/release.json').read_text())
+          assert public['version']=='0.2.0-beta.4' and public['versionCode']==13
+          assert Path('docs/HDR_TEST_CANDIDATE.md').is_file()
+          PY
+          python3 scripts/verify_release.py
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+          python3 scripts/check_docs.py
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+          log-accepted-android-sdk-licenses: false
+      - name: Unit and native-graphics regression suite
+        run: ./gradlew testDebugUnitTest --no-daemon --stacktrace
+      - name: Android release lint
+        run: ./gradlew lintRelease --no-daemon --stacktrace
+      - name: Decode established release key for this test APK only
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          umask 077
+          mkdir -p keystore
+          test -n "$KEYSTORE_BASE64"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > keystore/release.jks
+      - name: Build signed test candidate
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+      - name: Verify identity, certificate and alignment; label as unpublished test
+        run: |
+          cp app/build/outputs/apk/release/app-release.apk MobileFilmLab-v0.2.0-beta.5-HDR-test-signed.apk
+          python3 scripts/verify_apk.py MobileFilmLab-v0.2.0-beta.5-HDR-test-signed.apk
+          sha256sum MobileFilmLab-v0.2.0-beta.5-HDR-test-signed.apk > checksums.txt
+          cp docs/HDR_TEST_CANDIDATE.md TESTING-HDR.md
+      - name: Upload candidate without publishing a release or changing Latest
+        uses: actions/upload-artifact@v4
+        with:
+          name: hdr-test-candidate-${{ github.run_id }}
+          retention-days: 14
+          path: |
+            MobileFilmLab-v0.2.0-beta.5-HDR-test-signed.apk
+            checksums.txt
+            TESTING-HDR.md
+      - name: Upload QA evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hdr-test-qa-${{ github.run_id }}
+          retention-days: 7
+          path: |
+            app/build/test-results/
+            app/build/reports/tests/
+            app/build/reports/lint-results-*
+            app/build/outputs/documentation-screenshots/
+      - name: Remove private signing material
+        if: always()
+        run: rm -rf keystore
