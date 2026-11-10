@@ -17,6 +17,7 @@ import com.mobilefilmlab.camera.data.model.*
 import com.mobilefilmlab.camera.data.repository.RecipeRepository
 import com.mobilefilmlab.camera.gallery.PhotoRepository
 import com.mobilefilmlab.camera.pipeline.*
+import com.mobilefilmlab.camera.processing.hdr.HdrSceneMeter
 import com.mobilefilmlab.camera.settings.*
 import com.mobilefilmlab.camera.updates.ReleaseChecker
 import kotlinx.coroutines.*
@@ -32,7 +33,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     val repository=RecipeRepository(application,deviceProfile.naturalLabel)
     val cameraEngine=CameraEngine(application)
     val photoRepository=PhotoRepository(application)
-    private val store=SettingsStore(application)
+    private val store=SettingsStore(application,deviceProfile)
     private var foreground=false
     val settings=MutableStateFlow(store.load(LensType.WIDE))
     val mode=MutableStateFlow(CameraMode.AUTO)
@@ -62,6 +63,23 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     val lastCapturedThumbnail=MutableStateFlow<Bitmap?>(null)
     val photos=MutableStateFlow<List<PhotoRepository.Photo>>(emptyList())
     val processingProgress=MutableStateFlow("")
+    private var lastMeterLuma: IntArray?=null
+    private var lastMeterAt=0L
+    private var lastMeterCamera: String?=null
+    private var lastHdrResult="No HDR result yet"
+    fun meterHdrPreview(frame: Bitmap) {
+        if(!settings.value.pipeline.isSmartHdr || isCapturing.value || !cameraEngine.isCameraStreaming.value) return
+        val now=SystemClock.elapsedRealtime();if(now-lastMeterAt<200) return
+        val id=cameraEngine.activeCameraSpec.value?.cameraId
+        val w=64;val h=(64.0*frame.height/frame.width).roundToInt().coerceAtLeast(24)
+        val tiny=Bitmap.createScaledBitmap(frame,w,h,true)
+        try {
+            val p=IntArray(w*h);tiny.getPixels(p,0,w,0,0,w,h)
+            val previous=lastMeterLuma?.takeIf {id==lastMeterCamera && now-lastMeterAt<2000}
+            val (stats,luma)=HdrSceneMeter.measure(p,w,h,previous,now)
+            lastMeterLuma=luma;lastMeterAt=now;lastMeterCamera=id;cameraEngine.updateHdrSceneStats(stats)
+        } finally {if(tiny!==frame) tiny.recycle()}
+    }
     val userNotice=MutableStateFlow<String?>(null)
     val thermalStatus=MutableStateFlow("Normal")
     val updateStatus=MutableStateFlow("Updates are checked only when you tap Check")
@@ -296,7 +314,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
             try {
                 val heavy=Build.VERSION.SDK_INT<29 || runCatching { power.currentThermalStatus<PowerManager.THERMAL_STATUS_SEVERE }.getOrDefault(true)
                 if(!heavy && captureSettings.pipeline in listOf(CapturePipeline.OEM_HDR,CapturePipeline.OEM_NIGHT)) error("Phone is hot. Choose Camera2 natural or let it cool before an OEM HDR/Night capture.")
-                if(!heavy && (captureSettings.pipeline==CapturePipeline.BURST || captureSettings.zsl)) userNotice.value="Phone is hot: using a single standard capture"
+                if(!heavy && (captureSettings.pipeline==CapturePipeline.BURST || captureSettings.pipeline.isSmartHdr || captureSettings.zsl)) userNotice.value="Phone is hot: using a single standard capture"
                 val bundle=cameraEngine.capturePhoto(factor,heavy).getOrThrow(); captured=bundle
                 if(captureSettings.format.writesRaw) {
                     val raw=bundle.raw ?: error("RAW image missing; no JPEG-only replacement was saved")
@@ -312,10 +330,23 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
                         else "Saved ungraded RAW DNG · ${saved.rawWidth} × ${saved.rawHeight}"
                     refreshPhotos(saved.preferred)
                 } else {
-                    processingProgress.value=if(bundle.frames.size==3) "Aligning and merging frames…" else "Saving photo…"
+                    processingProgress.value=if(bundle.hdr!=null) "Registering tiles · rejecting motion · merging HDR…" else if(bundle.frames.size==3) "Aligning and merging frames…" else "Saving photo…"
                     val output=withContext(Dispatchers.Default) { ImageProcessor.processCapture(getApplication(),bundle,recipe,captureSettings) }
                     val uri=MediaStoreSaver.savePhoto(getApplication(),output.bytes,recipe.name).getOrThrow()
-                    lastCapturedUri.value=uri; userNotice.value="Saved ${output.width} × ${output.height} · ${recipe.name}"
+                    lastHdrResult=output.note
+                    var companion=""
+                    if(output.appliedHdr && captureSettings.hdrSaveOriginal) {
+                        processingProgress.value="Saving metered Original comparison…"
+                        try {
+                            val safety=CaptureBundle(listOf(bundle.frames.first()),factor,"Metered Original · HDR A/B safety frame")
+                            val original=withContext(Dispatchers.Default) {ImageProcessor.processCapture(getApplication(),safety,RecipeCatalog.getDefaultRecipe(),CaptureSettings())}
+                            MediaStoreSaver.savePhoto(getApplication(),original.bytes,"HDR_Test_Original").getOrThrow();companion=" + Original"
+                        } catch(e: CancellationException) {throw e}
+                        catch(e: OutOfMemoryError) {companion=" · Original companion not saved (memory)"}
+                        catch(e: Exception) {companion=" · Original companion could not be saved"}
+                    }
+                    lastCapturedUri.value=uri
+                    userNotice.value="Saved ${output.width} × ${output.height} · ${if(output.appliedHdr) captureSettings.pipeline.label+companion else output.fallbackReason?.let {"Original fallback: $it"} ?: recipe.name}"
                     refreshPhotos(uri)
                 }
             } catch(e: CancellationException) { throw e }
@@ -388,7 +419,7 @@ class CameraViewModel(application: Application) : AndroidViewModel(application) 
     }
     fun getDiagnosticsReport(): String = CameraDiagnosticsReport.generateReport(cameraEngine.cameraSpecs.value)+
         "\n${cameraEngine.diagnosticSummary()}\nThermal: ${thermalStatus.value}\nBuild: ${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})\n"+
-        "Default: neutral Camera2 ISP JPEG, not proprietary Oppo stock-app processing.\n"+
+        "HDR: conventional JPEG burst only, not proprietary Google RAW HDR+ or Oppo stock processing.\nLast JPEG result: $lastHdrResult\nScene meter: ${cameraEngine.hdrSceneStats}\n"+
         "Active calibration (user-adjustable, unmeasured): ${settings.value.calibration}\n"+
         "Files: ${settings.value.format.label}\nCamera ID: ${cameraEngine.activeCameraSpec.value?.cameraId}\n"+
         "Output: ${settings.value.outputSize.label}\nPipeline request: ${settings.value.pipeline.label}\n"

@@ -14,7 +14,7 @@ object CaptureFormatPolicy {
     fun normalize(settings: CaptureSettings): CaptureSettings = if (settings.format.writesRaw) {
         settings.copy(pipeline = CapturePipeline.STANDARD, zsl = false, outputSize = OutputSize.NATIVE,
             jpegRendering = if(settings.format.writesJpeg) settings.jpegRendering else JpegRendering.CAMERA_ORIGINAL)
-    } else settings
+    } else if(settings.pipeline.isSmartHdr) settings.copy(zsl=false) else settings
 
     fun supported(format: CaptureFormat, camera: com.mobilefilmlab.camera.data.model.CameraSpec?): Boolean = camera!=null &&
         (!format.writesRaw || camera.hasRawSupport) && (!format.writesJpeg || camera.hasJpegSupport)

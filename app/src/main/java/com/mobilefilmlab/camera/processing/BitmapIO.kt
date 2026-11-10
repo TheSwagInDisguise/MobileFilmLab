@@ -19,6 +19,9 @@ object BitmapIO {
         while(w.toLong()*h/(sample.toLong()*sample)>maxPixels) sample*=2
         val options=BitmapFactory.Options().apply { inPreferredConfig=Bitmap.Config.ARGB_8888; inSampleSize=sample; inMutable=true }
         val b=BitmapFactory.decodeByteArray(bytes,0,bytes.size,options) ?: error("JPEG could not be decoded")
+        return orient(b,bytes)
+    }
+    fun orient(b: Bitmap,bytes: ByteArray): Bitmap {
         val orientation=runCatching { ExifInterface(ByteArrayInputStream(bytes)).getAttributeInt(ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL) }.getOrDefault(ExifInterface.ORIENTATION_NORMAL)
         val m=Matrix()
         when(orientation) {

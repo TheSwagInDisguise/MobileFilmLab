@@ -1,11 +1,14 @@
 package com.mobilefilmlab.camera.settings
 
 import android.content.Context
+import android.os.Build
+import com.mobilefilmlab.camera.data.model.DeviceProfile
 import com.mobilefilmlab.camera.data.model.LensType
 
 enum class CapturePipeline(val label: String) {
-    STANDARD("Camera2 natural"), BURST("3-frame fusion · experimental"),
-    OEM_HDR("OEM HDR · if available"), OEM_NIGHT("OEM Night · if available")
+    STANDARD("Original · Camera2 natural"), SMART_HDR("Smart HDR · handheld"), QUALITY_HDR("Quality HDR · still scenes / slower"), BURST("3-frame fusion · experimental"),
+    OEM_HDR("OEM HDR · if available"), OEM_NIGHT("OEM Night · if available");
+    val isSmartHdr: Boolean get() = this==SMART_HDR || this==QUALITY_HDR
 }
 enum class JpegRendering(val label: String) {
     CAMERA_ORIGINAL("Camera original / recipe only · fastest"), BALANCED("Balanced detail + noise · optional")
@@ -34,18 +37,30 @@ data class CaptureSettings(
     val compare: Boolean = false,
     val calibration: LensCalibration = LensCalibration(),
     val jpegRendering: JpegRendering = JpegRendering.CAMERA_ORIGINAL,
-    val captureResolution: CaptureResolution = CaptureResolution.DEVICE_BALANCED
+    val captureResolution: CaptureResolution = CaptureResolution.DEVICE_BALANCED,
+    val hdrSaveOriginal: Boolean = false
 )
 
-class SettingsStore(context: Context) {
+class SettingsStore(context: Context,profile: DeviceProfile=DeviceProfile.detect(Build.MANUFACTURER,Build.MODEL)) {
     private val prefs = context.getSharedPreferences("capture_settings", Context.MODE_PRIVATE)
-    fun load(lens: LensType, cameraId: String? = null): CaptureSettings = CaptureSettings(
+    init {
+        // beta.4 persisted STANDARD even for unrelated settings, so legacy explicit/default
+        // STANDARD cannot be distinguished. Upgrade it once; never repeat an opt-out.
+        if(profile==DeviceProfile.GALAXY_Z_FOLD5 && !prefs.getBoolean("fold5_smart_hdr_default_v1",false)) {
+            val old=prefs.getString("pipeline",null)
+            val edit=prefs.edit().putBoolean("fold5_smart_hdr_default_v1",true)
+            if(old==null || old==CapturePipeline.STANDARD.name) edit.putString("pipeline",CapturePipeline.SMART_HDR.name)
+            edit.apply()
+        }
+    }
+    fun load(lens: LensType, cameraId: String? = null): CaptureSettings = CaptureFormatPolicy.normalize(CaptureSettings(
         pipeline = enumValue(prefs.getString("pipeline", null), CapturePipeline.STANDARD),
         format = enumValue(prefs.getString("format", null), CaptureFormat.JPEG),
         grid = enumValue(prefs.getString("grid", null), GridMode.THIRDS),
         jpegRendering = enumValue(prefs.getString("jpeg_rendering", null), JpegRendering.CAMERA_ORIGINAL),
         captureResolution = enumValue(prefs.getString("capture_resolution", null), CaptureResolution.DEVICE_BALANCED),
         showLevel = prefs.getBoolean("level", true), grain = prefs.getInt("grain", 0).coerceIn(0, 3),
+        hdrSaveOriginal = prefs.getBoolean("hdr_save_original", false),
         haptics = prefs.getBoolean("haptics", true), zsl = prefs.getBoolean("zsl", false),
         outputSize = enumValue(prefs.getString("output", null), OutputSize.NATIVE),
         calibration = LensCalibration(
@@ -53,7 +68,7 @@ class SettingsStore(context: Context) {
             gain(lens,cameraId,"g").coerceIn(0.8f, 1.2f),
             gain(lens,cameraId,"b").coerceIn(0.8f, 1.2f)
         )
-    )
+    ))
     private fun prefix(lens: LensType, cameraId: String?): String = if(cameraId==null) lens.name else
         "camera_"+java.util.Base64.getUrlEncoder().withoutPadding().encodeToString(cameraId.toByteArray(Charsets.UTF_8))
     private fun gain(lens: LensType, cameraId: String?, channel: String): Float {
@@ -66,7 +81,7 @@ class SettingsStore(context: Context) {
             .putString("jpeg_rendering",s.jpegRendering.name).putString("capture_resolution",s.captureResolution.name)
             .putString("selected_camera_id",cameraId ?: prefs.getString("selected_camera_id",null)).putString("grid", s.grid.name)
             .putBoolean("level", s.showLevel).putInt("grain", s.grain).putBoolean("haptics", s.haptics)
-            .putBoolean("zsl", s.zsl).putString("output", s.outputSize.name)
+            .putBoolean("hdr_save_original",s.hdrSaveOriginal).putBoolean("zsl", s.zsl).putString("output", s.outputSize.name)
             .putFloat("${prefix(lens,cameraId)}_r", s.calibration.red).putFloat("${prefix(lens,cameraId)}_g", s.calibration.green)
             .putFloat("${prefix(lens,cameraId)}_b", s.calibration.blue).apply()
     }

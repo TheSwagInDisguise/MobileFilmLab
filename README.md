@@ -12,6 +12,8 @@
 
 **[Explore the project website](https://theswagindisguise.github.io/MobileFilmLab/)** · **[Download v0.2.0-beta.4](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.2.0-beta.4)** · [Testing guide](docs/TESTING.md) · [Report a bug](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new/choose)
 
+> **Candidate branch only:** the source here contains an **unpublished 0.2.0-beta.5 / code 14 HDR test**, with handheld Smart HDR as the Fold5 JPEG default and a slower Quality preset. [Install/rollback, processing limits and A/B guide](docs/HDR_TEST_CANDIDATE.md). Public beta.4, the live website and release approvals remain unchanged; no beta.5 tag/release is authorised. The beta.4 defaults described below apply to the public build.
+
 ### Built primarily for the Oppo Find X9 Ultra
 
 The **Oppo Find X9 Ultra is the primary development and testing target**. We plan to expand compatibility to more devices with help from beta testers. Other phones may run the app, but camera access, lens availability and processing modes vary by device and firmware. Please share a [device compatibility report](https://github.com/TheSwagInDisguise/MobileFilmLab/issues/new?template=device_support.yml) to help improve support.
@@ -26,7 +28,7 @@ A Fold5 user reports working capture but poor image quality. Beta.4 adds capabil
 
 ## Natural capture. No app-added AI.
 
-MobileFilmLab adds **no generative image model, neural/ML photo enhancement or cloud photo processing**. It starts with the hardware’s exposed Camera2 JPEG; the default unedited 1× Natural path preserves its pixel data. Creative colour, ISO-aware noise filtering, adaptive tone, sharpening, grain and fusion use optional, conventional algorithms.
+MobileFilmLab adds **no generative image model, neural/ML photo enhancement or cloud photo processing**. It starts with the hardware’s exposed Camera2 JPEG; Original processing with an unedited 1× Natural look preserves its pixel data (the candidate’s Fold5 Smart HDR default instead merges a JPEG burst). Creative colour, ISO-aware noise filtering, adaptive tone, sharpening, grain and fusion use optional, conventional algorithms.
 
 **RAW when the hardware exposes it.** Choose ungraded sensor DNG, JPEG, or both. JPEG still passes through the device ISP, and even exposed RAW can contain firmware corrections; we cannot rule out all proprietary processing. [What our no-app-added-AI promise means](docs/NATURAL_CAPTURE.md).
 

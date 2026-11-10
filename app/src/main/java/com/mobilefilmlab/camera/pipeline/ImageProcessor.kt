@@ -8,6 +8,7 @@ import com.mobilefilmlab.camera.camera.CaptureBundle
 import com.mobilefilmlab.camera.camera.PhotoExifMetadata
 import com.mobilefilmlab.camera.data.model.*
 import com.mobilefilmlab.camera.processing.*
+import com.mobilefilmlab.camera.processing.hdr.SmartHdrProcessor
 import com.mobilefilmlab.camera.settings.*
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -147,11 +148,18 @@ object ImageProcessor {
         recipe.id == "stock_oppo_natural" && recipe.puckTone==0f && recipe.puckColor==0f &&
             settings.jpegRendering==JpegRendering.CAMERA_ORIGINAL && settings.grain==0 && settings.outputSize==OutputSize.NATIVE && settings.calibration.isIdentity && crop==1f
 
-    data class Output(val bytes: ByteArray, val width: Int, val height: Int, val note: String)
+    data class Output(val bytes: ByteArray, val width: Int, val height: Int, val note: String,val appliedHdr: Boolean=false,val fallbackReason: String?=null)
 
     /** Runs on a worker dispatcher. Ownership of all temporary bitmaps stays here. */
     fun processCapture(context: Context, capture: CaptureBundle, recipe: Recipe, settings: CaptureSettings): Output {
-        val baseFrame=capture.frames[if(capture.frames.size==3) 1 else 0]
+        require(!settings.format.writesRaw || capture.hdr==null) {"RAW cannot use an HDR capture bundle"}
+        val hdr=if(capture.hdr!=null) SmartHdrProcessor.process(capture) else null
+        if(hdr!=null && hdr.bitmap==null) {
+            // Never grade a partially stacked or underexposed helper as the fallback.
+            val fallback=CaptureBundle(listOf(capture.frames.first()),capture.cropFactor,"Original fallback · ${hdr.fallbackReason}")
+            return processCapture(context,fallback,recipe,settings).copy(fallbackReason=hdr.fallbackReason)
+        }
+        val baseFrame=capture.frames[hdr?.referenceIndex ?: if(capture.frames.size==3) 1 else 0]
         val (rawW,rawH)=BitmapIO.dimensions(baseFrame.bytes)
         val originalMeta=baseFrame.metadata.copy(
             sourceWidth=baseFrame.metadata.sourceWidth.takeIf { it>0 } ?: rawW,
@@ -164,12 +172,12 @@ object ImageProcessor {
             val rotate=e.getAttributeInt(ExifInterface.TAG_ORIENTATION,1) in listOf(5,6,7,8)
             return Output(tagged,if(rotate) rawH else rawW,if(rotate) rawW else rawH,"Original JPEG · ${capture.label}")
         }
-        var bitmap: Bitmap?=null
+        var bitmap: Bitmap?=hdr?.bitmap
         try {
-            var note=capture.label
+            var note=hdr?.let {it.note+"; merge ${it.processingMs} ms"} ?: capture.label
             val heap=Runtime.getRuntime().maxMemory()
             val maxPixels=(heap/14L).coerceIn(4_000_000L,55_000_000L)
-            bitmap=if(capture.frames.size==3) {
+            bitmap=if(hdr?.bitmap!=null) BitmapIO.orient(hdr.bitmap,baseFrame.bytes) else if(capture.frames.size==3) {
                 val fused=FusionProcessor.fuse(capture.frames); note=fused.note; fused.bitmap
             } else BitmapIO.decodeUpright(baseFrame.bytes,maxPixels)
             if(bitmap.width.toLong()*bitmap.height < rawW.toLong()*rawH && capture.frames.size==1) note+="; downsampled for memory safety"
@@ -183,7 +191,7 @@ object ImageProcessor {
                 val mutable=bitmap.copy(Bitmap.Config.ARGB_8888,true) ?: error("Cannot allocate writable JPEG pixels")
                 bitmap.recycle();bitmap=mutable
             }
-            val balanced=settings.jpegRendering==JpegRendering.BALANCED
+            val balanced=settings.jpegRendering==JpegRendering.BALANCED && hdr==null
             val balancedIso=originalMeta.iso?.coerceAtLeast(50) ?: 800
             if(balanced) {
                 applyBalancedJpeg(bitmap,balancedIso)
@@ -213,7 +221,7 @@ object ImageProcessor {
             val stream=ByteArrayOutputStream()
             check(bitmap.compress(Bitmap.CompressFormat.JPEG,98,stream)) { "JPEG encoder failed" }
             val bytes=writeExif(context,stream.toByteArray(),recipe,originalMeta,bitmap.width to bitmap.height,note,settings.grain)
-            return Output(bytes,bitmap.width,bitmap.height,note)
+            return Output(bytes,bitmap.width,bitmap.height,note,appliedHdr=hdr!=null)
         } finally { bitmap?.takeUnless { it.isRecycled }?.recycle() }
     }
     /** In-place JPEG-only processing with four scanline buffers, never a full image-sized pixel array. */
@@ -285,7 +293,7 @@ object ImageProcessor {
                 set(ExifInterface.TAG_LENS_SPECIFICATION,"$f/1000 $f/1000 $a/100 $a/100")
             }
             m.iso?.let { set(ExifInterface.TAG_PHOTOGRAPHIC_SENSITIVITY,it.toString()); set("SensitivityType","3") }
-            m.exposureTimeNs?.let { set(ExifInterface.TAG_EXPOSURE_TIME,"${(it/1000).coerceAtLeast(1)}/1000000") }
+            m.exposureTimeNs?.let { set(ExifInterface.TAG_EXPOSURE_TIME,(it/1_000_000_000.0).toString()) }
             m.fNumber?.let {
                 set(ExifInterface.TAG_F_NUMBER,"${(it*1000).roundToInt()}/1000")
                 set(ExifInterface.TAG_APERTURE_VALUE,"${(2.0*ln(it.toDouble())/ln(2.0)*1_000_000).roundToInt()}/1000000")

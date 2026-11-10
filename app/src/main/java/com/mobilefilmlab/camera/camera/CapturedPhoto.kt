@@ -1,6 +1,7 @@
 package com.mobilefilmlab.camera.camera
 
 import android.os.Build
+import com.mobilefilmlab.camera.processing.hdr.HdrCaptureInfo
 import com.mobilefilmlab.camera.data.model.LensType
 
 data class PhotoExifMetadata(
@@ -11,10 +12,11 @@ data class PhotoExifMetadata(
     val flashFired: Boolean? = null, val flashExif: Int? = null, val lensType: LensType = LensType.WIDE,
     val captureTimestampMs: Long = System.currentTimeMillis(), val pipeline: String = "Camera2 JPEG",
     val note: String = "", val sourceWidth: Int = 0, val sourceHeight: Int = 0,
-    val manualExposure: Boolean = false, val manualWhiteBalance: Boolean = false
+    val manualExposure: Boolean = false, val manualWhiteBalance: Boolean = false,
+    val sensorTimestampNs: Long? = null, val postRawSensitivityBoost: Int? = null
 )
 data class CapturedJpeg(val bytes: ByteArray, val metadata: PhotoExifMetadata, val raw: RawCapture? = null)
-data class CaptureBundle(val frames: List<CapturedJpeg>, val cropFactor: Float, val label: String) : AutoCloseable {
+data class CaptureBundle(val frames: List<CapturedJpeg>, val cropFactor: Float, val label: String, val hdr: HdrCaptureInfo? = null) : AutoCloseable {
     val raw: RawCapture? get() = frames.firstOrNull()?.raw
     override fun close() { frames.forEach { it.raw?.close() } }
 }

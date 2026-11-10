@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unpublished 0.2.0-beta.5 HDR test candidate (14)
+
+- Handheld Smart HDR becomes the Fold5 JPEG default once; Original remains selectable, existing other pipeline choices retained. Other devices keep their default. RAW/RAW+JPEG remain single-exposure native paths.
+- Added a quality-first static-scene preset, metered safety-frame fallback, constant highlight-protecting short exposures, optional long shadow frames, actual metadata/capability/thermal/flash/manual guards and progress/result diagnostics.
+- Original conventional JPEG-domain processing: sharp early reference, local fractional tile registration, ISO-aware robust RGB temporal merge, capped long-frame weights and restrained hue-preserving local tone. One output bitmap plus decoded strips bounds allocations; no Google code, learned model, RAW HDR+ parity or measured handset quality claim.
+- Corrected fractional shutter EXIF writing for newly encoded JPEGs; empty/transparent region output cannot masquerade as HDR. Native fixture tests use an explicitly test-only codec adapter because Robolectric does not decode real regions; handset codec/camera validation remains pending.
+- Optional metered Original companion for private A/B feedback; successful HDR avoids double Balanced filtering. Same package/key, test artifact only. Public beta.4/site/approval variables/tags stay unchanged. See [candidate/rollback guide](docs/HDR_TEST_CANDIDATE.md).
+
 ## [0.2.0-beta.4]
 
 - Added Samsung SM-F946* compatibility policy: prefer actual, normal-mode ~12.6MP-budget JPEG streams; maximum advertised native size is opt-in within the 55MP ceiling. Bounded session fallbacks no longer retry larger buffers. Other devices retain their existing native preference.

@@ -30,6 +30,7 @@ jobs:
           assert int(re.search(r'versionCode\s*=\s*(\d+)',source).group(1))==14
           public=json.loads(Path('site/release.json').read_text())
           assert public['version']=='0.2.0-beta.4' and public['versionCode']==13
+          assert 'buildConfigField("boolean", "UNPUBLISHED_HDR_TEST", "true")' in source
           assert Path('docs/HDR_TEST_CANDIDATE.md').is_file()
           PY
           python3 scripts/verify_release.py

@@ -28,6 +28,7 @@ import com.mobilefilmlab.camera.data.model.RawStreamSelector
 import com.mobilefilmlab.camera.data.model.CameraOptions
 import com.mobilefilmlab.camera.data.model.StreamSize
 import com.mobilefilmlab.camera.pipeline.CropEngine
+import com.mobilefilmlab.camera.processing.hdr.*
 import com.mobilefilmlab.camera.settings.CapturePipeline
 import com.mobilefilmlab.camera.settings.CaptureSettings
 import com.mobilefilmlab.camera.settings.CaptureFormatPolicy
@@ -93,6 +94,12 @@ class CameraEngine(private val context: Context) {
     @Volatile private var settings = CaptureSettings()
     @Volatile private var cropFactor = 1f
     private var bracketBaseline: Pair<Int,Long>? = null
+    @Volatile var hdrSceneStats: HdrSceneStats? = null
+        private set
+    fun updateHdrSceneStats(stats: HdrSceneStats) {hdrSceneStats=stats}
+    private var hdrAwbLock=false
+    private var hdrPostRawBoost: Int?=null
+    private var hdrAfLock: Float?=null
     @Volatile private var deviceOrientation = 0
     fun updateDeviceOrientation(degrees: Int) { if(degrees>=0) deviceOrientation=degrees }
     private fun jpegOrientation()=CaptureOrientation.jpeg(getSensorOrientation(),deviceOrientation,activeCameraSpec.value?.isBackFacing==false)
@@ -224,6 +231,7 @@ class CameraEngine(private val context: Context) {
         val match=CameraOptions.rear(cameraSpecs.value).firstOrNull { it.cameraId==cameraId }
         if(match==null) { _cameraError.value="Camera ID $cameraId is no longer exposed by this firmware"; return }
         val different=_activeCameraSpec.value?.cameraId!=match.cameraId
+        if(different) hdrSceneStats=null
         _activeCameraSpec.value=match
         cropFactor=if(settings.format.writesRaw) 1f else factor.coerceIn(1f,3f)
         handler.post {
@@ -338,7 +346,7 @@ class CameraEngine(private val context: Context) {
             if (useMaximumMode && Build.VERSION.SDK_INT >= 31) {
                 outputs[1].addSensorPixelModeUsed(CameraMetadata.SENSOR_PIXEL_MODE_MAXIMUM_RESOLUTION)
             }
-            val canZsl=!settings.format.writesRaw && settings.zsl && !thermalLimited && !disableZsl && !useMaximumMode && spec.privateReprocessing && spec.physicalOutputId == null && cropFactor == 1f
+            val canZsl=!settings.format.writesRaw && settings.zsl && !settings.pipeline.isSmartHdr && !thermalLimited && !disableZsl && !useMaximumMode && spec.privateReprocessing && spec.physicalOutputId == null && cropFactor == 1f
             var input: InputConfiguration?=null
             if (canZsl) {
                 val parentMap=parentChars().get(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP)
@@ -376,6 +384,7 @@ class CameraEngine(private val context: Context) {
                             _pipelineStatus.value=when {
                                 rawReader != null -> "Camera2 · ${settings.format.badge} · native RAW_SENSOR + JPEG companion"
                                 privateReader != null -> "Camera2 · PRIVATE reprocessing ZSL active"
+                                settings.pipeline.isSmartHdr -> if(spec.manualSensor) "${settings.pipeline.label} · JPEG burst selected; Original safety fallback" else "${settings.pipeline.label} · manual sensor unavailable; Original fallback"
                                 settings.zsl -> "Camera2 · ZSL unavailable/fallback"
                                 settings.pipeline == CapturePipeline.BURST -> "Camera2 · experimental 3-frame JPEG fusion selected"
                                 else -> "Camera2 native JPEG$fallback"
@@ -477,7 +486,7 @@ class CameraEngine(private val context: Context) {
         zslImages.remove(ts); previewResults.remove(ts)
         zslRing.addLast(ZslFrame(im,result)); while (zslRing.size > 3) zslRing.removeFirst().image.close()
     }
-    private fun applySettings(b: CaptureRequest.Builder, preview: Boolean, bracketEv: Int = 0, bracket: Boolean = false) {
+    private fun applySettings(b: CaptureRequest.Builder, preview: Boolean, bracketEv: Int = 0, bracket: Boolean = false, hdrExposure: HdrCapturePolicy.Exposure? = null) {
         val c=chars(); val p=parentChars(); val spec=activeCameraSpec.value ?: return
         val keys=p.availableCaptureRequestKeys.toSet()
         val physicalKeys=p.availablePhysicalCameraRequestKeys?.toSet().orEmpty()
@@ -496,9 +505,9 @@ class CameraEngine(private val context: Context) {
         val latest=latestResult.value
         val base=spec.physicalOutputId?.let { latest?.physicalCameraResults?.get(it) } ?: latest
         val aeModes=(p.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES) ?: intArrayOf())
-        if (isManual || (bracket && spec.manualSensor)) {
-            val iso=(manualIso ?: (if(bracket) bracketBaseline?.first else null) ?: base?.get(CaptureResult.SENSOR_SENSITIVITY) ?: spec.minIso).coerceIn(ProControlMath.isoRange(spec))
-            val time=((manualTime ?: (if(bracket) bracketBaseline?.second else null) ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 16_666_667L) * 2.0.pow(bracketEv)).toLong().coerceIn(ProControlMath.exposureRange(spec))
+        if (hdrExposure!=null || isManual || (bracket && spec.manualSensor)) {
+            val iso=(hdrExposure?.iso ?: manualIso ?: (if(bracket) bracketBaseline?.first else null) ?: base?.get(CaptureResult.SENSOR_SENSITIVITY) ?: spec.minIso).coerceIn(ProControlMath.isoRange(spec))
+            val time=((hdrExposure?.timeNs ?: manualTime ?: (if(bracket) bracketBaseline?.second else null) ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) ?: 16_666_667L) * 2.0.pow(bracketEv)).toLong().coerceIn(ProControlMath.exposureRange(spec))
             set(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.CONTROL_AE_MODE_OFF)
             set(CaptureRequest.SENSOR_SENSITIVITY,iso); set(CaptureRequest.SENSOR_EXPOSURE_TIME,time)
             val maxFrame=c.get(CameraCharacteristics.SENSOR_INFO_MAX_FRAME_DURATION) ?: max(time,33_333_333L)
@@ -527,6 +536,14 @@ class CameraEngine(private val context: Context) {
             val identity=ColorSpaceTransform(arrayOf(Rational(1,1),Rational(0,1),Rational(0,1),Rational(0,1),Rational(1,1),Rational(0,1),Rational(0,1),Rational(0,1),Rational(1,1)))
             set(CaptureRequest.COLOR_CORRECTION_TRANSFORM,base?.get(CaptureResult.COLOR_CORRECTION_TRANSFORM) ?: identity)
         } else set(CaptureRequest.CONTROL_AWB_MODE,CaptureRequest.CONTROL_AWB_MODE_AUTO)
+        if(hdrExposure!=null) hdrPostRawBoost?.let {set(CaptureRequest.CONTROL_POST_RAW_SENSITIVITY_BOOST,it)}
+        if(hdrAwbLock && kelvin==0) set(CaptureRequest.CONTROL_AWB_LOCK,true)
+        hdrAfLock?.let { distance ->
+            if(CaptureRequest.CONTROL_AF_MODE_OFF in afs) {
+                set(CaptureRequest.CONTROL_AF_MODE,CaptureRequest.CONTROL_AF_MODE_OFF)
+                set(CaptureRequest.LENS_FOCUS_DISTANCE,distance)
+            }
+        }
         // Crop once: preview is zoomed; still JPEG always uses the full stream, then software crop is applied once.
         c.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE)?.let {
             set(CaptureRequest.SCALER_CROP_REGION,CropEngine.computeCropRegion(it,if (preview) cropFactor else 1f))
@@ -621,6 +638,7 @@ class CameraEngine(private val context: Context) {
                     if(!_isCameraStreaming.value || device==null) return@withLock Result.failure(IllegalStateException("Camera not ready; no image was saved"))
                     try {
                         val frames=mutableListOf<CapturedJpeg>()
+                        var hdrInfo: HdrCaptureInfo?=null
                         if(settings.format.writesRaw) {
                             check(spec.hasRawSupport && rawReader!=null) { "RAW_SENSOR is not ready on this camera; no JPEG-only fallback was saved" }
                             check(factor==1f) { "RAW capture uses the uncropped sensor stream. Select 1×." }
@@ -632,7 +650,9 @@ class CameraEngine(private val context: Context) {
                         } else {
                             prepare3A()
                             val burst=settings.pipeline==CapturePipeline.BURST && allowHeavy && flash==FlashMode.OFF && manualIso==null && manualTime==null
-                            if(burst) {
+                            if(settings.pipeline.isSmartHdr) {
+                                hdrInfo=captureSmartHdr(spec,factor,allowHeavy,frames)
+                            } else if(burst) {
                                 val latest=latestResult.value
                                 val metered=spec.physicalOutputId?.let {latest?.physicalCameraResults?.get(it)} ?: latest
                                 val meteredIso=metered?.get(CaptureResult.SENSOR_SENSITIVITY)
@@ -670,7 +690,7 @@ class CameraEngine(private val context: Context) {
                                 frames+=captureOne(spec,factor,0,zsl=zsl)
                             }
                         }
-                        val bundle=CaptureBundle(frames,factor,if(frames.size==3) "Experimental 3-frame fusion" else frames.first().metadata.pipeline)
+                        val bundle=CaptureBundle(frames,factor,if(hdrInfo!=null) settings.pipeline.label else if(frames.size==3) "Experimental 3-frame fusion" else frames.first().metadata.pipeline,hdrInfo)
                         undelivered=bundle
                         Result.success(bundle)
                     } catch(e: TimeoutCancellationException) {
@@ -678,6 +698,7 @@ class CameraEngine(private val context: Context) {
                     } catch(e: CancellationException) { throw e }
                     catch(e: Exception) { Result.failure(e) }
                     finally {
+                        hdrAwbLock=false;hdrAfLock=null;hdrPostRawBoost=null
                         _progress.value=""
                         pending.toList().forEach { if(!it.deferred.isCompleted) it.deferred.cancel(); it.rawImage?.close(); it.rawImage=null }
                         pending.clear(); unmatchedJpegs.clear(); clearRawInbox(); extensionShot=null
@@ -689,6 +710,68 @@ class CameraEngine(private val context: Context) {
             return result
         } finally { undelivered?.close() }
     }
+    private suspend fun captureSmartHdr(spec: CameraSpec,factor: Float,allowHeavy: Boolean,frames: MutableList<CapturedJpeg>): HdrCaptureInfo {
+        val quality=settings.pipeline==CapturePipeline.QUALITY_HDR
+        _progress.value="Capturing metered Original safety frame…"
+        frames+=captureOne(spec,factor,0) // No ZSL and never a RAW substitution.
+        fun fallback(reason: String)=HdrCaptureInfo(quality,emptyList(),fallbackReason=reason)
+        if(!allowHeavy || thermalLimited) return fallback("Phone is hot; multi-frame processing skipped")
+        if(flash!=FlashMode.OFF) return fallback("Flash/torch enabled; one metered Original")
+        if(manualIso!=null || manualTime!=null) return fallback("Manual exposure selected; one Original")
+        if(!spec.manualSensor) return fallback("Manual sensor requests unavailable on this camera")
+        val safety=frames.first().metadata
+        if(safety.flashFired==true) return fallback("Safety exposure used flash")
+        val now=android.os.SystemClock.elapsedRealtime()
+        val scene=hdrSceneStats?.takeIf {now-it.timestampMs in 0..2500}
+        val compressedLimit=(Runtime.getRuntime().maxMemory()/5).coerceAtMost(96L*1024*1024)
+        if(frames.first().bytes.size>compressedLimit/3) return fallback("Safety JPEG is too large for a bounded burst")
+        val plan=HdrCapturePolicy.plan(spec,safety.iso,safety.exposureTimeNs,quality,scene)
+            ?: return fallback("Actual exposure unavailable or outside safe burst limits")
+        val latest=latestResult.value
+        val metered=spec.physicalOutputId?.let {latest?.physicalCameraResults?.get(it)} ?: latest
+        val characteristics=chars()
+        val keys=characteristics.availableCaptureRequestKeys.orEmpty().toSet()
+        val physicalKeys=if(Build.VERSION.SDK_INT>=28) parentChars().availablePhysicalCameraRequestKeys.orEmpty().toSet() else emptySet()
+        val exposureKeys=setOf(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.SENSOR_SENSITIVITY,CaptureRequest.SENSOR_EXPOSURE_TIME)
+        if(!exposureKeys.all {it in keys} || CaptureRequest.CONTROL_AE_MODE_OFF !in (characteristics.get(CameraCharacteristics.CONTROL_AE_AVAILABLE_MODES) ?: intArrayOf()))
+            return fallback("Public manual exposure controls unavailable; one Original")
+        if(spec.physicalOutputId!=null && !setOf(CaptureRequest.CONTROL_AE_MODE,CaptureRequest.SENSOR_SENSITIVITY,CaptureRequest.SENSOR_EXPOSURE_TIME).all {it in physicalKeys})
+            return fallback("Physical camera exposure overrides unavailable; one Original")
+        hdrAwbLock=kelvin==0 && characteristics.get(CameraCharacteristics.CONTROL_AWB_LOCK_AVAILABLE)==true && CaptureRequest.CONTROL_AWB_LOCK in keys
+        val distance=metered?.get(CaptureResult.LENS_FOCUS_DISTANCE)
+        val af=metered?.get(CaptureResult.CONTROL_AF_STATE)
+        hdrAfLock=if(distance!=null && af in listOf(CaptureResult.CONTROL_AF_STATE_FOCUSED_LOCKED,CaptureResult.CONTROL_AF_STATE_PASSIVE_FOCUSED)) distance.takeIf {it.isFinite() && it>=0f} else null
+        val boostRange=characteristics.get(CameraCharacteristics.CONTROL_POST_RAW_SENSITIVITY_BOOST_RANGE)
+        hdrPostRawBoost=if(boostRange!=null && CaptureRequest.CONTROL_POST_RAW_SENSITIVITY_BOOST in keys) safety.postRawSensitivityBoost?.coerceIn(boostRange.lower,boostRange.upper) else null
+        val requestedAwbLock=hdrAwbLock
+        val requestedFocusLock=hdrAfLock!=null
+        var memoryLimited=false
+        val shorts=mutableListOf<Int>();val longs=mutableListOf<Int>()
+        try {
+            updateRepeatingInternal() // Hold converged WB/focus when those public controls exist.
+            withTimeout(20_000) {
+                for((i,exposure) in plan.helpers.withIndex()) {
+                    if(frames.sumOf {it.bytes.size.toLong()}+frames.maxOf {it.bytes.size}>compressedLimit) {
+                        check(shorts.size>=3) {"Compressed burst exceeds memory budget; preserving Original"}
+                        memoryLimited=true;break
+                    }
+                    check(!thermalLimited) {"Phone became hot during HDR; preserving Original"}
+                    if(settings.format.writesRaw) error("Capture format changed during HDR")
+                    _progress.value="${if(quality) "Quality HDR" else "Smart HDR"} · ${i+2}/${plan.helpers.size+1} frames…"
+                    frames+=captureOne(spec,factor,0,hdrExposure=exposure)
+                    val actual=frames.last().metadata
+                    val product=actual.iso?.toDouble()?.times(actual.exposureTimeNs ?: 0L)
+                    check(product!=null && product/(exposure.iso.toDouble()*exposure.timeNs) in .78..1.28) {"Camera did not honour the requested HDR exposure"}
+                    if(exposure.longFrame) longs+=frames.lastIndex else shorts+=frames.lastIndex
+                }
+            }
+        } catch(e: TimeoutCancellationException) {
+            return fallback("HDR helper deadline exceeded; metered Original retained")
+        } catch(e: CancellationException) {throw e}
+        catch(e: Exception) {return fallback("HDR helper rejected: ${e.message?.take(90)}")}
+        finally {hdrAwbLock=false;hdrAfLock=null;hdrPostRawBoost=null;updateRepeatingInternal()}
+        return HdrCaptureInfo(quality,shorts,longs,plan.note+"; helpers trimmed for compressed-data memory budget=$memoryLimited; AWB lock requested=$requestedAwbLock; focus lock requested=$requestedFocusLock")
+    }
     private fun selectZsl(): ZslFrame? {
         val now=android.os.SystemClock.elapsedRealtimeNanos()
         val selected=zslRing.lastOrNull {
@@ -699,12 +782,12 @@ class CameraEngine(private val context: Context) {
         } ?: return null
         zslRing.remove(selected); return selected
     }
-    private suspend fun captureOne(spec: CameraSpec, factor: Float, ev: Int, extension: Boolean=false, zsl: ZslFrame?=null, bracket: Boolean=false, wantRaw: Boolean=false): CapturedJpeg {
+    private suspend fun captureOne(spec: CameraSpec, factor: Float, ev: Int, extension: Boolean=false, zsl: ZslFrame?=null, bracket: Boolean=false, wantRaw: Boolean=false, hdrExposure: HdrCapturePolicy.Exposure?=null): CapturedJpeg {
         val camera=device ?: throw IllegalStateException("Camera closed")
         val wantJpeg=!wantRaw || settings.format.writesJpeg
         val reader=if(wantJpeg) jpegReader ?: throw IllegalStateException("JPEG stream closed") else null
-        val label=when { extension -> pipelineStatus.value; zsl != null -> "Camera2 PRIVATE ZSL reprocess"; bracket -> "Bracket ${ev}EV"; wantRaw -> if(wantJpeg) "Camera2 native RAW_SENSOR + JPEG" else "Camera2 native RAW_SENSOR"; else -> "Camera2 native JPEG" }
-        val shot=Shot(spec,factor,label,sourceResult=zsl?.result,sourceSize=zsl?.image?.let { it.width to it.height },manual=manualIso != null || manualTime != null,manualWb=kelvin>0,
+        val label=when { extension -> pipelineStatus.value; zsl != null -> "Camera2 PRIVATE ZSL reprocess"; bracket -> "Bracket ${ev}EV"; wantRaw -> if(wantJpeg) "Camera2 native RAW_SENSOR + JPEG" else "Camera2 native RAW_SENSOR"; hdrExposure!=null -> if(hdrExposure.longFrame) "Quality HDR long JPEG" else "HDR short JPEG"; else -> "Camera2 native JPEG" }
+        val shot=Shot(spec,factor,label,sourceResult=zsl?.result,sourceSize=zsl?.image?.let { it.width to it.height },manual=hdrExposure!=null || manualIso != null || manualTime != null,manualWb=kelvin>0,
             wantRaw=wantRaw,wantJpeg=wantJpeg,bytes=if(wantJpeg) null else ByteArray(0),
             rawCharacteristics=if(wantRaw) chars() else null,orientation=jpegOrientation())
         pending+=shot
@@ -724,7 +807,7 @@ class CameraEngine(private val context: Context) {
                 b.set(CaptureRequest.JPEG_QUALITY,98.toByte()); b.set(CaptureRequest.JPEG_ORIENTATION,jpegOrientation())
                 try { writer!!.queueInputImage(zsl.image) } catch (e: Exception) { zsl.image.close(); throw e }
             } else {
-                applySettings(b,false,ev,bracket)
+                applySettings(b,false,ev,bracket,hdrExposure)
             }
             session!!.capture(b.build(),object : CameraCaptureSession.CaptureCallback() {
                 override fun onCaptureStarted(s: CameraCaptureSession,r: CaptureRequest,timestamp: Long,frame: Long) {
@@ -744,7 +827,7 @@ class CameraEngine(private val context: Context) {
         try {
             val latest=latestResult.value
             val base=spec.physicalOutputId?.let { latest?.physicalCameraResults?.get(it) } ?: latest
-            val exposure=if(manualIso!=null || manualTime!=null) manualTime ?: (if(bracket) bracketBaseline?.second else null) ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) else null
+            val exposure=hdrExposure?.timeNs ?: if(manualIso!=null || manualTime!=null) manualTime ?: (if(bracket) bracketBaseline?.second else null) ?: base?.get(CaptureResult.SENSOR_EXPOSURE_TIME) else null
             val captured=withTimeout(ProControlMath.captureTimeoutMs(exposure,extension)) { shot.deferred.await() }
             delivered=true; return captured
         } finally {
@@ -843,7 +926,7 @@ class CameraEngine(private val context: Context) {
             pipeline=s.label, sourceWidth=if(!s.wantJpeg) s.rawImage?.value?.width ?: 0 else s.sourceSize?.first ?: exif?.getAttributeInt(ExifInterface.TAG_IMAGE_WIDTH,0) ?: 0,
             sourceHeight=if(!s.wantJpeg) s.rawImage?.value?.height ?: 0 else s.sourceSize?.second ?: exif?.getAttributeInt(ExifInterface.TAG_IMAGE_LENGTH,0) ?: 0,
             note=s.sourceSize?.let { "PRIVATE reprocess input ${it.first}x${it.second}; JPEG output ${captureSize.value}" }.orEmpty(),
-            manualExposure=s.manual,manualWhiteBalance=s.manualWb
+            manualExposure=s.manual,manualWhiteBalance=s.manualWb,sensorTimestampNs=value(CaptureResult.SENSOR_TIMESTAMP),postRawSensitivityBoost=value(CaptureResult.CONTROL_POST_RAW_SENSITIVITY_BOOST)
         )
     }
     fun diagnosticSummary(): String = "Device policy: ${deviceProfile.label}; resolution choice: ${settings.captureResolution.label}\nJPEG rendering: ${settings.jpegRendering.label}\nPipeline: ${pipelineStatus.value}\nSelected JPEG stream: ${captureSize.value}\nCapture files: ${settings.format.label}; RAW_SENSOR stream: ${rawCaptureSize.value}\nCrop factor: $cropFactor (software once)\nZSL ring: ${zslRing.size}/3; PRIVATE input: ${privateReader?.let { "${it.width}x${it.height}" } ?: "none"}\nNo synthetic captures; actual native sizes only."

@@ -1,5 +1,7 @@
 # Galaxy Z Fold5: beta.4 compatibility and JPEG processing
 
+> This page describes **public beta.4**. The candidate source branch adds unpublished Smart/Quality HDR; see the separate [HDR test guide](HDR_TEST_CANDIDATE.md) for defaults, limits, backups and downgrade cautions. No public beta.5 is approved.
+
 **Status: capture already works according to the reporting user; image quality was reported as poor. These changes are capability-driven improvements, not a handset-calibrated profile.** No Fold5 sample photograph, capability report, Android/One UI version or attached phone was available during development. Automated/synthetic checks do not establish real-world image quality or stock-camera parity. Oppo Find X9 Ultra remains the primary development target.
 
 ## What changes on a Fold5

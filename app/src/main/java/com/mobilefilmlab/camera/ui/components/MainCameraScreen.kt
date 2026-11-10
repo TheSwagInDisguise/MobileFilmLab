@@ -80,8 +80,8 @@ fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
                     val rawOnly=settings.format==CaptureFormat.RAW
                     CameraViewfinder(viewModel.cameraEngine,if(rawOnly) RecipeCatalog.getDefaultRecipe() else recipe,if(rawOnly) 0f else tone,if(rawOnly) 0f else color,flashing,
                         if(rawOnly) settings.copy(compare=false,calibration=com.mobilefilmlab.camera.settings.LensCalibration()) else settings,
-                        samplePreview=!rawOnly && (recipeOpen || favourites.size>1),controlsEnabled=!busy,
-                        onPreviewFrame={ previewFrame=it },modifier=Modifier.fillMaxSize())
+                        samplePreview=!rawOnly && (settings.pipeline.isSmartHdr || recipeOpen || favourites.size>1),controlsEnabled=!busy,
+                        onPreviewFrame={ previewFrame=it;viewModel.meterHdrPreview(it) },modifier=Modifier.fillMaxSize())
                     if(!streaming && cameraError!=null) {
                         Column(Modifier.align(Alignment.Center).background(SurfaceDark.copy(alpha=.95f),RoundedCornerShape(14.dp)).padding(18.dp),horizontalAlignment=Alignment.CenterHorizontally) {
                             Text(cameraError!!,color=Color.White,fontSize=12.sp)
@@ -91,6 +91,9 @@ fun MainCameraScreen(viewModel: CameraViewModel,modifier: Modifier=Modifier) {
                             }
                         }
                     }
+                    if(settings.format.writesJpeg && settings.pipeline.isSmartHdr) Text(
+                        (if(settings.pipeline==com.mobilefilmlab.camera.settings.CapturePipeline.QUALITY_HDR) "Quality HDR" else "Smart HDR")+" · selected",
+                        color=AccentGold,fontSize=10.sp,modifier=Modifier.align(Alignment.TopEnd).padding(8.dp).background(Color.Black.copy(alpha=.55f),RoundedCornerShape(8.dp)).padding(horizontal=8.dp,vertical=5.dp))
                     Column(Modifier.align(Alignment.BottomCenter).padding(bottom=12.dp),horizontalAlignment=Alignment.CenterHorizontally,verticalArrangement=Arrangement.spacedBy(8.dp)) {
                         if(settings.format.writesJpeg && favourites.size>1) LazyRow(Modifier.fillMaxWidth().padding(horizontal=12.dp),horizontalArrangement=Arrangement.spacedBy(6.dp)) {
                             items(favourites,key={ it.id }) { fav ->

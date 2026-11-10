@@ -47,7 +47,7 @@ fun SettingsDialog(
         ) {
             Column(Modifier.padding(20.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                 Text("Camera settings",fontSize=22.sp,lineHeight=28.sp,fontWeight=FontWeight.Bold)
-                Text("${BuildConfig.VERSION_NAME} · PUBLIC BETA",color=AccentGold,fontSize=12.sp)
+                Text("${BuildConfig.VERSION_NAME} · ${if(BuildConfig.UNPUBLISHED_HDR_TEST) "UNPUBLISHED HDR TEST" else "PUBLIC BETA"}",color=AccentGold,fontSize=12.sp)
                 HorizontalDivider(color=BorderDark)
                 Column(Modifier.weight(1f,fill=false).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(12.dp)) {
                     SettingsNote("Default: ${profile.naturalLabel ?: "Oppo Natural (Camera2)"}, without an added film grade. This uses the selected device’s exposed Camera2 ISP, not a proprietary stock-app pipeline.")
@@ -60,7 +60,7 @@ fun SettingsDialog(
                             Text(rendering.label,fontSize=14.sp,lineHeight=20.sp,modifier=Modifier.weight(1f).padding(start=12.dp,top=10.dp,bottom=10.dp))
                         }
                     }
-                    SettingsNote("Balanced adds ISO-aware edge-preserving noise reduction, mild shadow/highlight tone balancing and restrained detail sharpening to saved JPEGs. It cannot recover clipped detail or reproduce a stock-camera pipeline. RAW is untouched; preview shows recipe colour only.")
+                    SettingsNote("Balanced adds gentle noise/tone/detail processing to single JPEGs and legacy fusion. Smart/Quality HDR already have their own temporal processing, so Balanced is skipped for a successful HDR merge. It cannot recover clipped single-frame detail. RAW is untouched; preview shows recipe colour, not final HDR tone.")
                     SectionTitle("Native capture size")
                     CaptureResolution.values().forEach { resolution ->
                         val enabled=!settings.format.writesRaw
@@ -84,8 +84,9 @@ fun SettingsDialog(
                         }
                     }
                     Text("Active: $status\nThermal: $thermal",fontSize=13.sp,lineHeight=18.sp,color=AccentGold)
-                    SettingsNote("OEM modes require firmware support and control their own exposure/flash. Fusion is JPEG-domain, translation-only, capped at ~12MP and can fall back for motion. It is not Oppo AI processing.")
-                    SettingToggle("Reprocessing ZSL (experimental)",settings.zsl,{ onChange(settings.copy(zsl=it)) },"PRIVATE input ring, where the device supports a reprocessable session. No guaranteed zero-lag fallback.",enabled=!settings.format.writesRaw)
+                    SettingsNote("Smart HDR is the Fold5 JPEG default: a metered Original safety frame plus 3–5 highlight-protecting short frames. Quality HDR adds 7 shorts and, for a quiet scene, up to 2 long shadow frames; hold still. Local tile alignment, actual-exposure normalisation and RGB outlier rejection work on already processed JPEGs, not Google RAW HDR+. Motion, unsupported controls, missing metadata, flash, manual exposure, heat or capture/merge failure can use the metered Original instead. No app-added AI; no guaranteed GCam quality or ghost-free result. OEM modes use firmware processing; legacy 3-frame fusion remains translation-only.")
+                    SettingToggle("Save metered Original with HDR",settings.hdrSaveOriginal,{ onChange(settings.copy(hdrSaveOriginal=it)) },"Optional ungraded safety-frame companion in Pictures/MobileFilmLab for A/B checks; same framing, no recipe/grain. Only saved after a successful HDR merge. Extra storage/write time.",enabled=settings.format.writesJpeg && settings.pipeline.isSmartHdr)
+                    SettingToggle("Reprocessing ZSL (experimental)",settings.zsl,{ onChange(settings.copy(zsl=it)) },"PRIVATE input ring, where the device supports a reprocessable session. No guaranteed zero-lag fallback.",enabled=!settings.format.writesRaw && !settings.pipeline.isSmartHdr)
                     SectionTitle("Output pixels")
                     OutputSize.values().forEach { o ->
                         val enabled=!settings.format.writesRaw || o==OutputSize.NATIVE

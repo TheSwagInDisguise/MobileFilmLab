@@ -11,7 +11,7 @@ object NativeCapturePolicy {
     const val MAX_PIXELS=55_000_000L
 
     fun attempts(candidates: List<ResolutionSelector.Candidate>,settings: CaptureSettings,profile: DeviceProfile): List<ResolutionSelector.Candidate> {
-        val bounded=settings.pipeline==CapturePipeline.BURST || settings.zsl ||
+        val bounded=settings.pipeline==CapturePipeline.BURST || settings.pipeline.isSmartHdr || settings.zsl ||
             (profile==DeviceProfile.GALAXY_Z_FOLD5 && settings.captureResolution==CaptureResolution.DEVICE_BALANCED)
         val valid=candidates.filter { it.width>0 && it.height>0 && it.area<=MAX_PIXELS && (!bounded || !it.maximumMode) }
             .sortedBy { it.highResolution }
