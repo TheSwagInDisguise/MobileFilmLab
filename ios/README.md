@@ -1,8 +1,10 @@
-# MobileFilmLab — native iOS companion (unpublished test)
+# MobileFilmLab — native iOS companion (beta 1)
 
 Native SwiftUI + AVFoundation + Core Image, alongside the existing native Android app. Target handset: **iPhone 18 Pro Max, public iOS 27**. Deployment floor is iOS 18 because the implementation uses established public APIs; that is not a tested-device list. Photos only. No app-added AI models, generative enhancement, cloud processing, analytics or video/audio recording.
 
-**Distribution:** build an unencrypted, unsigned device IPA on macOS, then let the owner re-sign/install it with Signulous. Signulous signs compiled IPAs; it does not build this source. No Apple ID, service password, developer certificate or provisioning profile belongs in this repository. No App Store / TestFlight publication is attempted. Signing-service acceptance and installation must be checked by the owner.
+**Development focus:** iOS is now the active platform; the Android app is retained unchanged. The owner has authorised iOS test builds in GitHub Releases. [iOS beta 1 release](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.1.0-ios.beta.1).
+
+**Distribution:** publish the verified, unencrypted, unsigned device IPA in GitHub Releases, then let the owner re-sign/install it with Signulous. Signulous signs compiled IPAs; it does not build this source. No Apple ID, service password, developer certificate or provisioning profile belongs in this repository. No App Store / TestFlight publication is attempted. Signing-service acceptance and installation must be checked by the owner.
 
 ## First-build scope
 
@@ -12,7 +14,7 @@ This is the advanced-feature candidate, not a core-only placeholder with RAW/HDR
 | --- | --- |
 | Photos-only AUTO / PRO | SwiftUI camera, supported exposure / ISO / shutter / EV / focus / WB controls. Disabled or absent when not exposed. No video UI. |
 | Dynamic camera routes | Enumerated AVFoundation physical rear/front devices and virtual auto-lens routes, not a hard-coded four-lens layout. A route is not a guarantee of RAW support. |
-| Native JPEG and crop | Requested JPEG quality priority; largest exposed dimensions optional. Separate **2× JPEG centre crop**; never described as an optical lens. |
+| Native JPEG and crop | Requested JPEG quality priority; largest exposed dimensions optional. **1× / 1.5× / 2× / 3× JPEG framing** (tap toggles 2×; hold for all choices); never described as optical lenses. |
 | RAW / RAW+JPEG | Genuine, capability-gated Bayer DNG output; 1× and single exposure. RAW bytes unmodified. Companion JPEG is graded separately. |
 | Computational RAW | Separately labelled, capability-gated **Apple ProRAW / ProRAW+JPEG**; not called unprocessed Bayer sensor data. |
 | HDR and fusion | Original + Smart HDR + Quality HDR + experimental three-frame fusion. Safety Original first, sequential exposure-verified JPEG helpers, local alignment, conservative motion rejection, sRGB-linear merge and restrained hue-preserving highlight compression. ~12 MP cap. Not the Google RAW HDR+ implementation and not a stock Camera Night/HDR switch. |
@@ -45,7 +47,7 @@ xcodegen generate
 bash scripts/build.sh
 ```
 
-The workflow checks an exact source SHA, runs shared Swift tests, native simulator image tests / UI smoke tests, builds **arm64 device code**, packages `Payload/MobileFilmLab.app`, and inspects the IPA's Mach-O, encryption flags, plist, full catalogue and GPL resources. Artifact-only: no public release, tag, public website update or Android publication. Generated projects/build output are excluded from version control; `project.yml` is the reproducible project specification.
+The workflow checks an exact source SHA, runs shared Swift tests, native simulator image tests / UI smoke tests, builds **arm64 device code**, packages `Payload/MobileFilmLab.app`, and inspects the IPA's Mach-O, encryption flags, plist, full catalogue and GPL resources. The build workflow is iOS-only and produces IPA/QA artifacts without signing credentials. Verified builds may then be published to GitHub Releases under the owner's standing approval. No Android build, retuning or public website update is performed. Generated projects/build output are excluded from version control; `project.yml` is the reproducible project specification.
 
 [Install, backup and handset test checklist](TESTING.md) · [Shared schema and vectors](../shared/README.md) · [Licence](../LICENSE) · [Attribution](../UPSTREAM_ATTRIBUTION.md)
 

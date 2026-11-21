@@ -42,7 +42,7 @@ def validate(path,source=None):
   info=plistlib.loads(z.read(base+'Info.plist'))
   assert info['CFBundleIdentifier']=='com.mobilefilmlab.camera'
   assert info['CFBundleDisplayName']=='MobileFilmLab'
-  assert info['CFBundleShortVersionString']=='0.1.0' and info['CFBundleVersion']=='1'
+  assert info['CFBundleShortVersionString']=='0.1.0' and info['CFBundleVersion']=='2'
   assert info.get('NSCameraUsageDescription') and info.get('NSPhotoLibraryAddUsageDescription') and info.get('NSMotionUsageDescription')
   assert not info.get('UIBackgroundModes') and not info.get('NSMicrophoneUsageDescription')
   assert float(info['MinimumOSVersion'])<=27
@@ -62,7 +62,7 @@ def validate(path,source=None):
   privacy=[n for n in names if n.endswith('/PrivacyInfo.xcprivacy')];assert privacy
   for name in privacy:
    manifest=plistlib.loads(z.read(name));assert not manifest.get('NSPrivacyTracking',False)
-  return dict(filename=p.name,bytes=p.stat().st_size,sha256=hashlib.sha256(p.read_bytes()).hexdigest(),source=info.get('MFLSourceSHA'),bundle_id=info['CFBundleIdentifier'],version=info['CFBundleShortVersionString'],build=info['CFBundleVersion'],minimum_ios=info['MinimumOSVersion'],binary=binary,catalogue_count=80,upstream_count=77,signing='No developer signature or embedded provisioning supplied; owner must re-sign',handset_tested=False,distribution='Unpublished personal test; no release or tag created')
+  return dict(filename=p.name,bytes=p.stat().st_size,sha256=hashlib.sha256(p.read_bytes()).hexdigest(),source=info.get('MFLSourceSHA'),bundle_id=info['CFBundleIdentifier'],version=info['CFBundleShortVersionString'],build=info['CFBundleVersion'],minimum_ios=info['MinimumOSVersion'],binary=binary,catalogue_count=80,upstream_count=77,signing='No developer signature or embedded provisioning supplied; owner must re-sign',handset_tested=False,distribution='iOS test build; owner-controlled signing; GitHub release publication authorised')
 if __name__=='__main__':
  a=argparse.ArgumentParser();a.add_argument('ipa');a.add_argument('--source');a.add_argument('--output');args=a.parse_args();result=validate(args.ipa,args.source);text=json.dumps(result,indent=2)+'\n';print(text)
  if args.output:Path(args.output).write_text(text)

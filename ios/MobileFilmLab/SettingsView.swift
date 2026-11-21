@@ -8,7 +8,7 @@ struct SettingsView:View {
     @State private var about=false
     @State private var diagnostics=false
     var body:some View {NavigationStack {Form {
-        Section {Label("Unpublished iOS personal test",systemImage:"testtube.2").foregroundStyle(FilmTheme.accent);Text("iPhone 18 Pro Max / iOS 27 is the target. This build needs installation and camera checks on your device; simulator success is not handset validation.").font(.footnote).foregroundStyle(.secondary)}
+        Section {Label("iOS feature-parity test release",systemImage:"testtube.2").foregroundStyle(FilmTheme.accent);Text("iPhone 18 Pro Max / iOS 27 is the target. This build needs installation and camera checks on your device; simulator success is not handset validation.").font(.footnote).foregroundStyle(.secondary)}
         Section("Capture pipeline") {
             Picker("JPEG pipeline",selection:$store.preferences.pipeline) {ForEach(CapturePipeline.allCases) {p in Text(p.label).tag(p)}}.disabled(store.preferences.format.writesRaw)
             Text("Original uses AVFoundation quality prioritisation. Smart / Quality HDR take a safety original plus sequential, locally aligned JPEG helpers, with motion rejection and guarded fallback. JPEGs already contain Apple's ISP processing. This is not Google's RAW HDR+, stock Night mode or a guaranteed quality improvement.").font(.caption).foregroundStyle(.secondary)
@@ -46,7 +46,7 @@ struct AboutView:View {
     let attribution=(Bundle.main.url(forResource:"Attribution",withExtension:"txt").flatMap {try? String(contentsOf:$0,encoding:.utf8)}) ?? "Attribution missing — consult the matching source tree."
     var body:some View {NavigationStack {ScrollView {VStack(alignment:.leading,spacing:20) {
         Image(systemName:"camera.aperture").font(.system(size:48,weight:.ultraLight)).foregroundStyle(FilmTheme.accent)
-        Text("MobileFilmLab").font(.largeTitle.weight(.semibold));Text("Native iOS companion · personal test 0.1.0 (1)").foregroundStyle(.secondary)
+        Text("MobileFilmLab").font(.largeTitle.weight(.semibold));Text("Native iOS companion · beta 1 · 0.1.0 (2)").foregroundStyle(.secondary)
         Text("AI-development disclosure").font(.headline);Text("This application and some design / documentation assets were developed with AI assistance. Any software-test screenshots are labelled as simulator screenshots, not photographs taken with the target phone. Camera capture and processing in the app do not use added AI models or generative enhancement.")
         Text("Original branding and interface. Photos only. Conventional recipe approximations and HDR are not affiliated with camera, film or phone manufacturers. Apple ProRAW may contain Apple's computational processing; firmware internals are outside the no-app-added-AI claim.")
         Text("GPL-3.0-or-later").font(.headline);Text("A derivative of the credited open-source recipe work. You receive source and licence rights; do not remove attribution when sharing modified copies. Signing / sideloading is your choice and may be affected by certificate expiry or revocation. No App Store publication or licensing review is implied.")

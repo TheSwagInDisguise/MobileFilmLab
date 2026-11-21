@@ -16,7 +16,17 @@ final class ProcessingTests:XCTestCase {
     }
     func frame(_ data:Data,exposure:Double=0.01,id:Int64=1)->PhotoFrame {PhotoFrame(jpeg:data,raw:nil,metadata:[:],iso:200,seconds:exposure,focal:6,timestamp:Date(timeIntervalSince1970:1700000000),requestID:id)}
     func testNaturalPreservesOriginalBytes() throws {let data=fixture(),r=try Catalogue.load().recipes[0];let out=try PhotoProcessor().process(PhotoBurst(frames:[frame(data)],pipeline:.original),recipe:r,preferences:CapturePreferences());XCTAssertEqual(out.data,data);XCTAssertEqual(out.width,192);XCTAssertEqual(out.height,256)}
-    func testCropAppliedExactlyOnceAndExifUpright() throws {var p=CapturePreferences();p.crop=2;let out=try PhotoProcessor().process(PhotoBurst(frames:[frame(fixture())],pipeline:.original),recipe:Catalogue.load().recipes[0],preferences:p);XCTAssertEqual(out.width,96);XCTAssertEqual(out.height,128);let source=try XCTUnwrap(CGImageSourceCreateWithData(try XCTUnwrap(out.data) as CFData,nil));let properties=try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(source,0,nil) as? [String:Any]);XCTAssertEqual((properties[kCGImagePropertyOrientation as String] as? NSNumber)?.intValue,1)}
+    func testCropAppliedExactlyOnceAndExifUpright() throws {
+        let data=fixture(),recipe=try Catalogue.load().recipes[0]
+        for factor in [1.0,1.5,2.0,3.0] {
+            var p=CapturePreferences();p.crop=factor
+            let out=try PhotoProcessor().process(PhotoBurst(frames:[frame(data)],pipeline:.original),recipe:recipe,preferences:p)
+            XCTAssertEqual(out.width,Int(floor(192/factor)));XCTAssertEqual(out.height,Int(floor(256/factor)))
+            let source=try XCTUnwrap(CGImageSourceCreateWithData(try XCTUnwrap(out.data) as CFData,nil))
+            let properties=try XCTUnwrap(CGImageSourceCopyPropertiesAtIndex(source,0,nil) as? [String:Any])
+            XCTAssertEqual((properties[kCGImagePropertyOrientation as String] as? NSNumber)?.intValue,1)
+        }
+    }
     func testRAWBytesUnchangedAndNoFakeJPEG() throws {var p=CapturePreferences();p.format = .raw;var f=frame(fixture());let raw=Data([73,73,42,0,4,5,6]);f.raw=raw;let out=try PhotoProcessor().process(PhotoBurst(frames:[f],pipeline:.original),recipe:Catalogue.load().recipes[0],preferences:p);XCTAssertEqual(out.raw,raw);XCTAssertNil(out.data)}
     func testHDRIncompleteFallsBackToSafetyBytes() throws {let data=fixture();let out=try PhotoProcessor().process(PhotoBurst(frames:[frame(data)],pipeline:.smartHDR),recipe:Catalogue.load().recipes[0],preferences:CapturePreferences());XCTAssertEqual(out.data,data);XCTAssertTrue(out.note.contains("fallback"))}
     func testMatrixUsesSRGBByteMath() throws {

@@ -20,5 +20,5 @@ def main():
  workflow=(ROOT/'.github/workflows/ios-test.yml').read_text();assert 'workflow_dispatch:' in workflow and 'contents: read' in workflow
  assert not any(k in workflow for k in ['gh release create','create-release','contents: write','APPLE_ID','SIGNULOUS_PASSWORD'])
  assert (ROOT/'ios/TESTING.md').is_file()
- print(f'iOS source invariants passed: {len(swift)} Swift files, complete 80 recipes, unchanged Android/site baseline, GPL, no signing credentials or publishing')
+ print(f'iOS source invariants passed: {len(swift)} Swift files, complete 80 recipes, unchanged Android/site baseline, GPL, no signing credentials or release writes in build workflow')
 if __name__=='__main__':main()

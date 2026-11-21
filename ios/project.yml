@@ -24,7 +24,7 @@ settings:
     CLANG_ENABLE_MODULES: YES
     GENERATE_INFOPLIST_FILE: YES
     MARKETING_VERSION: 0.1.0
-    CURRENT_PROJECT_VERSION: '1'
+    CURRENT_PROJECT_VERSION: '2'
 targets:
   MobileFilmLab:
     type: application
@@ -40,7 +40,7 @@ targets:
         CFBundleName: MobileFilmLab
         CFBundleIdentifier: com.mobilefilmlab.camera
         CFBundleShortVersionString: '0.1.0'
-        CFBundleVersion: '1'
+        CFBundleVersion: '2'
         MFLSourceSHA: $(MFL_SOURCE_SHA)
         ITSAppUsesNonExemptEncryption: false
         LSRequiresIPhoneOS: true

@@ -1,6 +1,6 @@
-# Install and test MobileFilmLab iOS — private candidate
+# Install and test MobileFilmLab iOS — beta 1 release
 
-**Target:** iPhone 18 Pro Max, public iOS 27. **App:** MobileFilmLab, `com.mobilefilmlab.camera`, 0.1.0 (1). This is an experimental personal test, not an App Store release or a certified camera-quality upgrade.
+**Target:** iPhone 18 Pro Max, public iOS 27. **App:** MobileFilmLab, `com.mobilefilmlab.camera`, 0.1.0 (2). This is an experimental iOS release, not an App Store release or a certified camera-quality upgrade.
 
 ## 1. Before installing
 
@@ -30,7 +30,7 @@ Official service information: [Signulous](https://www.signulous.com/). The assis
 
 - Switch each exposed physical / virtual route. Check framing and honest names; front preview may mirror while capture orientation differs. Do not expect a fixed UW/W/3×/10× layout or a particular telephoto count.
 - AUTO / PRO: move ISO/shutter/EV/WB sliders, reset to Auto, tap focus, try AF-S / AF-C and manual focus if exposed. Confirm exposure visibly responds; no claim of camera-vendor-equivalent ranges.
-- Try 2× **JPEG centre crop** once and compare dimensions. RAW must remain 1×. Maximum exposed dimensions and interpolated enlargement are separate settings.
+- Tap the JPEG crop control to toggle 2×; hold it for **1× / 1.5× / 2× / 3×** framing, matching the Android choices. These are JPEG centre crops, not lenses. Compare dimensions; RAW must remain 1×. Maximum exposed dimensions and interpolated enlargement are separate settings.
 - Open all 80 looks, favourite a look, adjust Tone/Colour, save a custom copy, quit/reopen and confirm persistence.
 - Export / import `.filmrecipe` to Android and back. Show QR on one device and import its image / payload on the other. Check name, tint and tone survive. Imported recipes become independent customs rather than overwriting built-ins.
 - Try timer, supported flash/torch, grids, level, histogram, hardware shutter events, live Original comparison, gallery sharing/deletion and saved-original comparison.

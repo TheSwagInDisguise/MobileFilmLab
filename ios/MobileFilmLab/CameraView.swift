@@ -38,7 +38,7 @@ struct CameraView:View {
                     Spacer()
                     Button {styles=true} label:{Image(systemName:"slider.horizontal.3").font(.title2).frame(width:52,height:52).background(Color.white.opacity(0.1),in:RoundedRectangle(cornerRadius:13))}.accessibilityLabel("Tone and colour pad")
                 }.foregroundStyle(.white)
-                Text(store.processing ? (camera.busy ? camera.status : "Processing and saving…") : "UNPUBLISHED iOS TEST · Photos only · No app-added AI").font(.system(size:9,weight:.medium,design:.monospaced)).foregroundStyle(FilmTheme.muted).lineLimit(1).minimumScaleFactor(0.7)
+                Text(store.processing ? (camera.busy ? camera.status : "Processing and saving…") : "iOS BETA 1 · Photos only · No app-added AI").font(.system(size:9,weight:.medium,design:.monospaced)).foregroundStyle(FilmTheme.muted).lineLimit(1).minimumScaleFactor(0.7)
             }.padding(.horizontal,18).padding(.top,8).padding(.bottom,8).frame(width:geometry.size.width,height:geometry.size.height)
         }.background(Color(red:0.025,green:0.035,blue:0.035).ignoresSafeArea())
             .background(HardwareCaptureKeys(enabled:camera.ready && !store.processing && !recipes && !settings && !library && !styles) {Task {await store.shoot(camera)}})
@@ -71,7 +71,7 @@ struct CameraView:View {
                     HStack {Spacer();Text("Hold Original").font(.system(size:10,weight:.semibold)).padding(9).background(.black.opacity(0.45),in:Capsule()).onLongPressGesture(minimumDuration:0.01,pressing:{camera.compareOriginal($0)},perform:{}).accessibilityLabel("Hold to compare ungraded camera preview")}.padding(.trailing,12)
                     Spacer()
                     if store.countdown>0 {Text("\(store.countdown)").font(.system(size:64,weight:.light)).shadow(radius:10);Spacer()}
-                    if store.preferences.crop>1 {Text("2× JPEG CENTRE CROP · NOT A LENS").font(.system(size:9,weight:.semibold,design:.monospaced)).padding(7).background(.black.opacity(0.5),in:Capsule())}
+                    if store.preferences.crop>1 {Text("\(String(format:"%g",store.preferences.crop))× JPEG CENTRE CROP · NOT A LENS").font(.system(size:9,weight:.semibold,design:.monospaced)).padding(7).background(.black.opacity(0.5),in:Capsule())}
                     lensControls
                     HStack {Text(camera.liveISO>0 ? "ISO \(Int(camera.liveISO))" : "ISO AUTO");Spacer();Text(camera.liveTime>0 ? exposureLabel(camera.liveTime) : "AE");Spacer();Text(camera.capabilities.name)}.font(.system(size:9,design:.monospaced)).padding(.horizontal,15).padding(.bottom,12)
                 }.foregroundStyle(.white)
@@ -90,10 +90,15 @@ struct CameraView:View {
                 }
                 if !store.preferences.format.writesRaw {
                     Button {store.preferences.crop=store.preferences.crop==1 ? 2 : 1} label:{
-                        Text("2× crop").font(.caption2.bold()).padding(.horizontal,12).padding(.vertical,10)
+                        Text(store.preferences.crop>1 ? "\(String(format:"%g",store.preferences.crop))× crop" : "2× crop").font(.caption2.bold()).padding(.horizontal,12).padding(.vertical,10)
                             .background(store.preferences.crop>1 ? FilmTheme.accent : Color.black.opacity(0.5),in:Capsule())
                             .foregroundStyle(store.preferences.crop>1 ? Color.black : Color.white)
-                    }
+                    }.accessibilityIdentifier("jpegCrop").accessibilityHint("Tap to toggle 2×; hold for full frame, 1.5×, 2× or 3× JPEG crop")
+                        .contextMenu {
+                            ForEach([1.0,1.5,2.0,3.0],id:\.self) {factor in
+                                Button(factor==1 ? "1× · full frame" : "\(String(format:"%g",factor))× JPEG crop") {store.preferences.crop=factor}
+                            }
+                        }
                 }
             }.padding(.horizontal,12)
         }

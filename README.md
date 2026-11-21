@@ -24,11 +24,11 @@ A Fold5 user reports working capture but poor image quality. Beta.4 adds capabil
 
 **Try it:** Settings → **Balanced detail + noise**, **Device-balanced native capture**, **Native pixels**. Start with the Natural look, 1× and Camera2 natural. **Camera original stays the default**, and DNG is never app-filtered.
 
-## Native iOS companion — unpublished development
+## Native iOS companion — current development focus
 
-An advanced-feature native iOS companion is being built alongside Android, targeting **iPhone 18 Pro Max / public iOS 27**. The separate implementation includes the complete catalogue, recipe sharing, manual capture, capability-gated RAW / computational RAW and experimental JPEG HDR. Platform-specific limitations and handset tests remain explicit; identical image quality is not promised. [iOS source, scope and build instructions](ios/README.md) · [Signing / installation and phone-test checklist](ios/TESTING.md).
+An advanced-feature native iOS companion is available as [iOS beta 1](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.1.0-ios.beta.1), targeting **iPhone 18 Pro Max / public iOS 27**. The separate implementation includes the complete catalogue, recipe sharing, manual capture, capability-gated RAW / computational RAW and experimental JPEG HDR. Platform-specific limitations and handset tests remain explicit; identical image quality is not promised. [iOS source, scope and build instructions](ios/README.md) · [Signing / installation and phone-test checklist](ios/TESTING.md).
 
-The intended private test delivery is an unsigned, unencrypted IPA for the owner to re-sign. This is **not a public iOS release or a completed handset-validation claim**. The Android beta.4 download above remains the public release; the separate unpublished Android HDR candidate is not promoted by this work. Oppo Find X9 Ultra remains the primary Android target, with tester-led expansion unchanged.
+**iOS is now the exclusive active development focus.** iOS test builds may be published to GitHub Releases; download the unsigned, unencrypted IPA and re-sign it with Signulous. This is **not an App Store release or a completed handset-validation claim**. The existing Android beta.4 download and Android source are retained unchanged; no new Android build is promoted by this work. Oppo Find X9 Ultra remains the documented Android target.
 
 ## Natural capture. No app-added AI.
 

@@ -96,7 +96,7 @@ final class PhotoProcessor {
         metadata[kCGImagePropertyExifDictionary as String]=exif
         var tiff=metadata[kCGImagePropertyTIFFDictionary as String] as? [String:Any] ?? [:]
         tiff[kCGImagePropertyTIFFOrientation as String]=1
-        tiff[kCGImagePropertyTIFFSoftware as String]="MobileFilmLab iOS · unpublished personal test"
+        tiff[kCGImagePropertyTIFFSoftware as String]="MobileFilmLab iOS · beta 1"
         metadata[kCGImagePropertyTIFFDictionary as String]=tiff
         metadata[kCGImageDestinationLossyCompressionQuality as String]=0.98
         CGImageDestinationAddImage(destination,cg,metadata as CFDictionary)
