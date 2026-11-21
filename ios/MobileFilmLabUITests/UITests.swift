@@ -9,7 +9,12 @@ final class UITests:XCTestCase {
         app.buttons["openSettings"].tap();XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout:5));XCTAssertTrue(app.staticTexts["Capture pipeline"].exists || app.staticTexts["CAPTURE PIPELINE"].exists);screenshot("SIMULATOR-settings")
         app.buttons["Done"].firstMatch.tap();app.buttons["openRecipes"].tap();XCTAssertTrue(app.navigationBars["The look library"].waitForExistence(timeout:5));screenshot("SIMULATOR-full-catalogue")
         XCTAssertTrue(app.buttons.containing(NSPredicate(format:"label CONTAINS %@","All 80")).firstMatch.exists)
-        app.buttons["Done"].firstMatch.tap()
+        app.buttons["Import or export recipes"].tap()
+        app.buttons["Export current recipe"].tap()
+        let nativeShare=app.otherElements["mfl-share-sheet"]
+        XCTAssertTrue(nativeShare.waitForExistence(timeout:10) || app.buttons["Copy"].exists,"Recipe export must present above the recipe drawer")
+        screenshot("SIMULATOR-native-recipe-export")
+        app.terminate()
     }
     @MainActor private func screenshot(_ name:String) {let attachment=XCTAttachment(screenshot:XCUIApplication().screenshot());attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)}
 }

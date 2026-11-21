@@ -18,7 +18,6 @@ import FilmLabCore
     @Published var message:String?
     @Published var processing=false
     @Published var countdown=0
-    @Published var share:ExportDocument?
     @Published var timer=0
     @Published var focusValue:Float=0.5
     let files:URL
@@ -79,7 +78,7 @@ import FilmLabCore
         }
     }
     func exportRecipes(_ recipes:[Recipe]) {
-        do {let data=try Interchange.encode(recipes);let url=FileManager.default.temporaryDirectory.appendingPathComponent("MobileFilmLab-\(recipes.count==1 ? "recipe" : "recipes").filmrecipe");try data.write(to:url,options:.atomic);share=ExportDocument(urls:[url])} catch {self.error=error.localizedDescription}
+        do {let data=try Interchange.encode(recipes);let url=FileManager.default.temporaryDirectory.appendingPathComponent("MobileFilmLab-\(recipes.count==1 ? "recipe" : "recipes").filmrecipe");try data.write(to:url,options:.atomic);presentShare([url])} catch {self.error=error.localizedDescription}
     }
     func qrImage(_ r:Recipe)->UIImage? {
         do {let text=try Interchange.qrPayload(r);guard let filter=CIFilter(name:"CIQRCodeGenerator") else {return nil};filter.setValue(Data(text.utf8),forKey:"inputMessage");filter.setValue("M",forKey:"inputCorrectionLevel");guard let ci=filter.outputImage?.transformed(by:CGAffineTransform(scaleX:8,y:8)),let cg=CIContext().createCGImage(ci,from:ci.extent) else {return nil};return UIImage(cgImage:cg)} catch {self.error=error.localizedDescription;return nil}
@@ -131,13 +130,25 @@ import FilmLabCore
             for url in urls {let request=PHAssetCreationRequest.forAsset();request.addResource(with:.photo,fileURL:url,options:nil)}
         }} catch {self.error="Saved in app library, but Photos could not import it: \(error.localizedDescription)"}
     }
+    private func presentShare(_ urls:[URL]) {
+        // Present from the top native controller, including nested recipe/QR/library sheets.
+        // A root-only SwiftUI sheet can otherwise fail while another sheet is already presented.
+        let windows=UIApplication.shared.connectedScenes.compactMap {$0 as? UIWindowScene}.flatMap(\.windows)
+        guard var host=windows.first(where:{$0.isKeyWindow})?.rootViewController else {error="Share window unavailable";return}
+        while let top=host.presentedViewController {host=top}
+        guard !(host is UIActivityViewController) else {return}
+        let activity=UIActivityViewController(activityItems:urls,applicationActivities:nil)
+        activity.view.accessibilityIdentifier="mfl-share-sheet"
+        if let popover=activity.popoverPresentationController {popover.sourceView=host.view;popover.sourceRect=CGRect(x:host.view.bounds.midX,y:host.view.bounds.midY,width:1,height:1);popover.permittedArrowDirections=[]}
+        host.present(activity,animated:true)
+    }
     func fileURL(_ name:String)->URL {files.appendingPathComponent(name)}
     func image(_ capture:SavedCapture,original:Bool=false)->UIImage? {
         let name=original ? capture.id+"_Original.jpg" : capture.jpeg
         if let name,let cached=thumbnailCache.object(forKey:name as NSString) {return cached}
         guard let name,let source=CGImageSourceCreateWithURL(fileURL(name) as CFURL,nil),let cg=CGImageSourceCreateThumbnailAtIndex(source,0,[kCGImageSourceCreateThumbnailFromImageAlways:true,kCGImageSourceCreateThumbnailWithTransform:true,kCGImageSourceThumbnailMaxPixelSize:1600] as CFDictionary) else {return nil};let result=UIImage(cgImage:cg);thumbnailCache.setObject(result,forKey:name as NSString,cost:cg.bytesPerRow*cg.height);return result
     }
-    func shareCapture(_ capture:SavedCapture) {let urls=[capture.jpeg,capture.raw].compactMap {$0}.map(fileURL);if !urls.isEmpty {share=ExportDocument(urls:urls)}}
+    func shareCapture(_ capture:SavedCapture) {let urls=[capture.jpeg,capture.raw].compactMap {$0}.map(fileURL);if !urls.isEmpty {presentShare(urls)}}
     func delete(_ capture:SavedCapture) {
         do {for name in [capture.jpeg,capture.raw,capture.id+"_Original.jpg"].compactMap({$0}) {let url=fileURL(name);if FileManager.default.fileExists(atPath:url.path) {try FileManager.default.removeItem(at:url)}};captures.removeAll {$0.id==capture.id};try JSONEncoder().encode(captures).write(to:files.appendingPathComponent("library.json"),options:.atomic)} catch {self.error=error.localizedDescription}
     }

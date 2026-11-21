@@ -17,12 +17,6 @@ import FilmLabCore
             }
             .onOpenURL {store.importURL($0)}
             .alert("MobileFilmLab",isPresented:Binding(get:{store.error != nil},set:{if !$0 {store.error=nil}})) {Button("OK",role:.cancel) {store.error=nil}} message:{Text(store.error ?? "")}
-            .sheet(item:$store.share) {ShareView(urls:$0.urls)}
     }}
-}
-struct ShareView:UIViewControllerRepresentable {
-    var urls:[URL]
-    func makeUIViewController(context:Context)->UIActivityViewController {UIActivityViewController(activityItems:urls,applicationActivities:nil)}
-    func updateUIViewController(_ uiViewController:UIActivityViewController,context:Context) {}
 }
 enum FilmTheme {static let accent=Color(red:0.85,green:0.97,blue:0.63);static let panel=Color(red:0.07,green:0.09,blue:0.09);static let muted=Color(white:0.72)}

@@ -118,6 +118,10 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         c.minEV=device.minExposureTargetBias;c.maxEV=device.maxExposureTargetBias;c.maxWB=device.maxWhiteBalanceGain
         c.customExposure=device.isExposureModeSupported(.custom);c.manualWB=device.isWhiteBalanceModeSupported(.locked)
         c.focus=device.isFocusPointOfInterestSupported;c.manualFocus=device.isLockingFocusWithCustomLensPositionSupported;c.flash=device.hasFlash;c.torch=device.hasTorch
+        c.flashChoices=[.off]
+        if output.supportedFlashModes.contains(.auto) {c.flashChoices.append(.auto)}
+        if output.supportedFlashModes.contains(.on) {c.flashChoices.append(.on)}
+        if device.hasTorch {c.flashChoices.append(.torch)}
         c.responsive=output.isZeroShutterLagSupported || output.isResponsiveCaptureSupported
         c.dimensions=device.activeFormat.supportedMaxPhotoDimensions
         lock.lock();scene=nil;lastLuma=nil;lock.unlock()

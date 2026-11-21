@@ -59,18 +59,20 @@ final class JPEGHDRProcessor {
         var output=[UInt8](repeating:0,count:width*height*4)
         let stripeHeight=80,scaleX=Float(ref.width)/Float(width),scaleY=Float(ref.height)/Float(height)
         let sourceISO=Float(reference.iso ?? 100)
+        // Bitmap rows are top-down; Core Image ROI coordinates are bottom-up.
+        // Convert the ROI, not the output row order, including helper margins.
         for y0 in stride(from:0,to:height,by:stripeHeight) {
             try safetyCheck()
             let h=min(stripeHeight,height-y0),pixels=width*h
             var anchor=[UInt8](repeating:0,count:pixels*4)
-            context.render(ref.image,toBitmap:&anchor,rowBytes:width*4,bounds:CGRect(x:0,y:y0,width:width,height:h),format:.RGBA8,colorSpace:PhotoProcessor.colourSpace)
+            context.render(ref.image,toBitmap:&anchor,rowBytes:width*4,bounds:CGRect(x:0,y:height-y0-h,width:width,height:h),format:.RGBA8,colorSpace:PhotoProcessor.colourSpace)
             var sum=[SIMD3<Float>](repeating:.zero,count:pixels),weights=[Float](repeating:1,count:pixels)
             for i in 0..<pixels {sum[i]=SIMD3(HDRMath.linear[Int(anchor[i*4])],HDRMath.linear[Int(anchor[i*4+1])],HDRMath.linear[Int(anchor[i*4+2])])}
             for helper in helpers {
                 try safetyCheck()
                 let margin=Int(ceil(22/scaleY)),minY=max(0,y0-margin),maxY=min(height,y0+h+margin),hh=maxY-minY
                 var bytes=[UInt8](repeating:0,count:width*hh*4)
-                context.render(helper.image,toBitmap:&bytes,rowBytes:width*4,bounds:CGRect(x:0,y:minY,width:width,height:hh),format:.RGBA8,colorSpace:PhotoProcessor.colourSpace)
+                context.render(helper.image,toBitmap:&bytes,rowBytes:width*4,bounds:CGRect(x:0,y:height-maxY,width:width,height:hh),format:.RGBA8,colorSpace:PhotoProcessor.colourSpace)
                 for y in 0..<h {for x in 0..<width {
                     let i=y*width+x,flow=helper.field.sample(Float(x)*scaleX,Float(y+y0)*scaleY)
                     guard flow.z>0.08 else {continue}

@@ -24,7 +24,7 @@ struct CameraView:View {
                     } label:{Text(store.preferences.format.label).font(.caption.bold());Image(systemName:"chevron.down").font(.caption2)}.accessibilityIdentifier("captureFormat")
                     Spacer()
                     Button {store.timer=store.timer==0 ? 3 : store.timer==3 ? 10 : 0} label:{Image(systemName:store.timer==0 ? "timer" : "\(store.timer).circle").frame(width:32,height:32)}.accessibilityLabel("Timer \(store.timer) seconds")
-                    if camera.capabilities.flash || camera.capabilities.torch {Button {flash=flash.next;camera.setFlash(flash)} label:{Image(systemName:flash == .off ? "bolt.slash" : flash == .torch ? "flashlight.on.fill" : "bolt.fill").foregroundStyle(flash == .off ? .white : FilmTheme.accent).frame(width:32,height:32)}.accessibilityLabel("Flash \(flash.rawValue)")}
+                    if camera.capabilities.flashChoices.count>1 {Button {let choices=camera.capabilities.flashChoices;let index=choices.firstIndex(of:flash) ?? 0;flash=choices[(index+1)%choices.count];camera.setFlash(flash)} label:{Image(systemName:flash == .off ? "bolt.slash" : flash == .torch ? "flashlight.on.fill" : "bolt.fill").foregroundStyle(flash == .off ? .white : FilmTheme.accent).frame(width:32,height:32)}.accessibilityLabel("Flash \(flash.rawValue)")}
                 }.foregroundStyle(.white)
                 preview.frame(maxHeight:.infinity)
                 if pro {manualPanel.disabled(!camera.ready)}

@@ -11,6 +11,7 @@ struct CameraCapabilities {
     var minISO:Float=25,maxISO:Float=3200,minTime:Double=0.0001,maxTime:Double=1
     var minEV:Float = -3,maxEV:Float=3,maxWB:Float=4
     var customExposure=false,manualWB=false,focus=false,manualFocus=false,flash=false,torch=false,responsive=false
+    var flashChoices:[FlashChoice]=[.off]
     var dimensions:[CMVideoDimensions]=[]
     func supports(_ f:CaptureFormat)->Bool {f == .jpeg || (f.usesProRAW ? proRAW != nil : bayer != nil)}
 }
@@ -46,4 +47,3 @@ struct PhotoBurst {
 struct SavedCapture:Codable,Identifiable {
     var id:String;var date:Date;var title:String;var jpeg:String?;var raw:String?;var note:String;var width:Int;var height:Int
 }
-struct ExportDocument:Identifiable {var id=UUID();var urls:[URL]}

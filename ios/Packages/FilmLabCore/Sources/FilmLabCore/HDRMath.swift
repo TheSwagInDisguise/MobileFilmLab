@@ -73,7 +73,7 @@ public enum TileAlign {
             let cx=clamp(x*32,12,width-13),cy=clamp(y*32,12,height-13)
             var bx=gx,by=gy;var cost=score(cx,cy,gx,gy)
             for yy in gy-3...gy+3 {for xx in gx-3...gx+3 {let value=score(cx,cy,xx,yy)+Float(abs(xx-gx)+abs(yy-gy))*0.00005;if value<cost {cost=value;bx=xx;by=yy}}}
-            func fraction(_ a:Float,_ b:Float)->Float {let d=a+b-2*cost;return d<0.005 ? 0 : clamp((a-b)/(2*d),-0.5,0.5)}
+            func fraction(_ a:Float,_ b:Float)->Float {if cost<0.00001 {return 0};let d=a+b-2*cost;return d<0.005 ? 0 : clamp((a-b)/(2*d),-0.5,0.5)}
             let i=y*field.cols+x
             field.dx[i]=Float(bx)+fraction(score(cx,cy,bx-1,by),score(cx,cy,bx+1,by))
             field.dy[i]=Float(by)+fraction(score(cx,cy,bx,by-1),score(cx,cy,bx,by+1))
