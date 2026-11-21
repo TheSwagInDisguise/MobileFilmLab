@@ -23,7 +23,7 @@ struct CameraView:View {
                     if camera.capabilities.flash || camera.capabilities.torch {Button {flash=flash.next;camera.setFlash(flash)} label:{Image(systemName:flash == .off ? "bolt.slash" : flash == .torch ? "flashlight.on.fill" : "bolt.fill").foregroundStyle(flash == .off ? .white : FilmTheme.accent).frame(width:32,height:32)}.accessibilityLabel("Flash \(flash.rawValue)")}
                 }.foregroundStyle(.white)
                 preview.frame(maxHeight:.infinity)
-                if pro {manualPanel}
+                if pro {manualPanel.disabled(!camera.ready)}
                 Button {recipes=true} label:{
                     HStack(spacing:12) {RoundedRectangle(cornerRadius:4).fill(FilmTheme.accent).frame(width:3,height:30);VStack(alignment:.leading,spacing:4) {Text(store.selected.displayName).font(.subheadline.weight(.semibold));Text(store.selected.summary).font(.caption2).foregroundStyle(FilmTheme.muted).lineLimit(1)};Spacer();Image(systemName:"square.stack.3d.up").font(.title3)}.padding(12).background(FilmTheme.panel,in:RoundedRectangle(cornerRadius:15))
                 }.foregroundStyle(.white).accessibilityIdentifier("openRecipes")
@@ -53,7 +53,7 @@ struct CameraView:View {
                 if let image=camera.preview {
                     Image(uiImage:image).resizable().scaledToFit()
                         .overlay {if store.preferences.grid != "Off" {GridOverlay(mode:store.preferences.grid).stroke(.white.opacity(0.35),lineWidth:0.6)}}
-                        .overlay {if store.preferences.level {Rectangle().fill(abs(camera.roll)<1.5 ? FilmTheme.accent : .white.opacity(0.65)).frame(width:72,height:1.5).rotationEffect(.degrees(-camera.roll))}}
+                        .overlay {if store.preferences.level && camera.motionAvailable {Rectangle().fill(abs(camera.roll)<1.5 ? FilmTheme.accent : .white.opacity(0.65)).frame(width:72,height:1.5).rotationEffect(.degrees(-camera.roll))}}
                         .overlay {if let p=camera.focusPoint {Rectangle().stroke(FilmTheme.accent,lineWidth:1.5).frame(width:54,height:54).position(x:geo.size.width*p.x,y:geo.size.height*p.y)}}
                         .contentShape(Rectangle()).onTapGesture {point in camera.focus(at:CGPoint(x:clamp(point.x/geo.size.width,0,1),y:clamp(point.y/geo.size.height,0,1)))}
                 } else {
@@ -84,9 +84,9 @@ struct CameraView:View {
                 ProSlider(label:"Shutter",value:Binding(get:{log2(max(camera.capabilities.minTime,controls.seconds ?? camera.liveTime))},set:{controls.seconds=pow(2,$0)}),range:log2(max(0.000001,camera.capabilities.minTime))...log2(max(0.000002,camera.capabilities.maxTime)),auto:!controls.isManual,display:(controls.seconds==nil && controls.isManual ? "MTR " : "")+exposureLabel(controls.seconds ?? camera.liveTime),reset:{controls.seconds=nil})
             }
             ProSlider(label:"EV",value:Binding(get:{Double(controls.ev)},set:{controls.ev=Float($0)}),range:Double(camera.capabilities.minEV)...Double(camera.capabilities.maxEV),auto:false,display:String(format:"%+0.1f",controls.ev),reset:{controls.ev=0}).disabled(controls.isManual)
-            if camera.capabilities.manualWB {ProSlider(label:"WB",value:Binding(get:{Double(controls.kelvin ?? 5600)},set:{controls.kelvin=Float($0)}),range:2500..0.9900,auto:controls.kelvin==nil,display:"\(Int(controls.kelvin ?? 5600))K",reset:{controls.kelvin=nil})}
+            if camera.capabilities.manualWB {ProSlider(label:"WB",value:Binding(get:{Double(controls.kelvin ?? 5600)},set:{controls.kelvin=Float($0)}),range:2500...9900,auto:controls.kelvin==nil,display:"\(Int(controls.kelvin ?? 5600))K",reset:{controls.kelvin=nil})}
             HStack {Picker("Focus",selection:$controls.focus) {Text("AF-C").tag("AF-C");Text("AF-S").tag("AF-S");if camera.capabilities.manualFocus {Text("MF").tag("MF")}}.pickerStyle(.segmented)
-                if controls.focus=="MF" {Slider(value:$store.focusValue,in:0..0.1).onChange(of:store.focusValue) {_,v in camera.manualFocus(v)}}
+                if controls.focus=="MF" {Slider(value:$controls.focusPosition,in:0...1)}
             }
         }.tint(FilmTheme.accent).padding(10).background(FilmTheme.panel,in:RoundedRectangle(cornerRadius:12))
     }

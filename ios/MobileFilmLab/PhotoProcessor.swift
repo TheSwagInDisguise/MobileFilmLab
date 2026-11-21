@@ -74,9 +74,13 @@ final class PhotoProcessor {
         metadata[kCGImagePropertyPixelWidth as String]=cg.width;metadata[kCGImagePropertyPixelHeight as String]=cg.height
         var exif=metadata[kCGImagePropertyExifDictionary as String] as? [String:Any] ?? [:]
         // A helper-backed HDR result retains the safety exposure in EXIF but labels the composite explicitly.
+        exif[kCGImagePropertyExifPixelXDimension as String]=cg.width
+        exif[kCGImagePropertyExifPixelYDimension as String]=cg.height
         exif[kCGImagePropertyExifUserComment as String]="MobileFilmLab | \(recipe.displayName) | \(note) | Synthetic recipe approximations; no app-added AI"
         metadata[kCGImagePropertyExifDictionary as String]=exif
-        metadata[kCGImagePropertyTIFFDictionary as String]=[kCGImagePropertyTIFFSoftware as String:"MobileFilmLab iOS · unpublished personal test"]
+        var tiff=metadata[kCGImagePropertyTIFFDictionary as String] as? [String:Any] ?? [:]
+        tiff[kCGImagePropertyTIFFSoftware as String]="MobileFilmLab iOS · unpublished personal test"
+        metadata[kCGImagePropertyTIFFDictionary as String]=tiff
         metadata[kCGImageDestinationLossyCompressionQuality as String]=0.98
         CGImageDestinationAddImage(destination,cg,metadata as CFDictionary)
         guard CGImageDestinationFinalize(destination) else {throw FilmError.invalid("JPEG encoding failed")}

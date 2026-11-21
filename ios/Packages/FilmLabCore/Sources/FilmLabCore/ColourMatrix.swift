@@ -1,6 +1,6 @@
 import Foundation
 
-/// Android-compatible affine sRGB matrix. Offsets use 0..0.255 units until the Core Image boundary.
+/// Android-compatible affine sRGB matrix. Offsets use 0...255 units until the Core Image boundary.
 public struct ColourMatrix: Equatable, Sendable {
     public var values:[Double]
     public init(_ values:[Double]=[1,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,1,0]) {precondition(values.count==20);self.values=values}
@@ -17,12 +17,17 @@ public struct ColourMatrix: Equatable, Sendable {
             m.then(w+[0,0]+w+[0,0]+w+[0,0]+[0,0,0,1,0])
         } else {
             let style=[2:1.16,3:0.94,4:0.96,5:1.1,8:1.08][r.style] ?? 1
-            let s=clamp((style+Double(r.sat)*0.12)*(1+r.puckColor*0.003),0.1,2)
+            let base:Double=style+Double(r.sat)*0.12
+            let adjustment:Double=1.0+r.puckColor*0.003
+            let s:Double=clamp(base*adjustment,0.1,2.0)
             let R=0.213*(1-s),G=0.715*(1-s),B=0.072*(1-s)
             m.then([R+s,G,B,0,0,R,G+s,B,0,0,R,G,B+s,0,0,0,0,0,1,0])
         }
         let conStyle=[3:0.96,9:0.92,8:1.1][r.style] ?? 1
-        let c=clamp((conStyle+Double(r.con)*0.10)*(1+r.puckTone*0.003),0.5,1.8),o=(1-c)*128
+        let baseContrast:Double=conStyle+Double(r.con)*0.10
+        let puckContrast:Double=1.0+r.puckTone*0.003
+        let c:Double=clamp(baseContrast*puckContrast,0.5,1.8)
+        let o:Double=(1.0-c)*128.0
         m.then([c,0,0,0,o,0,c,0,0,o,0,0,c,0,o,0,0,0,1,0])
         var R=1.0,G=1.0,B=1.0
         if r.wbMode==14,r.kelvin>0 {let d=Double(r.kelvin-5600)/1000;if d<0 {R += -d*0.08;B -= -d*0.08} else {B += d*0.07;R -= d*0.07}}

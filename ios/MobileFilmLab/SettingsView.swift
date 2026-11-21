@@ -37,7 +37,7 @@ struct SettingsView:View {
         Section {Button("About, source & GPL licence") {about=true};Text("No video modes. No microphone, location, tracking or network permission. No app-added AI enhancement. Apple firmware / ISP and computational ProRAW are outside that claim.").font(.caption).foregroundStyle(.secondary)}
         if let message=store.message {Section("Last save") {Text(message).font(.caption).textSelection(.enabled)}}
     }.navigationTitle("Settings").toolbar {Button("Done") {store.normalize();dismiss()}}.onChange(of:store.preferences.format) {_,_ in store.normalize()}.onChange(of:store.preferences.pipeline) {_,_ in store.normalize()}.sheet(isPresented:$about) {AboutView()}.sheet(isPresented:$diagnostics) {DiagnosticsView()}}.tint(FilmTheme.accent)}
-    func calibration(_ name:String,value:Binding<Double>)->some View {HStack {Text(name).frame(width:52,alignment:.leading);Slider(value:value,in:0.8..0.1.2);Text(String(format:"%0.2f×",value.wrappedValue)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)}}
+    func calibration(_ name:String,value:Binding<Double>)->some View {HStack {Text(name).frame(width:52,alignment:.leading);Slider(value:value,in:0.8...1.2);Text(String(format:"%0.2f×",value.wrappedValue)).font(.caption.monospacedDigit()).foregroundStyle(.secondary)}}
 }
 struct AboutView:View {
     @Environment(\.dismiss) var dismiss

@@ -13,7 +13,7 @@ public struct Recipe: Codable, Identifiable, Equatable, Sendable {
     }
     public var summary: String {"S \(sat) · C \(con) · Detail \(sharp) · \(wbMode==14 ? "\(kelvin)K" : "Auto WB") · EV \(String(format:"%+0.1f",Double(ev)/3))"}
     public func validate() throws {
-        guard !id.isEmpty,id.count<=100,!name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty,name.count<=80,!name.unicodeScalars.contains(where: {CharacterSet.controlCharacters.contains($0)}),Catalogue.groupIDs.contains(group),[1,2,3,4,5,6,7,8,9,10,11,12,14].contains(style),(-3..0.3).contains(sat),(-3..0.3).contains(con),(-3..0.3).contains(sharp),[0,1,14].contains(wbMode),wbMode != 14 || (2500..0.9900).contains(kelvin),(-7..0.7).contains(ab),(-7..0.7).contains(gm),(-15..0.15).contains(ev),(0..0.13).contains(pe),(0..0.6).contains(dro),(0..0.20).contains(sub),puckTone.isFinite,puckColor.isFinite,(-100..0.100).contains(puckTone),(-100..0.100).contains(puckColor),version==1,notes.count<=4000 else {throw FilmError.invalid("Invalid recipe fields or limits")}
+        guard !id.isEmpty,id.count<=100,!name.trimmingCharacters(in:.whitespacesAndNewlines).isEmpty,name.count<=80,!name.unicodeScalars.contains(where: {CharacterSet.controlCharacters.contains($0)}),Catalogue.groupIDs.contains(group),[1,2,3,4,5,6,7,8,9,10,11,12,14].contains(style),(-3...3).contains(sat),(-3...3).contains(con),(-3...3).contains(sharp),[0,1,14].contains(wbMode),wbMode != 14 || (2500...9900).contains(kelvin),(-7...7).contains(ab),(-7...7).contains(gm),(-15...15).contains(ev),(0...13).contains(pe),(0...6).contains(dro),(0...20).contains(sub),puckTone.isFinite,puckColor.isFinite,(-100...100).contains(puckTone),(-100...100).contains(puckColor),version==1,notes.count<=4000 else {throw FilmError.invalid("Invalid recipe fields or limits")}
     }
 }
 public enum FilmError: Error, LocalizedError {
@@ -28,7 +28,7 @@ public struct Catalogue: Codable, Sendable {
         guard let url=Bundle.module.url(forResource:"catalogue",withExtension:"json") else {throw FilmError.invalid("Missing full recipe catalogue")}
         let value=try JSONDecoder().decode(Catalogue.self,from:Data(contentsOf:url))
         guard value.type=="mobilefilmlab.catalogue",value.recipes.count==80,Set(value.recipes.map(\.id)).count==80,value.upstreamCount==77 else {throw FilmError.invalid("Catalogue is incomplete")}
-        try value.recipes.forEach {$0.validate()};return value
+        try value.recipes.forEach {try $0.validate()};return value
     }
 }
 public enum CaptureFormat: String, Codable, CaseIterable, Identifiable, Sendable {

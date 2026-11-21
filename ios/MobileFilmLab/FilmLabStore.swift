@@ -23,6 +23,7 @@ import FilmLabCore
     @Published var focusValue:Float=0.5
     let files:URL
     private var loading=true
+    private let thumbnailCache=NSCache<NSString,UIImage>()
     private let worker=DispatchQueue(label:"com.mobilefilmlab.processing",qos:.userInitiated)
     private struct State:Codable {var selected:Recipe;var preferences:CapturePreferences;var favourites:Set<String>;var custom:[Recipe]}
     init() {
@@ -44,6 +45,7 @@ import FilmLabCore
             if fm.fileExists(atPath:index.path) {captures=try JSONDecoder().decode([SavedCapture].self,from:Data(contentsOf:index))}
         } catch {self.error="Local library could not be fully read. Existing files were left in place. \(error.localizedDescription)"}
         if c==nil {error="Full recipe catalogue is missing or invalid. Reinstall from a verified build."}
+        thumbnailCache.totalCostLimit=32*1024*1024
         loading=false
     }
     var allRecipes:[Recipe] {(catalogue?.recipes ?? [])+custom}
@@ -80,7 +82,7 @@ import FilmLabCore
         do {let data=try Interchange.encode(recipes);let url=FileManager.default.temporaryDirectory.appendingPathComponent("MobileFilmLab-\(recipes.count==1 ? "recipe" : "recipes").filmrecipe");try data.write(to:url,options:.atomic);share=ExportDocument(urls:[url])} catch {self.error=error.localizedDescription}
     }
     func qrImage(_ r:Recipe)->UIImage? {
-        do {let text=try Interchange.qrPayload(r);guard let filter=CIFilter(name:"CIQRCodeGenerator") else {return nil};filter.setValue(Data(text.utf8),forKey:"inputMessage");filter.setValue("M",forKey:"inputCorrectionLevel");guard let ci=filter.outputImage?.transformed(by:CGAffineTransform(scaleX:8,y:8)),let cg=CIContext().createCGImage(ci,from:ci.extent) else {return nil};return UIImage(cgImage:cg)} catch {self.error=error.localizedDescription;return nil}
+        do {let text=try Interchange.qrPayload(r);guard let filter=CIFilter(name:"CIQRCodeGenerator") else {return nil};filter.setValue(Data(text.utf8),forKey:"inputMessage");filter.setValue("M",forKey:"inputCorrectionLevel");guard let ci=filter.outputImage?.transformed(by:CGAffineTransform(scaleX:8,y:8)),let cg=CIContext().createCGImage(ci,from:ci.extent) else {return nil};let result=UIImage(cgImage:cg);thumbnailCache.setObject(result,forKey:name as NSString,cost:cg.bytesPerRow*cg.height);return result} catch {self.error=error.localizedDescription;return nil}
     }
     func shoot(_ camera:CameraController) async {
         guard !processing,!camera.busy,camera.ready,catalogue != nil else {return}
@@ -132,7 +134,8 @@ import FilmLabCore
     func fileURL(_ name:String)->URL {files.appendingPathComponent(name)}
     func image(_ capture:SavedCapture,original:Bool=false)->UIImage? {
         let name=original ? capture.id+"_Original.jpg" : capture.jpeg
-        guard let name,let source=CGImageSourceCreateWithURL(fileURL(name) as CFURL,nil),let cg=CGImageSourceCreateThumbnailAtIndex(source,0,[kCGImageSourceCreateThumbnailFromImageAlways:true,kCGImageSourceCreateThumbnailWithTransform:true,kCGImageSourceThumbnailMaxPixelSize:1600] as CFDictionary) else {return nil};return UIImage(cgImage:cg)
+        if let name,let cached=thumbnailCache.object(forKey:name as NSString) {return cached}
+        guard let name,let source=CGImageSourceCreateWithURL(fileURL(name) as CFURL,nil),let cg=CGImageSourceCreateThumbnailAtIndex(source,0,[kCGImageSourceCreateThumbnailFromImageAlways:true,kCGImageSourceCreateThumbnailWithTransform:true,kCGImageSourceThumbnailMaxPixelSize:1600] as CFDictionary) else {return nil};let result=UIImage(cgImage:cg);thumbnailCache.setObject(result,forKey:name as NSString,cost:cg.bytesPerRow*cg.height);return result
     }
     func shareCapture(_ capture:SavedCapture) {let urls=[capture.jpeg,capture.raw].compactMap {$0}.map(fileURL);if !urls.isEmpty {share=ExportDocument(urls:urls)}}
     func delete(_ capture:SavedCapture) {

@@ -4,17 +4,17 @@ import XCTest
 final class HDRTests:XCTestCase {
     func testMovingHandheldShortsAndNoLongs() throws {
         let scene=SceneStats(clipped:0.03,percentile:253,shadows:0.4,motion:0.3,uptime:1)
-        let p=try XCTUnwrap(HDRPolicy.plan(base:Exposure(iso:800,seconds:0.05),isoRange:25..0.6400,timeRange:0.00001..0.1,quality:false,scene:scene))
+        let p=try XCTUnwrap(HDRPolicy.plan(base:Exposure(iso:800,seconds:0.05),isoRange:25...6400,timeRange:0.00001...1,quality:false,scene:scene))
         XCTAssertEqual(p.count,5);XCTAssertTrue(p.allSatisfy {$0.seconds<=0.025 && !$0.long});XCTAssertLessThan(p[0].product,40)
     }
     func testQualityAllowsLongsOnlyWithQuietMeasuredMotion() throws {
         for motion in [Double?.none,0.2,0.01] {
             let scene=SceneStats(clipped:0.02,percentile:251,shadows:0.4,motion:motion,uptime:1)
-            let p=try XCTUnwrap(HDRPolicy.plan(base:Exposure(iso:800,seconds:0.04),isoRange:25..0.6400,timeRange:0.00001..0.1,quality:true,scene:scene))
+            let p=try XCTUnwrap(HDRPolicy.plan(base:Exposure(iso:800,seconds:0.04),isoRange:25...6400,timeRange:0.00001...1,quality:true,scene:scene))
             XCTAssertEqual(p.filter(\.long).count,motion==0.01 ? 2 : 0);XCTAssertTrue(p.allSatisfy {$0.seconds<=0.25})
         }
     }
-    func testInvalidExposureDoesNotPlan() {XCTAssertNil(HDRPolicy.plan(base:Exposure(iso:0,seconds:0),isoRange:25..0.6400,timeRange:0.0001..0.1,quality:false,scene:nil))}
+    func testInvalidExposureDoesNotPlan() {XCTAssertNil(HDRPolicy.plan(base:Exposure(iso:0,seconds:0),isoRange:25...6400,timeRange:0.0001...1,quality:false,scene:nil))}
     func testSubpixelTileAlignmentKnownTranslation() {
         let w=128,h=128
         let r=(0..<w*h).map {i in UInt8(((i%w)*17+(i/w)*31+((i%w)*(i/w))%67)%180+25)}
@@ -34,7 +34,7 @@ final class HDRTests:XCTestCase {
         XCTAssertEqual(HDRMath.weight(SIMD3(0.5,0.1,0.4),a,sigma:0.02,confidence:1),0)
     }
     func testToneCurveProtectsMidGreyAndHighlightWhite() {
-        for white:Float in [1,1.2,2,4] {XCTAssertEqual(HDRMath.tone(0.18,white:white),0.18,accuracy:0.0001);XCTAssertEqual(HDRMath.tone(white,white:white),1,accuracy:0.0001);var previous:Float=0;for n in 0..0.100 {let value=HDRMath.tone(Float(n)/100*white,white:white);XCTAssertGreaterThanOrEqual(value,previous);previous=value}}
+        for white:Float in [1,1.2,2,4] {XCTAssertEqual(HDRMath.tone(0.18,white:white),0.18,accuracy:0.0001);XCTAssertEqual(HDRMath.tone(white,white:white),1,accuracy:0.0001);var previous:Float=0;for n in 0...100 {let value=HDRMath.tone(Float(n)/100*white,white:white);XCTAssertGreaterThanOrEqual(value,previous);previous=value}}
     }
-    func testSRGBRoundtripEveryByte() {for n in 0..0.255 {XCTAssertLessThanOrEqual(abs(Int(HDRMath.encode(HDRMath.linear[n]))-n),1)}}
+    func testSRGBRoundtripEveryByte() {for n in 0...255 {XCTAssertLessThanOrEqual(abs(Int(HDRMath.encode(HDRMath.linear[n]))-n),1)}}
 }

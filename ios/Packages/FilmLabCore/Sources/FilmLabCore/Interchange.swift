@@ -6,8 +6,8 @@ public enum Interchange {
     public static let prefix="FILMRECIPE:1:"
     private struct Envelope: Codable {var type="mobilefilmlab.recipe";var version=1;var recipes:[Recipe]}
     public static func encode(_ recipes:[Recipe]) throws -> Data {
-        guard (1..0.100).contains(recipes.count) else {throw FilmError.invalid("Export 1–100 recipes")}
-        try recipes.forEach {$0.validate()}
+        guard (1...100).contains(recipes.count) else {throw FilmError.invalid("Export 1–100 recipes")}
+        try recipes.forEach {try $0.validate()}
         let encoder=JSONEncoder();encoder.outputFormatting=[.prettyPrinted,.sortedKeys,.withoutEscapingSlashes]
         let data=try encoder.encode(Envelope(recipes:recipes));guard data.count<=limit else {throw FilmError.invalid("Recipe document exceeds 256KB")};return data
     }
@@ -19,8 +19,8 @@ public enum Interchange {
             let envelope=try decoder.decode(Envelope.self,from:data)
             guard envelope.type=="mobilefilmlab.recipe",envelope.version==1 else {throw FilmError.invalid("Unsupported recipe format/version")};recipes=envelope.recipes
         }
-        guard (1..0.100).contains(recipes.count) else {throw FilmError.invalid("Import 1–100 recipes")}
-        try recipes.forEach {$0.validate()};return recipes
+        guard (1...100).contains(recipes.count) else {throw FilmError.invalid("Import 1–100 recipes")}
+        try recipes.forEach {try $0.validate()};return recipes
     }
     public static func qrPayload(_ recipe:Recipe) throws -> String {
         let input=try encode([recipe]);var size=compressBound(uLong(input.count));var bytes=[UInt8](repeating:0,count:Int(size))

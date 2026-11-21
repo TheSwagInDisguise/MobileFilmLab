@@ -20,6 +20,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
     @Published var liveISO:Float=0
     @Published var liveTime:Double=0
     @Published var roll:Double=0
+    @Published var motionAvailable=false
     @Published var focusPoint:CGPoint?
     var previewObserver:((CIImage)->Void)?
     private let session=AVCaptureSession(),output=AVCapturePhotoOutput(),video=AVCaptureVideoDataOutput()
@@ -42,7 +43,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         super.init()
         tokens.append(NotificationCenter.default.addObserver(forName:AVCaptureSession.runtimeErrorNotification,object:session,queue:nil) {[weak self] n in
             let error=n.userInfo?[AVCaptureSessionErrorKey] as? AVError
-            self?.queue.async {guard let self else {return};self.finish(error:FilmError.invalid(error?.localizedDescription ?? "Camera interrupted"));self.publish {self.ready=false;self.status="Camera error. Reopen the camera to reconnect."}}
+            self?.queue.async {guard let self else {return};self.finish(error:FilmError.invalid(error?.localizedDescription ?? "Camera interrupted"));self.publish {self.ready=false;self.preview=nil;self.status="Camera error. Reopen the camera to reconnect."}}
         })
         tokens.append(NotificationCenter.default.addObserver(forName:AVCaptureSession.wasInterruptedNotification,object:session,queue:nil) {[weak self] _ in self?.queue.async {guard let self else {return};self.finish(error:FilmError.invalid("Capture interrupted; no incomplete image was saved"));self.publish {self.ready=false;self.status="Camera interrupted by iOS"}}})
         tokens.append(NotificationCenter.default.addObserver(forName:AVCaptureSession.interruptionEndedNotification,object:session,queue:nil) {[weak self] _ in self?.start()})
@@ -157,7 +158,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         motion.deviceMotionUpdateInterval=0.1
         motion.startDeviceMotionUpdates(to:motionQueue) {[weak self] data,_ in guard let self,let data else {return};let r=data.rotationRate
             self.lock.lock();self.rotation=sqrt(r.x*r.x+r.y*r.y+r.z*r.z);self.lock.unlock()
-            self.publish {self.roll=atan2(data.gravity.x,-data.gravity.y)*180/Double.pi}
+            self.publish {self.motionAvailable=true;self.roll=atan2(data.gravity.x,-data.gravity.y)*180/Double.pi}
         }
     }
     func capture(_ preferences:CapturePreferences,angle:CGFloat) async throws -> PhotoBurst {

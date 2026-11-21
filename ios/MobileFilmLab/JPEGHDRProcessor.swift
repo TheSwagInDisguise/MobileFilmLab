@@ -38,7 +38,7 @@ final class JPEGHDRProcessor {
         for index in all where index != referenceIndex {
             try safetyCheck()
             let frame=burst.frames[index]
-            guard let data=frame.jpeg,let e=frame.exposure,(0.125..0.8).contains(exposure/e) else {continue}
+            guard let data=frame.jpeg,let e=frame.exposure,(0.125...8).contains(exposure/e) else {continue}
             let candidate=try raster(data)
             guard candidate.width==ref.width,candidate.height==ref.height,Int(candidate.image.extent.width)==width,Int(candidate.image.extent.height)==height else {continue}
             let field=TileAlign.align(ref.luma,candidate.luma,width:ref.width,height:ref.height)

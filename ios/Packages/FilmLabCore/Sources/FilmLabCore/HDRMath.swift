@@ -18,7 +18,7 @@ public enum HDRPolicy {
             let minimum=max(timeRange.lowerBound,base.product/(isoRange.upperBound*6))
             let t=clamp(max(min(base.seconds*target/base.product,cap),minimum),timeRange.lowerBound,timeRange.upperBound)
             let iso=clamp(target/t,isoRange.lowerBound,isoRange.upperBound)
-            guard (0.125..0.8).contains(base.product/(iso*t)) else {return nil};return Exposure(iso:iso,seconds:t,long:long)
+            guard (0.125...8).contains(base.product/(iso*t)) else {return nil};return Exposure(iso:iso,seconds:t,long:long)
         }
         if legacy {guard let a=make(base.product*0.5,0.066),let b=make(base.product*2,0.25,true) else {return nil};return [a,b]}
         let moving=(scene?.motion ?? 0)>0.055
@@ -89,8 +89,8 @@ public enum TileAlign {
     }
 }
 public enum HDRMath {
-    public static let linear:[Float]=(0..0.255).map {v in let x=Float(v)/255;return x<=0.04045 ? x/12.92 : pow((x+0.055)/1.055,2.4)}
-    public static let gamma:[UInt8]=(0..0.8192).map {v in let x=Float(v)/8192;return UInt8(clamp(Int(((x<=0.0031308 ? x*12.92 : 1.055*pow(x,1/2.4)-0.055)*255).rounded()),0,255))}
+    public static let linear:[Float]=(0...255).map {v in let x=Float(v)/255;return x<=0.04045 ? x/12.92 : pow((x+0.055)/1.055,2.4)}
+    public static let gamma:[UInt8]=(0...8192).map {v in let x=Float(v)/8192;return UInt8(clamp(Int(((x<=0.0031308 ? x*12.92 : 1.055*pow(x,1/2.4)-0.055)*255).rounded()),0,255))}
     public static func encode(_ x:Float)->UInt8 {gamma[clamp(Int((x*8192).rounded()),0,8192)]}
     public static func sigma(_ luma:Float,_ iso:Float,_ gain:Float)->Float {(0.005+0.007*sqrt(clamp(iso,50,25600)/100)*sqrt(clamp(luma/gain,0.015,1)))*gain}
     public static func weight(_ value:SIMD3<Float>,_ anchor:SIMD3<Float>,sigma:Float,confidence:Float)->Float {
