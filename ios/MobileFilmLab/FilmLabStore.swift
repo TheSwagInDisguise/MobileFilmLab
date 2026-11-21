@@ -82,7 +82,7 @@ import FilmLabCore
         do {let data=try Interchange.encode(recipes);let url=FileManager.default.temporaryDirectory.appendingPathComponent("MobileFilmLab-\(recipes.count==1 ? "recipe" : "recipes").filmrecipe");try data.write(to:url,options:.atomic);share=ExportDocument(urls:[url])} catch {self.error=error.localizedDescription}
     }
     func qrImage(_ r:Recipe)->UIImage? {
-        do {let text=try Interchange.qrPayload(r);guard let filter=CIFilter(name:"CIQRCodeGenerator") else {return nil};filter.setValue(Data(text.utf8),forKey:"inputMessage");filter.setValue("M",forKey:"inputCorrectionLevel");guard let ci=filter.outputImage?.transformed(by:CGAffineTransform(scaleX:8,y:8)),let cg=CIContext().createCGImage(ci,from:ci.extent) else {return nil};let result=UIImage(cgImage:cg);thumbnailCache.setObject(result,forKey:name as NSString,cost:cg.bytesPerRow*cg.height);return result} catch {self.error=error.localizedDescription;return nil}
+        do {let text=try Interchange.qrPayload(r);guard let filter=CIFilter(name:"CIQRCodeGenerator") else {return nil};filter.setValue(Data(text.utf8),forKey:"inputMessage");filter.setValue("M",forKey:"inputCorrectionLevel");guard let ci=filter.outputImage?.transformed(by:CGAffineTransform(scaleX:8,y:8)),let cg=CIContext().createCGImage(ci,from:ci.extent) else {return nil};return UIImage(cgImage:cg)} catch {self.error=error.localizedDescription;return nil}
     }
     func shoot(_ camera:CameraController) async {
         guard !processing,!camera.busy,camera.ready,catalogue != nil else {return}

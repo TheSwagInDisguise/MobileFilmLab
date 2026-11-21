@@ -40,7 +40,8 @@ struct CaptureDetail:View {
     @EnvironmentObject var store:FilmLabStore
     @Environment(\.dismiss) var dismiss
     @State var capture:SavedCapture
-    @State private var original=false,deleting=false
+    @State private var original=false
+    @State private var deleting=false
     @State private var zoom:CGFloat=1
     var body:some View {ScrollView {VStack(alignment:.leading,spacing:16) {
         if let image=store.image(capture,original:original) {Image(uiImage:image).resizable().scaledToFit().scaleEffect(zoom).gesture(MagnifyGesture().onChanged {value in zoom=min(5,max(1,value.magnification))}).onTapGesture(count:2) {zoom=zoom>1 ? 1 : 2}.clipShape(RoundedRectangle(cornerRadius:16))} else {ContentUnavailableView("Unmodified DNG",systemImage:"camera.aperture",description:Text("Use Share to open this RAW / ProRAW in a DNG-compatible editor. There is no app-added look baked into the DNG."))}

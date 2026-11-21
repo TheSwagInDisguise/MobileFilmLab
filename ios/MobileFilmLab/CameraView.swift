@@ -5,7 +5,11 @@ import FilmLabCore
 struct CameraView:View {
     @EnvironmentObject var store:FilmLabStore
     @EnvironmentObject var camera:CameraController
-    @State private var recipes=false,settings=false,library=false,styles=false,pro=false
+    @State private var recipes=false
+    @State private var settings=false
+    @State private var library=false
+    @State private var styles=false
+    @State private var pro=false
     @State private var controls=ManualControls()
     @State private var flash:FlashChoice = .off
     var body:some View {

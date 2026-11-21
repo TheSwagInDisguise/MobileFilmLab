@@ -8,8 +8,15 @@ struct RecipeDrawer:View {
     @EnvironmentObject var store:FilmLabStore
     @EnvironmentObject var camera:CameraController
     @Environment(\.dismiss) var dismiss
-    @State private var group="ALL",search="",onlyFavourite=false,importing=false,editing=false
-    @State private var qr:Recipe?,photo:PhotosPickerItem?,qrText="",showQRText=false
+    @State private var group="ALL"
+    @State private var search=""
+    @State private var onlyFavourite=false
+    @State private var importing=false
+    @State private var editing=false
+    @State private var qr:Recipe?
+    @State private var photo:PhotosPickerItem?
+    @State private var qrText=""
+    @State private var showQRText=false
     var filtered:[Recipe] {store.allRecipes.filter {(group=="ALL" || $0.group==group) && (!onlyFavourite || store.favourites.contains($0.id)) && (search.isEmpty || $0.displayName.localizedCaseInsensitiveContains(search))}}
     var body:some View {
         NavigationStack {

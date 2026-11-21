@@ -21,7 +21,8 @@ struct StylePad:View {
 struct RecipeEditor:View {
     @EnvironmentObject var store:FilmLabStore
     @Environment(\.dismiss) var dismiss
-    @State private var recipe=Recipe(id:"draft",name:"My recipe"),name="My recipe"
+    @State private var recipe=Recipe(id:"draft",name:"My recipe")
+    @State private var name="My recipe"
     let styles=[(1,"Standard"),(2,"Vivid"),(3,"Neutral"),(4,"Portrait"),(5,"Landscape"),(6,"Monochrome"),(7,"Clear"),(8,"Deep"),(9,"Light"),(10,"Sunset"),(11,"Night colour"),(12,"Autumn"),(14,"Sepia")]
     var body:some View {NavigationStack {Form {
         Section("Your recipe") {TextField("Name",text:$name);Picker("Creative style",selection:$recipe.style) {ForEach(styles,id:\.0) {s in Text(s.1).tag(s.0)}};Text("Conventional approximations, not proprietary film, OEM processing or camera modes. Night colour is a look, not Night capture.").font(.caption).foregroundStyle(.secondary)}

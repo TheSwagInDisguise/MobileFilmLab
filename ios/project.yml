@@ -57,7 +57,7 @@ targets:
           - CFBundleTypeName: MobileFilmLab recipe
             CFBundleTypeRole: Editor
             LSHandlerRank: Owner
-            LSItemContentTypes: [com.mobilefilmlab.recipe, public.json]
+            LSItemContentTypes: [com.mobilefilmlab.recipe]
         UTExportedTypeDeclarations:
           - UTTypeIdentifier: com.mobilefilmlab.recipe
             UTTypeDescription: MobileFilmLab recipe document

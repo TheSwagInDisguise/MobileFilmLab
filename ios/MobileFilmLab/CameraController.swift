@@ -63,7 +63,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         }
     }
     private func startAuthorized() {
-        guard foreground,AVCaptureDevice.authorizationStatus(for:.video)==.authorized else {return}
+        guard foreground,AVCaptureDevice.authorizationStatus(for:.video) == .authorized else {return}
         do {
             if !configured {
                 let discovery=AVCaptureDevice.DiscoverySession(deviceTypes:[.builtInWideAngleCamera,.builtInUltraWideCamera,.builtInTelephotoCamera,.builtInDualCamera,.builtInDualWideCamera,.builtInTripleCamera,.builtInTrueDepthCamera],mediaType:.video,position:.unspecified)
@@ -285,7 +285,13 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         var rgba=[UInt8](repeating:0,count:w*h*4)
         previewContext.render(i,toBitmap:&rgba,rowBytes:w*4,bounds:CGRect(x:0,y:0,width:w,height:h),format:.RGBA8,colorSpace:CGColorSpace(name:CGColorSpace.sRGB))
         var luma=[UInt8](repeating:0,count:w*h),bins=[Int](repeating:0,count:256);var clipped=0,shadow=0
-        for p in luma.indices {let v=Int((Double(rgba[p*4])*0.213+Double(rgba[p*4+1])*0.715+Double(rgba[p*4+2])*0.072).rounded());luma[p]=UInt8(v);bins[v]+=1;if max(rgba[p*4],max(rgba[p*4+1],rgba[p*4+2]))>=250 {clipped+=1};if v<50 {shadow+=1}}
+        for p in luma.indices {
+            let red=Int(rgba[p*4]),green=Int(rgba[p*4+1]),blue=Int(rgba[p*4+2])
+            let v=(red*54+green*183+blue*19+128)>>8
+            luma[p]=UInt8(v);bins[v]+=1
+            if max(red,max(green,blue))>=250 {clipped+=1}
+            if v<50 {shadow+=1}
+        }
         var cumulative=0,p98=255;for x in 0..<256 {cumulative+=bins[x];if Double(cumulative)>Double(w*h)*0.98 {p98=x;break}}
         lock.lock();scene=SceneStats(clipped:Double(clipped)/Double(w*h),percentile:p98,shadows:Double(shadow)/Double(w*h),motion:motion,uptime:now);lastLuma=luma;lock.unlock()
         let peak=max(1,(0..<32).map {bins[($0*8)..<($0*8+8)].reduce(0,+)}.max() ?? 1)

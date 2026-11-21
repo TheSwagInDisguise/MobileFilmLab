@@ -5,7 +5,8 @@ struct SettingsView:View {
     @EnvironmentObject var store:FilmLabStore
     @EnvironmentObject var camera:CameraController
     @Environment(\.dismiss) var dismiss
-    @State private var about=false,diagnostics=false
+    @State private var about=false
+    @State private var diagnostics=false
     var body:some View {NavigationStack {Form {
         Section {Label("Unpublished iOS personal test",systemImage:"testtube.2").foregroundStyle(FilmTheme.accent);Text("iPhone 18 Pro Max / iOS 27 is the target. This build needs installation and camera checks on your device; simulator success is not handset validation.").font(.footnote).foregroundStyle(.secondary)}
         Section("Capture pipeline") {
