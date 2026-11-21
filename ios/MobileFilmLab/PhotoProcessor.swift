@@ -10,6 +10,22 @@ struct ProcessedPhoto {var data:Data?;var raw:Data?;var original:Data?;var width
 /// Conventional colour/denoise/detail only. There is no ML model or network-based enhancement.
 final class PhotoProcessor {
     static let colourSpace=CGColorSpace(name:CGColorSpace.sRGB)!
+    // Explicitly preserve the photograph's alpha. Signed noise in a zero-alpha
+    // compositing layer is discarded by Core Image's premultiplication rules.
+    private static let grainKernel=CIColorKernel(source:"""
+        kernel vec4 filmLabGrain(__sample photograph, __sample noise, float strength) {
+            vec4 rgba = unpremultiply(photograph);
+            float delta = (unpremultiply(noise).r - 0.5) * strength;
+            return premultiply(vec4(clamp(rgba.rgb + vec3(delta), 0.0, 1.0), rgba.a));
+        }
+        """)
+    static func grain(_ image:CIImage,amount:Double,seed:TimeInterval) throws -> CIImage {
+        guard amount>0 else {return image}
+        guard let kernel=grainKernel,let random=CIFilter(name:"CIRandomGenerator")?.outputImage else {throw FilmError.invalid("Grain renderer unavailable")}
+        let noise=random.transformed(by:CGAffineTransform(translationX:seed.truncatingRemainder(dividingBy:1000),y:47)).cropped(to:image.extent)
+        guard let result=kernel.apply(extent:image.extent,arguments:[image,noise,amount*0.014]) else {throw FilmError.invalid("Grain renderer failed")}
+        return result
+    }
     let context=CIContext(options:[.workingColorSpace:NSNull(),.outputColorSpace:colourSpace,.cacheIntermediates:false])
     static func upright(_ data:Data)->CIImage? {CIImage(data:data,options:[.applyOrientationProperty:true,.colorSpace:colourSpace])}
     static func matrix(_ image:CIImage,recipe:Recipe,preferences p:CapturePreferences)->CIImage {
@@ -54,12 +70,9 @@ final class PhotoProcessor {
         image=Self.matrix(image,recipe:recipe,preferences:p)
         let detail=max(0,recipe.sharp)
         if detail>0 {image=image.applyingFilter("CISharpenLuminance",parameters:["inputSharpness":Double(detail)*0.12]);note+="; mild luminance sharpening"}
-        if p.grain>0,let random=CIFilter(name:"CIRandomGenerator")?.outputImage {
-            let extent=image.extent
-            let noise=random.transformed(by:CGAffineTransform(translationX:Double(first.timestamp.timeIntervalSince1970.truncatingRemainder(dividingBy:1000)),y:47)).cropped(to:extent)
-            let a=Double(p.grain)*0.014
-            let g=noise.applyingFilter("CIColorMatrix",parameters:["inputRVector":CIVector(x:a,y:0,z:0,w:0),"inputGVector":CIVector(x:a,y:0,z:0,w:0),"inputBVector":CIVector(x:a,y:0,z:0,w:0),"inputAVector":CIVector(x:0,y:0,z:0,w:0),"inputBiasVector":CIVector(x:-a/2,y:-a/2,z:-a/2,w:0)])
-            image=g.applyingFilter("CIAdditionCompositing",parameters:[kCIInputBackgroundImageKey:image]).cropped(to:extent);note+="; synthetic luminance grain"
+        if p.grain>0 {
+            image=try Self.grain(image,amount:Double(p.grain),seed:first.timestamp.timeIntervalSince1970)
+            note+="; synthetic luminance grain"
         }
         if p.enlarge28 {
             let long=max(image.extent.width,image.extent.height),target=6120/p.crop

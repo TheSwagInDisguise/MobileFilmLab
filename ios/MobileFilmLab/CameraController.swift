@@ -121,7 +121,10 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         c.minTime=CMTimeGetSeconds(device.activeFormat.minExposureDuration);c.maxTime=CMTimeGetSeconds(device.activeFormat.maxExposureDuration)
         c.minEV=device.minExposureTargetBias;c.maxEV=device.maxExposureTargetBias;c.maxWB=device.maxWhiteBalanceGain
         c.customExposure=device.isExposureModeSupported(.custom);c.manualWB=device.isWhiteBalanceModeSupported(.locked)
-        c.focus=device.isFocusPointOfInterestSupported;c.manualFocus=device.isLockingFocusWithCustomLensPositionSupported;c.flash=device.hasFlash;c.torch=device.hasTorch
+        c.focus=device.isFocusPointOfInterestSupported || device.isExposurePointOfInterestSupported;c.manualFocus=device.isLockingFocusWithCustomLensPositionSupported;c.flash=device.hasFlash;c.torch=device.hasTorch
+        if device.isFocusModeSupported(.continuousAutoFocus) {c.focusModes.append("AF-C")}
+        if device.isFocusModeSupported(.autoFocus) {c.focusModes.append("AF-S")}
+        if c.manualFocus {c.focusModes.append("MF")}
         c.flashChoices=[.off]
         if output.supportedFlashModes.contains(.auto) {c.flashChoices.append(.auto)}
         if output.supportedFlashModes.contains(.on) {c.flashChoices.append(.on)}
@@ -151,7 +154,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         else if d.isFocusModeSupported(.continuousAutoFocus) {d.focusMode = .continuousAutoFocus}
     }
     func manualFocus(_ value:Float) {queue.async {guard self.transaction==nil,let d=self.input?.device,d.isLockingFocusWithCustomLensPositionSupported else {return};do {try d.lockForConfiguration();d.setFocusModeLocked(lensPosition:clamp(value,0,1),completionHandler:nil);d.unlockForConfiguration()} catch {self.publish {self.status=error.localizedDescription}}}}
-    func focus(at point:CGPoint) {queue.async {guard self.transaction==nil,let d=self.input?.device else {return};do {try d.lockForConfiguration();defer {d.unlockForConfiguration()}
+    func focus(at point:CGPoint) {queue.async {guard self.transaction==nil,let d=self.input?.device,d.isFocusPointOfInterestSupported || d.isExposurePointOfInterestSupported else {return};do {try d.lockForConfiguration();defer {d.unlockForConfiguration()}
         // Preview is portrait, aspect-fit; mirrored front preview needs a mirrored POI.
         self.lock.lock();let crop=self.previewPrefs.crop;self.lock.unlock()
         let px=(point.x-0.5)/crop+0.5,py=(point.y-0.5)/crop+0.5

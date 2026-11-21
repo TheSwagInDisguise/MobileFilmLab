@@ -47,7 +47,7 @@ struct CameraView:View {
             .sheet(isPresented:$settings) {SettingsView()}
             .sheet(isPresented:$library) {LibraryView()}
             .onChange(of:controls) {_,m in camera.setControls(m)}
-            .onChange(of:camera.selectedID) {_,_ in controls=ManualControls();flash = .off}
+            .onChange(of:camera.selectedID) {_,_ in controls=ManualControls();controls.focus=camera.capabilities.focusModes.first ?? "AF-C";flash = .off}
     }
     private var header:some View {HStack {HStack(spacing:9) {Image(systemName:"camera.aperture").font(.title3).foregroundStyle(FilmTheme.accent);Text("MobileFilmLab").font(.system(size:18,weight:.semibold,design:.rounded))};Spacer();Button {settings=true} label:{Image(systemName:"gearshape").font(.title3).frame(width:42,height:42)}.accessibilityLabel("Settings").accessibilityIdentifier("openSettings")}.foregroundStyle(.white)}
     private var preview:some View {
@@ -105,10 +105,12 @@ struct CameraView:View {
                 ProSlider(label:"ISO",value:Binding(get:{Double(controls.iso ?? camera.liveISO)},set:{controls.iso=Float($0)}),range:Double(camera.capabilities.minISO)...Double(max(camera.capabilities.minISO+1,camera.capabilities.maxISO)),auto:!controls.isManual,display:controls.iso==nil && controls.isManual ? "MTR \(Int(camera.liveISO))" : nil,reset:{controls.iso=nil})
                 ProSlider(label:"Shutter",value:Binding(get:{log2(max(camera.capabilities.minTime,controls.seconds ?? camera.liveTime))},set:{controls.seconds=pow(2,$0)}),range:log2(max(0.000001,camera.capabilities.minTime))...log2(max(0.000002,camera.capabilities.maxTime)),auto:!controls.isManual,display:(controls.seconds==nil && controls.isManual ? "MTR " : "")+exposureLabel(controls.seconds ?? camera.liveTime),reset:{controls.seconds=nil})
             }
-            ProSlider(label:"EV",value:Binding(get:{Double(controls.ev)},set:{controls.ev=Float($0)}),range:Double(camera.capabilities.minEV)...Double(camera.capabilities.maxEV),auto:false,display:String(format:"%+0.1f",controls.ev),reset:{controls.ev=0}).disabled(controls.isManual)
+            if camera.capabilities.maxEV>camera.capabilities.minEV {ProSlider(label:"EV",value:Binding(get:{Double(controls.ev)},set:{controls.ev=Float($0)}),range:Double(camera.capabilities.minEV)...Double(camera.capabilities.maxEV),auto:false,display:String(format:"%+0.1f",controls.ev),reset:{controls.ev=0}).disabled(controls.isManual)}
             if camera.capabilities.manualWB {ProSlider(label:"WB",value:Binding(get:{Double(controls.kelvin ?? 5600)},set:{controls.kelvin=Float($0)}),range:2500...9900,auto:controls.kelvin==nil,display:"\(Int(controls.kelvin ?? 5600))K",reset:{controls.kelvin=nil})}
-            HStack {Picker("Focus",selection:$controls.focus) {Text("AF-C").tag("AF-C");Text("AF-S").tag("AF-S");if camera.capabilities.manualFocus {Text("MF").tag("MF")}}.pickerStyle(.segmented)
-                if controls.focus=="MF" {Slider(value:$controls.focusPosition,in:0...1)}
+            if !camera.capabilities.focusModes.isEmpty {
+                HStack {Picker("Focus",selection:$controls.focus) {ForEach(camera.capabilities.focusModes,id:\.self) {mode in Text(mode).tag(mode)}}.pickerStyle(.segmented)
+                    if controls.focus=="MF" {Slider(value:$controls.focusPosition,in:0...1)}
+                }
             }
         }.tint(FilmTheme.accent).padding(10).background(FilmTheme.panel,in:RoundedRectangle(cornerRadius:12))
     }

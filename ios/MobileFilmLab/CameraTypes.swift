@@ -12,6 +12,7 @@ struct CameraCapabilities {
     var minEV:Float = -3,maxEV:Float=3,maxWB:Float=4
     var customExposure=false,manualWB=false,focus=false,manualFocus=false,flash=false,torch=false,responsive=false
     var flashChoices:[FlashChoice]=[.off]
+    var focusModes:[String]=[]
     var dimensions:[CMVideoDimensions]=[]
     func supports(_ f:CaptureFormat)->Bool {f == .jpeg || (f.usesProRAW ? proRAW != nil : bayer != nil)}
 }

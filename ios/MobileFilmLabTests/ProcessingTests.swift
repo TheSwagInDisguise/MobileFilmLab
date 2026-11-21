@@ -55,10 +55,18 @@ final class ProcessingTests:XCTestCase {
         var pa=[UInt8](repeating:0,count:width*height*4),pb=pa
         processor.context.render(ia,toBitmap:&pa,rowBytes:width*4,bounds:ia.extent,format:.RGBA8,colorSpace:PhotoProcessor.colourSpace)
         processor.context.render(ib,toBitmap:&pb,rowBytes:width*4,bounds:ib.extent,format:.RGBA8,colorSpace:PhotoProcessor.colourSpace)
-        var difference=0.0
-        for p in 0..<width*height {difference+=abs(Double(pa[p*4])-Double(pb[p*4]));XCTAssertEqual(pb[p*4+3],255)}
+        var difference=0.0,signedDifference=0.0;var brighter=0,darker=0
+        for p in 0..<width*height {let delta=Double(pb[p*4])-Double(pa[p*4]);difference+=abs(delta);signedDifference+=delta;if delta>1 {brighter+=1};if delta < -1 {darker+=1};XCTAssertEqual(pb[p*4+3],255)}
         XCTAssertGreaterThan(difference/Double(width*height),0.5)
         XCTAssertLessThan(difference/Double(width*height),12)
+        XCTAssertLessThan(abs(signedDifference/Double(width*height)),0.8,"Grain must not add a broad brightness cast")
+        XCTAssertGreaterThan(brighter,100);XCTAssertGreaterThan(darker,100)
+        // Check premultiplication before the JPEG encoder (JPEG itself has no alpha).
+        let translucent=CIImage(color:CIColor(red:0.4,green:0.5,blue:0.6,alpha:0.5)).cropped(to:CGRect(x:0,y:0,width:32,height:32))
+        let noisy=try PhotoProcessor.grain(translucent,amount:3,seed:47)
+        var pixels=[UInt8](repeating:0,count:32*32*4)
+        processor.context.render(noisy,toBitmap:&pixels,rowBytes:32*4,bounds:noisy.extent,format:.RGBA8,colorSpace:PhotoProcessor.colourSpace)
+        for p in 0..<32*32 {XCTAssertLessThanOrEqual(abs(Int(pixels[p*4+3])-128),1)}
     }
 
 }
