@@ -29,6 +29,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
     private let previewContext=CIContext(options:[.workingColorSpace:NSNull(), .cacheIntermediates:false])
     private let motion=CMMotionManager(),motionQueue=OperationQueue()
     private let lock=NSLock()
+    private var previewDevice:AVCaptureDevice?
     private var previewRecipe=Recipe(id:"stock_oppo_natural",name:"Natural",group:"OPPO"),previewPrefs=CapturePreferences()
     private var showPreviewOriginal=false
     private var scene:SceneStats?,lastLuma:[UInt8]?,rotation:Double?
@@ -73,6 +74,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
                 publish {self.routes=routes}
                 guard let initial=sorted.first(where:{$0.deviceType == .builtInWideAngleCamera && $0.position == .back}) ?? sorted.first else {throw FilmError.invalid("No camera exposed by AVFoundation")}
                 session.beginConfiguration();session.sessionPreset = .photo
+                session.automaticallyConfiguresCaptureDeviceForWideColor=false
                 guard session.canAddOutput(output),session.canAddOutput(video) else {session.commitConfiguration();throw FilmError.invalid("Photo output unavailable")}
                 session.addOutput(output);session.addOutput(video)
                 video.videoSettings=[kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_32BGRA]
@@ -105,6 +107,8 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         if let c=video.connection(with:.video),c.isVideoRotationAngleSupported(90) {c.videoRotationAngle=90;if c.isVideoMirroringSupported {c.automaticallyAdjustsVideoMirroring=false;c.isVideoMirrored=device.position == .front}}
         session.commitConfiguration()
         try device.lockForConfiguration();device.videoZoomFactor=1
+        // The shared grade is defined in SDR sRGB, not an unlabelled Display P3 interpretation.
+        if device.activeFormat.supportedColorSpaces.contains(.sRGB) {device.activeColorSpace = .sRGB}
         if device.isFocusModeSupported(.continuousAutoFocus) {device.focusMode = .continuousAutoFocus}
         if device.isWhiteBalanceModeSupported(.continuousAutoWhiteBalance) {device.whiteBalanceMode = .continuousAutoWhiteBalance}
         if device.isExposureModeSupported(.continuousAutoExposure) {device.exposureMode = .continuousAutoExposure}
@@ -124,7 +128,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         if device.hasTorch {c.flashChoices.append(.torch)}
         c.responsive=output.isZeroShutterLagSupported || output.isResponsiveCaptureSupported
         c.dimensions=device.activeFormat.supportedMaxPhotoDimensions
-        lock.lock();scene=nil;lastLuma=nil;lock.unlock()
+        lock.lock();previewDevice=device;scene=nil;lastLuma=nil;lock.unlock()
         publish {self.selectedID=device.uniqueID;self.capabilities=c;self.status="Ready · \(c.name)"}
     }
     func updateLook(_ r:Recipe,_ p:CapturePreferences) {lock.lock();previewRecipe=r;previewPrefs=p;lock.unlock()}
@@ -272,7 +276,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         guard let buffer=CMSampleBufferGetImageBuffer(sampleBuffer) else {return}
         autoreleasepool {
             let image=CIImage(cvPixelBuffer:buffer);let scale=min(1,960/image.extent.height);let small=image.transformed(by:CGAffineTransform(scaleX:scale,y:scale))
-            lock.lock();let recipe=previewRecipe,prefs=previewPrefs,movement=rotation,before=showPreviewOriginal;lock.unlock()
+            lock.lock();let recipe=previewRecipe,prefs=previewPrefs,movement=rotation,before=showPreviewOriginal,device=previewDevice;lock.unlock()
             let framed=PhotoProcessor.crop(small,factor:prefs.crop)
             let c=before ? framed : PhotoProcessor.matrix(framed,recipe:recipe,preferences:prefs)
             guard let cg=previewContext.createCGImage(c,from:c.extent) else {return}
@@ -280,7 +284,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
             frames+=1
             if frames%4==0 {sampleScene(small,motion:movement,now:now)}
             if frames%8==0 {let thumb=small.transformed(by:CGAffineTransform(scaleX:0.20,y:0.20));if let cg=previewContext.createCGImage(thumb,from:thumb.extent) {let source=UIImage(cgImage:cg);publish {self.lookSource=source}}}
-            let iso=input?.device.iso ?? 0,time=input.map {CMTimeGetSeconds($0.device.exposureDuration)} ?? 0
+            let iso=device?.iso ?? 0,time=device.map {CMTimeGetSeconds($0.exposureDuration)} ?? 0
             publish {self.preview=result;self.liveISO=iso;self.liveTime=time}
         }
     }

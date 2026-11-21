@@ -43,4 +43,22 @@ final class ProcessingTests:XCTestCase {
         XCTAssertEqual(Int(decoded.extent.width),128);XCTAssertEqual(Int(decoded.extent.height),96)
     }
 
+    func testGrainActuallyChangesLuminanceWithoutAlphaDamage() throws {
+        let burst=PhotoBurst(frames:[frame(fixture())],pipeline:.original)
+        let recipe=try Catalogue.load().recipes[0];var plain=CapturePreferences();plain.crop=1.001
+        var grained=plain;grained.grain=3
+        let processor=PhotoProcessor()
+        let a=try processor.process(burst,recipe:recipe,preferences:plain)
+        let b=try processor.process(burst,recipe:recipe,preferences:grained)
+        let ia=try XCTUnwrap(PhotoProcessor.upright(XCTUnwrap(a.data))),ib=try XCTUnwrap(PhotoProcessor.upright(XCTUnwrap(b.data)))
+        let width=a.width,height=a.height
+        var pa=[UInt8](repeating:0,count:width*height*4),pb=pa
+        processor.context.render(ia,toBitmap:&pa,rowBytes:width*4,bounds:ia.extent,format:.RGBA8,colorSpace:PhotoProcessor.colourSpace)
+        processor.context.render(ib,toBitmap:&pb,rowBytes:width*4,bounds:ib.extent,format:.RGBA8,colorSpace:PhotoProcessor.colourSpace)
+        var difference=0.0
+        for p in 0..<width*height {difference+=abs(Double(pa[p*4])-Double(pb[p*4]));XCTAssertEqual(pb[p*4+3],255)}
+        XCTAssertGreaterThan(difference/Double(width*height),0.5)
+        XCTAssertLessThan(difference/Double(width*height),12)
+    }
+
 }
