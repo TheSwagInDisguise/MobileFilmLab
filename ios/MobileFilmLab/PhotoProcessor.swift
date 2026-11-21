@@ -13,17 +13,20 @@ final class PhotoProcessor {
     // Explicitly preserve the photograph's alpha. Signed noise in a zero-alpha
     // compositing layer is discarded by Core Image's premultiplication rules.
     private static let grainKernel=CIColorKernel(source:"""
-        kernel vec4 filmLabGrain(__sample photograph, __sample noise, float strength) {
+        kernel vec4 filmLabGrain(__sample photograph, float strength, float seed) {
             vec4 rgba = unpremultiply(photograph);
-            float delta = (unpremultiply(noise).r - 0.5) * strength;
+            vec2 position = floor(destCoord()) + vec2(seed, 47.0);
+            float noise = fract(sin(dot(position, vec2(12.9898, 78.233))) * 43758.5453);
+            float delta = (noise - 0.5) * strength;
             return premultiply(vec4(clamp(rgba.rgb + vec3(delta), 0.0, 1.0), rgba.a));
         }
         """)
     static func grain(_ image:CIImage,amount:Double,seed:TimeInterval) throws -> CIImage {
         guard amount>0 else {return image}
-        guard let kernel=grainKernel,let random=CIFilter(name:"CIRandomGenerator")?.outputImage else {throw FilmError.invalid("Grain renderer unavailable")}
-        let noise=random.transformed(by:CGAffineTransform(translationX:seed.truncatingRemainder(dividingBy:1000),y:47)).cropped(to:image.extent)
-        guard let result=kernel.apply(extent:image.extent,arguments:[image,noise,amount*0.014]) else {throw FilmError.invalid("Grain renderer failed")}
+        // Coordinate-hash luminance noise has bounded, zero-centred RGB deltas;
+        // it never interprets a random image's alpha as a brightness divisor.
+        guard let kernel=grainKernel else {throw FilmError.invalid("Grain renderer unavailable")}
+        guard let result=kernel.apply(extent:image.extent,arguments:[image,amount*0.014,seed.truncatingRemainder(dividingBy:1000)]) else {throw FilmError.invalid("Grain renderer failed")}
         return result
     }
     let context=CIContext(options:[.workingColorSpace:NSNull(),.outputColorSpace:colourSpace,.cacheIntermediates:false])
