@@ -68,13 +68,31 @@ struct CameraView:View {
                     Spacer()
                     if store.countdown>0 {Text("\(store.countdown)").font(.system(size:64,weight:.light)).shadow(radius:10);Spacer()}
                     if store.preferences.crop>1 {Text("2× JPEG CENTRE CROP · NOT A LENS").font(.system(size:9,weight:.semibold,design:.monospaced)).padding(7).background(.black.opacity(0.5),in:Capsule())}
-                    ScrollView(.horizontal,showsIndicators:false) {HStack(spacing:8) {
-                        ForEach(camera.routes) {r in Button {camera.select(r.id)} label:{Text(r.name).font(.caption2.weight(.semibold)).padding(.horizontal,12).padding(.vertical,10).background(camera.selectedID==r.id ? FilmTheme.accent : Color.black.opacity(0.5),in:Capsule()).foregroundStyle(camera.selectedID==r.id ? .black : .white)}.disabled(store.processing || camera.busy)}
-                        if !store.preferences.format.writesRaw {Button {store.preferences.crop=store.preferences.crop==1 ? 2 : 1} label:{Text("2× crop").font(.caption2.bold()).padding(.horizontal,12).padding(.vertical,10).background(store.preferences.crop>1 ? FilmTheme.accent : Color.black.opacity(0.5),in:Capsule()).foregroundStyle(store.preferences.crop>1 ? .black : .white)}}}.padding(.horizontal,12)
+                    lensControls
                     HStack {Text(camera.liveISO>0 ? "ISO \(Int(camera.liveISO))" : "ISO AUTO");Spacer();Text(camera.liveTime>0 ? exposureLabel(camera.liveTime) : "AE");Spacer();Text(camera.capabilities.name)}.font(.system(size:9,design:.monospaced)).padding(.horizontal,15).padding(.bottom,12)
                 }.foregroundStyle(.white)
             }.clipShape(RoundedRectangle(cornerRadius:22))
         }.aspectRatio(3/4,contentMode:.fit)
+    }
+    private var lensControls:some View {
+        ScrollView(.horizontal,showsIndicators:false) {
+            HStack(spacing:8) {
+                ForEach(camera.routes) {r in
+                    Button {camera.select(r.id)} label:{
+                        Text(r.name).font(.caption2.weight(.semibold)).padding(.horizontal,12).padding(.vertical,10)
+                            .background(camera.selectedID==r.id ? FilmTheme.accent : Color.black.opacity(0.5),in:Capsule())
+                            .foregroundStyle(camera.selectedID==r.id ? Color.black : Color.white)
+                    }.disabled(store.processing || camera.busy)
+                }
+                if !store.preferences.format.writesRaw {
+                    Button {store.preferences.crop=store.preferences.crop==1 ? 2 : 1} label:{
+                        Text("2× crop").font(.caption2.bold()).padding(.horizontal,12).padding(.vertical,10)
+                            .background(store.preferences.crop>1 ? FilmTheme.accent : Color.black.opacity(0.5),in:Capsule())
+                            .foregroundStyle(store.preferences.crop>1 ? Color.black : Color.white)
+                    }
+                }
+            }.padding(.horizontal,12)
+        }
     }
     private var manualPanel:some View {
         VStack(spacing:7) {

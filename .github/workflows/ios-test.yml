@@ -31,8 +31,10 @@ jobs:
           xcodebuild -version
           xcodebuild -showsdks
           swift --version
-      - name: Compile shared core before starting any simulator
-        run: swift build --package-path ios/Packages/FilmLabCore
+      - name: Parse native sources and compile shared core before starting any simulator
+        run: |
+          xcrun swiftc -frontend -parse ios/MobileFilmLab/*.swift ios/MobileFilmLabTests/*.swift ios/MobileFilmLabUITests/*.swift
+          swift build --package-path ios/Packages/FilmLabCore
       - name: Test shared Swift core
         id: core
         continue-on-error: true

@@ -3,10 +3,38 @@ import SwiftUI
 struct LibraryView:View {
     @EnvironmentObject var store:FilmLabStore
     @Environment(\.dismiss) var dismiss
-    var body:some View {NavigationStack {
-        Group {if store.captures.isEmpty {ContentUnavailableView("Your photographs",systemImage:"photo.on.rectangle",description:Text("Photos and unmodified DNGs are saved here before any Apple Photos import. No demo captures are included."))} else {ScrollView {LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:12) {ForEach(store.captures) {capture in NavigationLink {CaptureDetail(capture:capture)} label:{VStack(alignment:.leading,spacing:6) {ZStack {Rectangle().fill(FilmTheme.panel);if let image=store.image(capture) {Image(uiImage:image).resizable().scaledToFill()} else {Image(systemName:"camera.badge.ellipsis").font(.largeTitle)}}.aspectRatio(1,contentMode:.fit).clipped().clipShape(RoundedRectangle(cornerRadius:12));Text(capture.title).font(.caption).lineLimit(1);Text(capture.raw != nil ? (capture.jpeg != nil ? "DNG + JPEG" : "DNG") : "JPEG").font(.caption2).foregroundStyle(.secondary)}}}.padding()}}}
-            .navigationTitle("App photo library").navigationBarTitleDisplayMode(.inline).toolbar {Button("Done") {dismiss()}}
-    }.tint(FilmTheme.accent)}
+    var body:some View {
+        NavigationStack {
+            Group {
+                if store.captures.isEmpty {
+                    ContentUnavailableView("Your photographs",systemImage:"photo.on.rectangle",description:Text("Photos and unmodified DNGs are saved here before any Apple Photos import. No demo captures are included."))
+                } else {
+                    ScrollView {
+                        LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:12) {
+                            ForEach(store.captures) {capture in
+                                NavigationLink {CaptureDetail(capture:capture)} label:{LibraryTile(capture:capture)}
+                            }
+                        }.padding()
+                    }
+                }
+            }.navigationTitle("App photo library").navigationBarTitleDisplayMode(.inline).toolbar {Button("Done") {dismiss()}}
+        }.tint(FilmTheme.accent)
+    }
+}
+struct LibraryTile:View {
+    @EnvironmentObject var store:FilmLabStore
+    var capture:SavedCapture
+    var body:some View {
+        VStack(alignment:.leading,spacing:6) {
+            ZStack {
+                Rectangle().fill(FilmTheme.panel)
+                if let image=store.image(capture) {Image(uiImage:image).resizable().scaledToFill()}
+                else {Image(systemName:"camera.badge.ellipsis").font(.largeTitle)}
+            }.aspectRatio(1,contentMode:.fit).clipped().clipShape(RoundedRectangle(cornerRadius:12))
+            Text(capture.title).font(.caption).lineLimit(1)
+            Text(capture.raw != nil ? (capture.jpeg != nil ? "DNG + JPEG" : "DNG") : "JPEG").font(.caption2).foregroundStyle(.secondary)
+        }
+    }
 }
 struct CaptureDetail:View {
     @EnvironmentObject var store:FilmLabStore

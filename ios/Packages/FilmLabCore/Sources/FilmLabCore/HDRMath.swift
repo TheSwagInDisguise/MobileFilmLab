@@ -57,7 +57,7 @@ public enum TileAlign {
             return sum/Float(max(1,count))
         }
         var gx=0,gy=0;var best=globalCost(0,0)
-        for y in stride(from:-16,through:16,by:2) {for x in stride(from:-16,through:16,by:2) {let error=globalCost(x,y)+Float(abs(x)+abs(y))*0.00001;if error<best {best=error;gx=x;gy=y}}}
+        for y in -16...16 {for x in -16...16 {let error=globalCost(x,y)+Float(abs(x)+abs(y))*0.00001;if error<best {best=error;gx=x;gy=y}}}
         var field=AlignmentField(width:width,height:height,confidence:0)
         guard best<0.8 else {field.fraction=0;return field}
         func score(_ cx:Int,_ cy:Int,_ dx:Int,_ dy:Int)->Float {
