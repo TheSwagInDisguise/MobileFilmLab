@@ -31,9 +31,6 @@ targets:
     platform: iOS
     sources:
       - path: MobileFilmLab
-        excludes: [Resources]
-    resources:
-      - path: MobileFilmLab/Resources
     dependencies:
       - package: FilmLabCore
     info:

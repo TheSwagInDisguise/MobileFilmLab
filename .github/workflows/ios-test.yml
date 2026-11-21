@@ -32,7 +32,12 @@ jobs:
           xcodebuild -showsdks
           swift --version
       - name: Test shared Swift core
-        run: swift test --package-path ios/Packages/FilmLabCore --parallel
+        id: core
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          mkdir -p ios/artifacts
+          swift test --package-path ios/Packages/FilmLabCore --parallel 2>&1 | tee ios/artifacts/swift-core-tests.log
       - name: Generate native project
         env:
           HOMEBREW_NO_AUTO_UPDATE: '1'
@@ -43,6 +48,9 @@ jobs:
         env:
           MFL_SOURCE_SHA: ${{ github.sha }}
         run: bash ios/scripts/build.sh
+      - name: Require shared tests to pass
+        if: steps.core.outcome != 'success'
+        run: exit 1
       - name: Upload IPA for owner-side signing only
         uses: actions/upload-artifact@v4
         with:
