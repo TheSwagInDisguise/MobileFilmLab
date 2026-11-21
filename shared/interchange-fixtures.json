@@ -1,0 +1,33 @@
+{
+  "producer": "Java 11 DeflaterOutputStream / Base64 URL protocol used by Android RecipeQrCodec; decoded by both native apps",
+  "document": {
+    "type": "mobilefilmlab.recipe",
+    "version": 1,
+    "recipes": [
+      {
+        "style": 1,
+        "sat": 0,
+        "con": 0,
+        "sharp": 0,
+        "wbMode": 1,
+        "kelvin": 0,
+        "ab": 0,
+        "gm": 0,
+        "pe": 0,
+        "ev": 0,
+        "dro": 6,
+        "sub": 0,
+        "puckTone": 0.0,
+        "puckColor": 0.0,
+        "isFavourite": false,
+        "isCustom": false,
+        "version": 1,
+        "notes": "",
+        "id": "sony_factory_st",
+        "name": "FACTORY (ST)",
+        "group": "SONY"
+      }
+    ]
+  },
+  "androidDeflaterQR": "FILMRECIPE:1:eJxlkUFrAjEQhe_-ipCTBRG9eOitLHhrBd2LlCLZ3awNm2SWTLKyiP-92ZE2xl4GvvdmHpPJdcYY92Mv-SvjBiqlZau00aJaOlmrqC-mjkE6VGBj05r47mHkz4iMXalGA_2o5W_bXRE-8uqPa4pJjN_C9Zlyqd6hyUM6qQeVz4kqw7PJkB6UUA4ZNg4ib9IOIQ_rQ92VYCljmcsFaHBPusKtGCA45aeJVmiUD14R0IP5ZzydlDQLno7KeZpvJkaw46kVtQc3ntAn2wpDX7d9K8rd_sjmh_IluWcHYbotP-w-jpzUW6xfs9sPkNp2EQ"
+}

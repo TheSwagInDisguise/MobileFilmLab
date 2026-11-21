@@ -1,0 +1,38 @@
+import Foundation
+import AVFoundation
+import CoreImage
+import FilmLabCore
+
+struct CameraRoute: Identifiable,Equatable {
+    var id:String;var name:String;var detail:String;var virtual:Bool
+}
+struct CameraCapabilities {
+    var cameraID="",name="No camera",bayer:UInt32?,proRAW:UInt32?
+    var minISO:Float=25,maxISO:Float=3200,minTime:Double=0.0001,maxTime:Double=1
+    var minEV:Float = -3,maxEV:Float=3,maxWB:Float=4
+    var customExposure=false,manualWB=false,focus=false,manualFocus=false,flash=false,torch=false,responsive=false
+    var dimensions:[CMVideoDimensions]=[]
+    func supports(_ f:CaptureFormat)->Bool {f == .jpeg || (f.usesProRAW ? proRAW != nil : bayer != nil)}
+}
+struct ManualControls:Equatable {
+    var iso:Float?,seconds:Double?,kelvin:Float?
+    var ev:Float=0
+    var focusPosition:Float=0.5
+    var focus="AF-C"
+    var isManual:Bool {iso != nil || seconds != nil}
+}
+enum FlashChoice:String,CaseIterable,Identifiable {case off,auto,on,torch;var id:String {rawValue};var next:FlashChoice {Self.allCases[(Self.allCases.firstIndex(of:self)!+1)%4]}}
+struct PhotoFrame {
+    var jpeg:Data?,raw:Data?,metadata:[String:Any],iso:Double?,seconds:Double?,focal:Double?,timestamp:Date,requestID:Int64
+    var exposure:Double? {guard let i=iso,let t=seconds,i>0,t>0 else {return nil};return i*t}
+}
+struct PhotoBurst {
+    var frames:[PhotoFrame]
+    var shorts:[Int]=[],longs:[Int]=[]
+    var pipeline:CapturePipeline
+    var note:String="",fallback:String?
+}
+struct SavedCapture:Codable,Identifiable {
+    var id:String;var date:Date;var title:String;var jpeg:String?;var raw:String?;var note:String;var width:Int;var height:Int
+}
+struct ExportDocument:Identifiable {var id=UUID();var urls:[URL]}

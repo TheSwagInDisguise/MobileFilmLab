@@ -64,3 +64,32 @@ jobs:
             ios/artifacts/*.xcresult
             ios/artifacts/screenshots/
             ios/artifacts/qa-summary.json
+
+  android-contract:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '17'
+          distribution: temurin
+          cache: gradle
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: 'platform-tools platforms;android-34 build-tools;34.0.0'
+          log-accepted-android-sdk-licenses: false
+      - name: Existing Android regressions plus shared iOS contract
+        run: |
+          python3 scripts/check_ios.py
+          ./gradlew testDebugUnitTest lintDebug --no-daemon --stacktrace
+      - name: Upload Android test reports, never another signed APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-android-regression-${{ github.run_id }}
+          retention-days: 7
+          path: |
+            app/build/test-results/
+            app/build/reports/tests/
+            app/build/reports/lint-results-*

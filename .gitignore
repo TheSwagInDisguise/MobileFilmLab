@@ -29,3 +29,15 @@ __pycache__/
 .cache/
 .venv/
 .kotlin/
+
+# Native iOS generated output / signing stays external
+*.ipa
+*.xcarchive/
+*.p12
+*.mobileprovision
+ios/DerivedData/
+ios/*.xcodeproj/
+**/.build/
+**/.swiftpm/
+ios/artifacts/
+ios/Generated/

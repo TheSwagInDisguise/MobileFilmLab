@@ -24,6 +24,12 @@ A Fold5 user reports working capture but poor image quality. Beta.4 adds capabil
 
 **Try it:** Settings → **Balanced detail + noise**, **Device-balanced native capture**, **Native pixels**. Start with the Natural look, 1× and Camera2 natural. **Camera original stays the default**, and DNG is never app-filtered.
 
+## Native iOS companion — unpublished development
+
+An advanced-feature native iOS companion is being built alongside Android, targeting **iPhone 18 Pro Max / public iOS 27**. The separate implementation includes the complete catalogue, recipe sharing, manual capture, capability-gated RAW / computational RAW and experimental JPEG HDR. Platform-specific limitations and handset tests remain explicit; identical image quality is not promised. [iOS source, scope and build instructions](ios/README.md) · [Signing / installation and phone-test checklist](ios/TESTING.md).
+
+The intended private test delivery is an unsigned, unencrypted IPA for the owner to re-sign. This is **not a public iOS release or a completed handset-validation claim**. The Android beta.4 download above remains the public release; the separate unpublished Android HDR candidate is not promoted by this work. Oppo Find X9 Ultra remains the primary Android target, with tester-led expansion unchanged.
+
 ## Natural capture. No app-added AI.
 
 MobileFilmLab adds **no generative image model, neural/ML photo enhancement or cloud photo processing**. It starts with the hardware’s exposed Camera2 JPEG; the default unedited 1× Natural path preserves its pixel data. Creative colour, ISO-aware noise filtering, adaptive tone, sharpening, grain and fusion use optional, conventional algorithms.
