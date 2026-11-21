@@ -79,6 +79,7 @@ final class PhotoProcessor {
         exif[kCGImagePropertyExifUserComment as String]="MobileFilmLab | \(recipe.displayName) | \(note) | Synthetic recipe approximations; no app-added AI"
         metadata[kCGImagePropertyExifDictionary as String]=exif
         var tiff=metadata[kCGImagePropertyTIFFDictionary as String] as? [String:Any] ?? [:]
+        tiff[kCGImagePropertyTIFFOrientation as String]=1
         tiff[kCGImagePropertyTIFFSoftware as String]="MobileFilmLab iOS · unpublished personal test"
         metadata[kCGImagePropertyTIFFDictionary as String]=tiff
         metadata[kCGImageDestinationLossyCompressionQuality as String]=0.98

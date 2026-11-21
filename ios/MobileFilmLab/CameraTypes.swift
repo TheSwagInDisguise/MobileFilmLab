@@ -23,8 +23,18 @@ struct ManualControls:Equatable {
 }
 enum FlashChoice:String,CaseIterable,Identifiable {case off,auto,on,torch;var id:String {rawValue};var next:FlashChoice {Self.allCases[(Self.allCases.firstIndex(of:self)!+1)%4]}}
 struct PhotoFrame {
-    var jpeg:Data?,raw:Data?,metadata:[String:Any],iso:Double?,seconds:Double?,focal:Double?,timestamp:Date,requestID:Int64
-    var warning:String?=nil
+    var jpeg:Data?
+    var raw:Data?
+    var metadata:[String:Any]
+    var iso:Double?
+    var seconds:Double?
+    var focal:Double?
+    var timestamp:Date
+    var requestID:Int64
+    var warning:String?
+    init(jpeg:Data?,raw:Data?,metadata:[String:Any],iso:Double?,seconds:Double?,focal:Double?,timestamp:Date,requestID:Int64,warning:String?=nil) {
+        self.jpeg=jpeg;self.raw=raw;self.metadata=metadata;self.iso=iso;self.seconds=seconds;self.focal=focal;self.timestamp=timestamp;self.requestID=requestID;self.warning=warning
+    }
     var exposure:Double? {guard let i=iso,let t=seconds,i>0,t>0 else {return nil};return i*t}
 }
 struct PhotoBurst {
