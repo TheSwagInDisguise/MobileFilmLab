@@ -219,6 +219,13 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         pending[id]=receiver;output.capturePhoto(with:settings,delegate:receiver)
     }
     private func received(_ frame:PhotoFrame,_ t:BurstTransaction,planned:Exposure?) {
+        if t.frames.isEmpty {
+            if frame.jpeg==nil && frame.raw==nil {finish(error:FilmError.invalid("Camera returned no image resources"));return}
+            if let warning=frame.warning {t.frames.append(frame);t.fallback=warning;finish();return}
+            if (t.preferences.format.writesRaw && frame.raw==nil) || (t.preferences.format.writesJPEG && frame.jpeg==nil) {
+                t.frames.append(frame);t.fallback="Requested format was incomplete; available originals retained";finish();return
+            }
+        }
         if let planned,let base=t.frames.first {
             guard let e=frame.exposure,abs(e/planned.product-1)<0.4,frame.requestID != base.requestID,frame.jpeg != base.jpeg,frame.focal==nil || base.focal==nil || abs(frame.focal!-base.focal!)<0.2 else {t.fallback="HDR request/metadata guard rejected a helper";finish();return}
             let limit=96*1024*1024
@@ -252,7 +259,9 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         if let error,t.frames.isEmpty {t.continuation.resume(throwing:error);return}
         guard !t.frames.isEmpty else {t.continuation.resume(throwing:error ?? FilmError.invalid("No image delivered"));return}
         let fallback=error?.localizedDescription ?? t.fallback
-        t.continuation.resume(returning:PhotoBurst(frames:t.frames,shorts:t.shorts,longs:t.longs,pipeline:t.preferences.pipeline,note:t.preferences.format.writesRaw ? (t.preferences.format.usesProRAW ? "Computational Apple ProRAW; unmodified DNG" : "Single-exposure Bayer RAW; unmodified DNG") : "AVFoundation quality photo",fallback:fallback))
+        var note=t.preferences.format.writesRaw ? (t.preferences.format.usesProRAW ? "Computational Apple ProRAW; unmodified DNG" : "Single-exposure Bayer RAW; unmodified DNG") : "AVFoundation quality photo"
+        if let fallback,t.preferences.pipeline == .original {note+="; WARNING: \(fallback)"}
+        t.continuation.resume(returning:PhotoBurst(frames:t.frames,shorts:t.shorts,longs:t.longs,pipeline:t.preferences.pipeline,note:note,fallback:fallback))
     }
     func captureOutput(_ output:AVCaptureOutput,didOutput sampleBuffer:CMSampleBuffer,from connection:AVCaptureConnection) {
         let now=ProcessInfo.processInfo.systemUptime;guard now-lastPreview>1/12 else {return};lastPreview=now
@@ -303,11 +312,12 @@ private final class PhotoReceiver:NSObject,AVCapturePhotoCaptureDelegate {
         if photo.isRawPhoto {raw=data;if metadata.isEmpty {metadata=photo.metadata}} else {jpeg=data;metadata=photo.metadata}
     }
     func photoOutput(_ output:AVCapturePhotoOutput,didFinishCaptureFor resolvedSettings:AVCaptureResolvedPhotoSettings,error:Error?) {
-        if let error=error ?? self.error {completion(.failure(error));return}
+        let failure=error ?? self.error
+        if let failure,jpeg==nil && raw==nil {completion(.failure(failure));return}
         let exif=metadata[kCGImagePropertyExifDictionary as String] as? [String:Any] ?? [:]
         let iso=(exif[kCGImagePropertyExifISOSpeedRatings as String] as? [NSNumber])?.first?.doubleValue
         let time=(exif[kCGImagePropertyExifExposureTime as String] as? NSNumber)?.doubleValue
         let focal=(exif[kCGImagePropertyExifFocalLength as String] as? NSNumber)?.doubleValue
-        completion(.success(PhotoFrame(jpeg:jpeg,raw:raw,metadata:metadata,iso:iso,seconds:time,focal:focal,timestamp:date,requestID:id)))
+        completion(.success(PhotoFrame(jpeg:jpeg,raw:raw,metadata:metadata,iso:iso,seconds:time,focal:focal,timestamp:date,requestID:id,warning:failure?.localizedDescription)))
     }
 }
