@@ -1,0 +1,66 @@
+name: Build Unpublished iOS IPA
+on:
+  workflow_dispatch:
+    inputs:
+      expected_source_sha:
+        description: Exact candidate commit to compile; unsigned IPA only, no release or tag
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: ios-personal-test-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  ios:
+    runs-on: macos-26
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+      - name: Exact source and unchanged Android public version
+        env:
+          EXPECTED_SOURCE_SHA: ${{ inputs.expected_source_sha }}
+        run: |
+          test "$GITHUB_SHA" = "$EXPECTED_SOURCE_SHA"
+          test "$(git rev-parse HEAD)" = "$EXPECTED_SOURCE_SHA"
+          python3 scripts/check_ios.py
+          python3 scripts/export_catalogue.py --check
+          python3 scripts/check_docs.py
+          python3 -m unittest discover -s scripts -p 'test_*.py'
+      - name: Record Apple toolchain
+        run: |
+          xcodebuild -version
+          xcodebuild -showsdks
+          swift --version
+      - name: Test shared Swift core
+        run: swift test --package-path ios/Packages/FilmLabCore --parallel
+      - name: Generate native project
+        env:
+          HOMEBREW_NO_AUTO_UPDATE: '1'
+        run: |
+          command -v xcodegen >/dev/null || brew install xcodegen
+          cd ios && xcodegen generate
+      - name: Build, run simulator tests and package unsigned device IPA
+        env:
+          MFL_SOURCE_SHA: ${{ github.sha }}
+        run: bash ios/scripts/build.sh
+      - name: Upload IPA for owner-side signing only
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-personal-test-${{ github.run_id }}
+          retention-days: 14
+          path: |
+            ios/artifacts/MobileFilmLab-iOS-test-unsigned.ipa
+            ios/artifacts/checksums.txt
+            ios/artifacts/BUILD-INFO.json
+            ios/artifacts/TESTING-iOS.md
+      - name: Upload software QA evidence (not handset validation)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-test-qa-${{ github.run_id }}
+          retention-days: 7
+          path: |
+            ios/artifacts/*.log
+            ios/artifacts/*.xcresult
+            ios/artifacts/screenshots/
+            ios/artifacts/qa-summary.json
