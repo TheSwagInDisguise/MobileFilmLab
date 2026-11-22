@@ -1,12 +1,22 @@
-# MobileFilmLab — native iOS companion (beta 2 · cleaner camera UI)
+# MobileFilmLab — native iOS companion (beta 3 · native preview pipeline)
 
 Native SwiftUI + AVFoundation + Core Image, alongside the existing native Android app. Target handset: **iPhone 18 Pro Max, public iOS 27**. Deployment floor is iOS 18 because the implementation uses established public APIs; that is not a tested-device list. Photos only. No app-added AI models, generative enhancement, cloud processing, analytics or video/audio recording.
 
-**Development focus:** iOS is now the active platform; the Android app is retained unchanged. The owner has authorised iOS test builds in GitHub Releases. [iOS beta 2 release](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.1.0-ios.beta.2).
+**Development focus:** iOS is now the active platform; the Android app is retained unchanged. The owner has authorised iOS test builds in GitHub Releases. [iOS beta 3 release](https://github.com/TheSwagInDisguise/MobileFilmLab/releases/tag/v0.1.0-ios.beta.3).
 
 **Distribution:** publish the verified, unencrypted, unsigned device IPA in GitHub Releases, then let the owner re-sign/install it with Signulous. Signulous signs compiled IPAs; it does not build this source. No Apple ID, service password, developer certificate or provisioning profile belongs in this repository. No App Store / TestFlight publication is attempted. Signing-service acceptance and installation must be checked by the owner.
 
-## Cleaner camera controls in beta 2
+## Viewfinder performance fix in beta 3
+
+Beta 2's preview had an explicit **12 FPS maximum** and converted each displayed camera frame into a `CGImage` / `UIImage` published through the entire SwiftUI camera screen. That is a code-level bottleneck, not a measured benchmark of the owner's phone.
+
+Beta 3 removes that limiter and uses a **Metal-backed native viewfinder** with cached colour coefficients, one pending newest frame and at most two GPU renders in flight. Stale frames are replaced rather than queued. Camera output requests a preview-sized YUV proxy where supported; the native drawable is bounded to a 1440-pixel longest edge. **Only the viewfinder is bounded: the photo preset, requested still dimensions, RAW bytes, processing algorithms and HDR/save transaction remain unchanged.**
+
+Histogram/HDR statistics and recipe thumbnails use coalesced background work. Thumbnails are generated only while the look drawer is open; tile colour rendering no longer runs on main. Slow PRO telemetry is separate from frame delivery. A native Core Image fallback remains for environments without Metal. The surface pauses GPU drawing when detached or inactive.
+
+The display requests a 60 Hz drawing cadence, **not a guaranteed 60 FPS camera feed**. Sensor exposure, public camera APIs, low light, manual long shutters, still capture and thermal conditions can lower actual input. There is no before/after handset FPS measurement yet. [Performance design, software tests and phone checks](PERFORMANCE.md).
+
+## Cleaner camera controls introduced in beta 2
 
 - **One compact toolbar:** AUTO/PRO, photo format, supported flash, timer and Settings. The redundant title/banner and always-visible technical text are gone.
 - **A physical rear lens row:** Main is 1×; other numeric ratios come from validated AVFoundation constituent/crossover metadata relative to Main. If that mapping is unavailable, **Ultra / Tele** are used instead of guessed numbers. No hard-coded telephoto power or fixed slot count.
@@ -64,6 +74,8 @@ The workflow checks an exact source SHA, runs shared Swift tests, native simulat
 [Install, backup and handset test checklist](TESTING.md) · [Shared schema and vectors](../shared/README.md) · [Licence](../LICENSE) · [Attribution](../UPSTREAM_ATTRIBUTION.md)
 
 ## Test evidence and disclosure
+
+A separate, explicitly labelled **synthetic four-colour preview pattern** exercises the native render surface, orientation and displayed colours in Debug + Simulator only. It does not exercise a sensor, measure handset FPS or enable photo capture, and is independently excluded from the device IPA.
 
 The source, tests, UI and documentation were developed with AI assistance. Tests use **synthetic pixels**; simulator screenshots depict native app UI with **no handset camera feed** (some use visibly labelled sample lens metadata), not iPhone photographs or camera-quality evidence. Build results are recorded beside a delivered IPA, not predeclared here. A successful build/test/package inspection is not proof that a third-party service can sign it or that RAW/HDR/Photos work on the user's phone.
 

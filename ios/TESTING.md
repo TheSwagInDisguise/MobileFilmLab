@@ -1,6 +1,6 @@
-# Install and test MobileFilmLab iOS — beta 2 · cleaner camera UI
+# Install and test MobileFilmLab iOS — beta 3 · native preview performance
 
-**Target:** iPhone 18 Pro Max, public iOS 27. **App:** MobileFilmLab, `com.mobilefilmlab.camera`, 0.1.0 (3). This is an experimental iOS release, not an App Store release or a certified camera-quality upgrade.
+**Target:** iPhone 18 Pro Max, public iOS 27. **App:** MobileFilmLab, `com.mobilefilmlab.camera`, 0.1.0 (4). This is an experimental iOS release, not an App Store release or a certified camera-quality upgrade.
 
 ## 1. Before installing
 
@@ -25,6 +25,14 @@ Official service information: [Signulous](https://www.signulous.com/). The assis
 - Start on the physical **Main (1×)** lens, **JPEG**, **Original**, **iPhone Natural (AVFoundation)**, no crop, no grain, Balanced off, enlargement off. Take a daylight still scene.
 - Confirm the app library shows a new capture; Share it to Files and open it independently. With optional Photos saving enabled, check the Photos copy. Deny Photos once and verify the app copy remains shareable.
 - Record Settings → Advanced → Camera routing → All camera routes & diagnostics: routes, formats, exposure bounds and dimensions. A listed capability is not proof of request honouring.
+
+## Viewfinder performance check
+
+- First try **Main 1× / JPEG / Original / iPhone Natural**, in good daylight with a normal automatic shutter. Pan slowly across a textured static scene before taking a photo. The app no longer applies the old 12 FPS limiter or publishes frame bitmaps through SwiftUI.
+- Try another look, the front camera, then open/close the look library and Tone/Colour pad. Check that the preview stays current rather than playing back old frames. Live looks and JPEG crop must still match the chosen framing.
+- Settings → Advanced → Camera routing → All camera routes & diagnostics → **Live preview** shows the backend, approximate one-second input/completed-render counts, proxy/drawable sizes, one pending slot and replaced-frame/error counters. These are diagnostic counters, not a laboratory FPS/latency benchmark. Do not interpret replaced stale frames as lost still photographs.
+- Record the lens, look, JPEG/RAW format, light level, manual shutter (if any), pipeline and the displayed counters if it still stutters. Do not send private photos unless you choose to. No diagnostics are uploaded by the app.
+- Separately check a saved JPEG/DNG and its dimensions. Preview sizing must not reduce the still output. Very low light, a deliberately long manual shutter and active still/HDR capture can legitimately reduce or interrupt the sensor feed. This release does not claim to eliminate those platform limits or promise 60 FPS.
 
 ## 4. Capability and workflow checks
 

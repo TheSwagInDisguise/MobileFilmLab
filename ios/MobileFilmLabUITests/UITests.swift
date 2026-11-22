@@ -1,4 +1,5 @@
 import XCTest
+import UIKit
 
 final class UITests: XCTestCase {
     @MainActor func testNativeScreensAndCompleteCatalogueAreAccessible() throws {
@@ -108,6 +109,38 @@ final class UITests: XCTestCase {
         XCTAssertEqual(app.buttons["captureFormat"].value as? String, "JPEG", "Unavailable RAW must not stay selected on the front route")
         XCTAssertTrue(app.buttons["jpegCrop"].waitForExistence(timeout: 5))
         XCTAssertEqual(app.buttons["jpegCrop"].value as? String, "Full frame")
+    }
+
+    @MainActor func testNativePreviewSurfaceRendersUprightSyntheticPattern() throws {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-lens-fixture", "--ui-preview-pattern"]; app.launch()
+        defer { app.terminate() }
+        XCTAssertTrue(app.buttons["lens-fixture-main"].waitForExistence(timeout: 10))
+        selectJPEG(app)
+        app.buttons["jpegCrop"].tap(); app.buttons["1× · full frame"].tap()
+        let surface = app.otherElements["cameraPreviewSurface"]
+        XCTAssertTrue(surface.waitForExistence(timeout: 10))
+        expectation(for: NSPredicate(format: "value CONTAINS %@", "frame rendered"), evaluatedWith: surface)
+        waitForExpectations(timeout: 20)
+        XCTAssertFalse(app.buttons["shutter"].isEnabled, "The synthetic renderer test must not enable photo capture")
+        XCTAssertTrue(app.staticTexts["SIMULATOR · SYNTHETIC PREVIEW TEST"].exists)
+        let shot = app.screenshot(), frame = surface.frame
+        for (x, y, expected) in [(0.25, 0.25, [255, 0, 0]), (0.75, 0.25, [0, 255, 0]), (0.25, 0.75, [0, 0, 255]), (0.75, 0.75, [255, 255, 255])] {
+            let point = CGPoint(x: frame.minX + frame.width * CGFloat(x), y: frame.minY + frame.height * CGFloat(y))
+            let pixel = try pixelRGB(in: shot, point: point, screen: app.frame)
+            for channel in 0..<3 { XCTAssertLessThanOrEqual(abs(pixel[channel] - expected[channel]), 20, "Preview orientation/colour at \(x),\(y)") }
+        }
+        print("MFL_PREVIEW_UI_BACKEND=\(surface.value as? String ?? "unknown")")
+        screenshot("SIMULATOR-synthetic-native-preview")
+    }
+    @MainActor private func pixelRGB(in screenshot: XCUIScreenshot, point: CGPoint, screen: CGRect) throws -> [Int] {
+        let image = try XCTUnwrap(screenshot.image.cgImage)
+        let x = floor((point.x - screen.minX) * CGFloat(image.width) / screen.width)
+        let y = floor((point.y - screen.minY) * CGFloat(image.height) / screen.height)
+        let cropped = try XCTUnwrap(image.cropping(to: CGRect(x: x, y: y, width: 1, height: 1)))
+        var bytes = [UInt8](repeating: 0, count: 4)
+        let context = try XCTUnwrap(CGContext(data: &bytes, width: 1, height: 1, bitsPerComponent: 8, bytesPerRow: 4, space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.draw(cropped, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+        return bytes.prefix(3).map(Int.init)
     }
 
     @MainActor private func fixtureApp() -> XCUIApplication {

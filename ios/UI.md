@@ -1,5 +1,7 @@
 # iOS beta 2 — simpler camera interface
 
+This layout was introduced in beta 2 and is retained in beta 3. [Beta 3 preview performance changes](PERFORMANCE.md).
+
 This refresh addresses a crowded camera screen and confusing device names. It changes presentation, not the sensor pipeline or the meaning of RAW.
 
 ## On the camera screen

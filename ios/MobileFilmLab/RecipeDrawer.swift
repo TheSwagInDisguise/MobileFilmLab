@@ -25,7 +25,7 @@ struct RecipeDrawer:View {
                 HStack {Label("Live colour previews",systemImage:"camera.aperture").font(.caption).foregroundStyle(.secondary);Spacer();Button {onlyFavourite.toggle()} label:{Image(systemName:onlyFavourite ? "star.fill" : "star")}.accessibilityLabel("Show favourites")}.padding(.horizontal)
                 ScrollView {LazyVGrid(columns:[GridItem(.flexible()),GridItem(.flexible())],spacing:14) {ForEach(filtered) {r in
                     VStack(alignment:.leading,spacing:7) {
-                        Button {store.select(r);dismiss()} label:{LookTile(recipe:r).environmentObject(camera).overlay(alignment:.bottomLeading) {Text(r.displayName).font(.caption.weight(.semibold)).lineLimit(2).foregroundStyle(.white).padding(8).frame(maxWidth:.infinity,alignment:.leading).background(LinearGradient(colors:[.clear,.black.opacity(0.85)],startPoint:.top,endPoint:.bottom))}.clipShape(RoundedRectangle(cornerRadius:13)).overlay {RoundedRectangle(cornerRadius:13).stroke(store.selected.id==r.id ? FilmTheme.accent : .clear,lineWidth:2)}}
+                        Button {store.select(r);dismiss()} label:{LookTile(source: camera.lookPreviews, recipe: r).overlay(alignment:.bottomLeading) {Text(r.displayName).font(.caption.weight(.semibold)).lineLimit(2).foregroundStyle(.white).padding(8).frame(maxWidth:.infinity,alignment:.leading).background(LinearGradient(colors:[.clear,.black.opacity(0.85)],startPoint:.top,endPoint:.bottom))}.clipShape(RoundedRectangle(cornerRadius:13)).overlay {RoundedRectangle(cornerRadius:13).stroke(store.selected.id==r.id ? FilmTheme.accent : .clear,lineWidth:2)}}
                         HStack {Text(r.summary).font(.system(size:9)).lineLimit(1).foregroundStyle(.secondary);Spacer();Button {store.toggleFavourite(r)} label:{Image(systemName:store.favourites.contains(r.id) ? "star.fill" : "star").font(.caption).foregroundStyle(FilmTheme.accent)}}
                     }.contextMenu {Button("Use recipe") {store.select(r);dismiss()};Button("Export recipe") {store.exportRecipes([r])};Button("Show QR code") {qr=r};Button("Edit a copy") {store.selected=r;editing=true};if r.isCustom {Button("Delete custom recipe",role:.destructive) {store.deleteCustom(r)}}}
                 }}.padding()}
@@ -38,15 +38,25 @@ struct RecipeDrawer:View {
                 .sheet(isPresented:$showQRText) {NavigationStack {VStack {Text("Paste a FILMRECIPE:1: QR payload from MobileFilmLab.").font(.caption).foregroundStyle(.secondary);TextEditor(text:$qrText).font(.caption.monospaced());Button("Import QR recipe") {store.importQR(qrText.trimmingCharacters(in:.whitespacesAndNewlines));showQRText=false}.buttonStyle(.borderedProminent)}.padding().navigationTitle("Import QR text").toolbar {Button("Cancel") {showQRText=false}}}}
                 .onChange(of:photo) {_,item in Task {if let data=try? await item?.loadTransferable(type:Data.self) {store.scanQRImage(data)}}}
         }.tint(FilmTheme.accent)
+            .onAppear { camera.requestLookThumbnails(true) }
+            .onDisappear { camera.requestLookThumbnails(false) }
     }
     func chip(_ title:String,id:String)->some View {Button {group=id} label:{Text(title).font(.caption).padding(.horizontal,12).padding(.vertical,8).background(group==id ? FilmTheme.accent : Color.white.opacity(0.08),in:Capsule()).foregroundStyle(group==id ? .black : .white)}}
 }
-struct LookTile:View {
-    @EnvironmentObject var camera:CameraController
-    var recipe:Recipe
-    @State private var image:UIImage?
-    private static let context=CIContext(options:[.workingColorSpace:NSNull(),.cacheIntermediates:false])
-    var body:some View {ZStack {Rectangle().fill(FilmTheme.panel);if let image {Image(uiImage:image).resizable().scaledToFill()} else {Image(systemName:"camera.aperture").font(.largeTitle).foregroundStyle(.white.opacity(0.25))}}.aspectRatio(1.05,contentMode:.fit).clipped().onReceive(camera.$lookSource) {source in guard let source,let cg=source.cgImage else {return};let input=CIImage(cgImage:cg),output=PhotoProcessor.matrix(input,recipe:recipe,preferences:CapturePreferences());if let rendered=Self.context.createCGImage(output,from:output.extent) {image=UIImage(cgImage:rendered)}}}
+struct LookTile: View {
+    @ObservedObject var source: LiveLookSource
+    var recipe: Recipe
+    @StateObject private var model = LookThumbnailModel()
+    var body: some View {
+        ZStack {
+            Rectangle().fill(FilmTheme.panel)
+            if let image = model.image { Image(uiImage: image).resizable().scaledToFill() }
+            else { Image(systemName: "camera.aperture").font(.largeTitle).foregroundStyle(.white.opacity(0.25)) }
+        }.aspectRatio(1.05, contentMode: .fit).clipped()
+            .onAppear { model.activate(); model.request(source.image, recipe: recipe) }
+            .onDisappear { model.deactivate() }
+            .onReceive(source.$image) { model.request($0, recipe: recipe) }
+    }
 }
 struct QRView:View {
     @EnvironmentObject var store:FilmLabStore

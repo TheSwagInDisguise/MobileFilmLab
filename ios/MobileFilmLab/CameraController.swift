@@ -11,8 +11,10 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
     @Published var routes:[CameraRoute]=[]
     @Published var selectedID=""
     @Published var capabilities=CameraCapabilities()
-    @Published var preview:UIImage?
-    @Published var lookSource:UIImage?
+    @Published var hasPreview = false
+    let previewFrames = LatestFrameMailbox<CameraPreviewFrame>()
+    let previewPerformance = PreviewPerformance()
+    let lookPreviews = LiveLookSource()
     @Published var histogram:[Double]=Array(repeating:0,count:32)
     @Published var status="Camera permission required"
     @Published var ready=false
@@ -22,17 +24,21 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
     @Published var roll:Double=0
     @Published var motionAvailable=false
     @Published var focusPoint:CGPoint?
-    var previewObserver:((CIImage)->Void)?
     private let session=AVCaptureSession(),output=AVCapturePhotoOutput(),video=AVCaptureVideoDataOutput()
     private let queue=DispatchQueue(label:"com.mobilefilmlab.camera.session",qos:.userInitiated)
     private let previewQueue=DispatchQueue(label:"com.mobilefilmlab.camera.preview",qos:.userInitiated)
-    private let previewContext=CIContext(options:[.workingColorSpace:NSNull(), .cacheIntermediates:false])
+    private let auxiliaryContext = CIContext(options: [.workingColorSpace: NSNull(), .cacheIntermediates: false, .priorityRequestLow: true])
+    private var analysisWorker: LatestOnlyWorker<PreviewAnalysisRequest>!
+    private var thumbnailWorker: LatestOnlyWorker<PreviewThumbnailRequest>!
     private let motion=CMMotionManager(),motionQueue=OperationQueue()
     private let lock=NSLock()
     private var previewDevice:AVCaptureDevice?
-    private var previewRecipe=Recipe(id:"stock_oppo_natural",name:"Natural",group:"OPPO"),previewPrefs=CapturePreferences()
+    private var previewGrade = PreviewColourTransform()
+    private var previewPrefs = CapturePreferences()
+    private var thumbnailRequested = false, proTelemetryRequested = false
+    private var previewEpoch: UInt64 = 0
     private var showPreviewOriginal=false
-    private var scene:SceneStats?,lastLuma:[UInt8]?,rotation:Double?
+    private var scene:SceneStats?,rotation:Double?
     private var devices:[String:AVCaptureDevice]=[:],input:AVCaptureDeviceInput?
     private var namedRoutes: [String: CameraRoute] = [:]
     private var defaultRearID: String?
@@ -57,19 +63,38 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
     private var controls=ManualControls(),flash:FlashChoice = .off
     private var transaction:BurstTransaction?
     private var pending:[Int64:PhotoReceiver]=[:]
-    private var lastPreview=0.0,frames=0
+    // These cadence/announcement values belong to previewQueue, never the main or session queue.
+    private var lastAnalysis = -Double.infinity, lastThumbnail = -Double.infinity, lastTelemetry = -Double.infinity
+    private var announcedPreview = false
     private var tokens:[NSObjectProtocol]=[]
     private var configured=false,foreground=true
     override init() {
         super.init()
+        analysisWorker = LatestOnlyWorker<PreviewAnalysisRequest>(queue: DispatchQueue(label: "com.mobilefilmlab.preview.analysis", qos: .utility)) { [weak self] request in
+            autoreleasepool { self?.sampleScene(request.image, motion: request.motion, now: request.uptime, epoch: request.epoch, histogram: request.histogram) }
+        }
+        thumbnailWorker = LatestOnlyWorker<PreviewThumbnailRequest>(queue: DispatchQueue(label: "com.mobilefilmlab.preview.look-source", qos: .utility)) { [weak self] request in
+            guard let self, self.wantsThumbnail(epoch: request.epoch) else { return }
+            autoreleasepool {
+                let extent = request.image.extent, scale = min(1, 192 / max(extent.width, extent.height))
+                let small = request.image.transformed(by: CGAffineTransform(scaleX: scale, y: scale))
+                guard let cg = self.auxiliaryContext.createCGImage(small, from: small.extent, format: .RGBA8, colorSpace: PhotoProcessor.colourSpace) else { return }
+                self.publish { if self.wantsThumbnail(epoch: request.epoch) { self.lookPreviews.update(UIImage(cgImage: cg)) } }
+            }
+        }
         tokens.append(NotificationCenter.default.addObserver(forName:AVCaptureSession.runtimeErrorNotification,object:session,queue:nil) {[weak self] n in
             let error=n.userInfo?[AVCaptureSessionErrorKey] as? AVError
-            self?.queue.async {guard let self else {return};self.finish(error:FilmError.invalid(error?.localizedDescription ?? "Camera interrupted"));self.publish {self.ready=false;self.preview=nil;self.status="Camera error. Reopen the camera to reconnect."}}
+            self?.queue.async {guard let self else {return};self.finish(error:FilmError.invalid(error?.localizedDescription ?? "Camera interrupted"));self.resetPreview();self.publish {self.ready=false;self.status="Camera error. Reopen the camera to reconnect."}}
         })
-        tokens.append(NotificationCenter.default.addObserver(forName:AVCaptureSession.wasInterruptedNotification,object:session,queue:nil) {[weak self] _ in self?.queue.async {guard let self else {return};self.finish(error:FilmError.invalid("Capture interrupted; no incomplete image was saved"));self.publish {self.ready=false;self.status="Camera interrupted by iOS"}}})
+        tokens.append(NotificationCenter.default.addObserver(forName:AVCaptureSession.wasInterruptedNotification,object:session,queue:nil) {[weak self] _ in self?.queue.async {guard let self else {return};self.finish(error:FilmError.invalid("Capture interrupted; no incomplete image was saved"));self.resetPreview();self.publish {self.ready=false;self.status="Camera interrupted by iOS"}}})
         tokens.append(NotificationCenter.default.addObserver(forName:AVCaptureSession.interruptionEndedNotification,object:session,queue:nil) {[weak self] _ in self?.start()})
     }
-    deinit {tokens.forEach {NotificationCenter.default.removeObserver($0)};motion.stopDeviceMotionUpdates()}
+    deinit {
+        tokens.forEach { NotificationCenter.default.removeObserver($0) }; motion.stopDeviceMotionUpdates()
+        #if DEBUG && targetEnvironment(simulator)
+        previewPatternTimer?.cancel()
+        #endif
+    }
     private func publish(_ change:@escaping ()->Void) {DispatchQueue.main.async(execute:change)}
     func start() {
         #if DEBUG && targetEnvironment(simulator)
@@ -86,7 +111,7 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         if isShowingLensFixture { return }
         #endif
         queue.async {self.foreground=active
-            if active {self.startAuthorized()} else {self.finish(error:FilmError.invalid("Capture cancelled when app left the foreground"));if self.session.isRunning {self.session.stopRunning()};self.motion.stopDeviceMotionUpdates();self.publish {self.ready=false}}
+            if active {self.startAuthorized()} else {self.finish(error:FilmError.invalid("Capture cancelled when app left the foreground"));if self.session.isRunning {self.session.stopRunning()};self.motion.stopDeviceMotionUpdates();self.resetPreview();self.publish {self.ready=false}}
         }
     }
     private func startAuthorized() {
@@ -122,7 +147,9 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
                 session.automaticallyConfiguresCaptureDeviceForWideColor=false
                 guard session.canAddOutput(output),session.canAddOutput(video) else {session.commitConfiguration();throw FilmError.invalid("Photo output unavailable")}
                 session.addOutput(output);session.addOutput(video)
-                video.videoSettings=[kCVPixelBufferPixelFormatTypeKey as String:kCVPixelFormatType_32BGRA]
+                // This output is a display proxy, not the saved photograph. Do not change the photo preset/dimensions.
+                video.automaticallyConfiguresOutputBufferDimensions = false
+                video.deliversPreviewSizedOutputBuffers = true
                 video.alwaysDiscardsLateVideoFrames=true;video.setSampleBufferDelegate(self,queue:previewQueue)
                 session.commitConfiguration();configured=true
                 try selectDevice(initial)
@@ -166,6 +193,11 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         let old=input;if let old {session.removeInput(old)}
         guard session.canAddInput(newInput) else {if let old,session.canAddInput(old) {session.addInput(old)};session.commitConfiguration();throw FilmError.invalid("This camera route is unavailable")}
         session.addInput(newInput);input=newInput
+        let supportedPixels = video.availableVideoPixelFormatTypes
+        let preferredPixels: [OSType] = [kCVPixelFormatType_420YpCbCr8BiPlanarFullRange, kCVPixelFormatType_420YpCbCr8BiPlanarVideoRange, kCVPixelFormatType_32BGRA]
+        if let pixel = preferredPixels.first(where: { supportedPixels.contains($0) }) {
+            video.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: pixel]
+        } else { video.videoSettings = [:] }
         output.maxPhotoQualityPrioritization = .quality
         if output.isAppleProRAWSupported {output.isAppleProRAWEnabled=true}
         if output.isZeroShutterLagSupported {output.isZeroShutterLagEnabled=false}
@@ -199,12 +231,34 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         if device.hasTorch {c.flashChoices.append(.torch)}
         c.responsive=output.isZeroShutterLagSupported || output.isResponsiveCaptureSupported
         c.dimensions=device.activeFormat.supportedMaxPhotoDimensions
-        lock.lock();previewDevice=device;scene=nil;lastLuma=nil;lock.unlock()
+        lock.lock();previewDevice=device;lock.unlock()
+        resetPreview()
         if device.position == .front { rememberedFrontID = device.uniqueID }
         else if device.position == .back { rememberedRearID = device.uniqueID }
         publish {self.selectedID=device.uniqueID;self.capabilities=c;self.status="Ready · \(c.name)"}
     }
-    func updateLook(_ r:Recipe,_ p:CapturePreferences) {lock.lock();previewRecipe=r;previewPrefs=p;lock.unlock()}
+    private func resetPreview() {
+        lock.lock(); previewEpoch &+= 1; scene = nil; lock.unlock()
+        publish { self.hasPreview = false }
+        previewQueue.async {
+            self.previewFrames.clear(); self.announcedPreview = false
+            self.lastAnalysis = -Double.infinity; self.lastThumbnail = -Double.infinity; self.lastTelemetry = -Double.infinity
+            self.analysisWorker.cancelPending(); self.thumbnailWorker.cancelPending()
+        }
+    }
+    func updateLook(_ r:Recipe,_ p:CapturePreferences) {
+        let grade = PreviewColourTransform(recipe: r, preferences: p)
+        lock.lock();previewGrade=grade;previewPrefs=p;lock.unlock()
+    }
+    func requestLookThumbnails(_ requested: Bool) {
+        lock.lock(); thumbnailRequested = requested; lock.unlock()
+        if requested { previewQueue.async { self.lastThumbnail = -Double.infinity } }
+        else { thumbnailWorker.cancelPending() }
+    }
+    func setProTelemetry(_ requested: Bool) { lock.lock(); proTelemetryRequested = requested; lock.unlock() }
+    private func wantsThumbnail(epoch: UInt64) -> Bool {
+        lock.lock(); defer { lock.unlock() }; return thumbnailRequested && previewEpoch == epoch
+    }
     func compareOriginal(_ show:Bool) {lock.lock();showPreviewOriginal=show;lock.unlock()}
     func setControls(_ m:ManualControls) {queue.async {guard self.transaction==nil,let d=self.input?.device else {return};self.controls=m;do {try self.apply(m,to:d)} catch {self.publish {self.status=error.localizedDescription}}}}
     private func apply(_ m:ManualControls,to d:AVCaptureDevice) throws {
@@ -238,8 +292,12 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         guard motion.isDeviceMotionAvailable,!motion.isDeviceMotionActive else {return}
         motion.deviceMotionUpdateInterval=0.1
         motion.startDeviceMotionUpdates(to:motionQueue) {[weak self] data,_ in guard let self,let data else {return};let r=data.rotationRate
-            self.lock.lock();self.rotation=sqrt(r.x*r.x+r.y*r.y+r.z*r.z);self.lock.unlock()
-            self.publish {self.motionAvailable=true;self.roll=atan2(data.gravity.x,-data.gravity.y)*180/Double.pi}
+            self.lock.lock();self.rotation=sqrt(r.x*r.x+r.y*r.y+r.z*r.z);let level = self.previewPrefs.level;self.lock.unlock()
+            let angle = atan2(data.gravity.x,-data.gravity.y)*180/Double.pi
+            self.publish {
+                if !self.motionAvailable { self.motionAvailable = true }
+                if level && abs(self.roll - angle) >= 0.15 { self.roll = angle }
+            }
         }
     }
     func capture(_ preferences:CapturePreferences,angle:CGFloat) async throws -> PhotoBurst {
@@ -345,24 +403,39 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         t.continuation.resume(returning:PhotoBurst(frames:t.frames,shorts:t.shorts,longs:t.longs,pipeline:t.preferences.pipeline,note:note,fallback:fallback))
     }
     func captureOutput(_ output:AVCaptureOutput,didOutput sampleBuffer:CMSampleBuffer,from connection:AVCaptureConnection) {
-        let now=ProcessInfo.processInfo.systemUptime;guard now-lastPreview>1/12 else {return};lastPreview=now
         guard let buffer=CMSampleBufferGetImageBuffer(sampleBuffer) else {return}
         autoreleasepool {
-            let image=CIImage(cvPixelBuffer:buffer);let scale=min(1,960/image.extent.height);let small=image.transformed(by:CGAffineTransform(scaleX:scale,y:scale))
-            lock.lock();let recipe=previewRecipe,prefs=previewPrefs,movement=rotation,before=showPreviewOriginal,device=previewDevice;lock.unlock()
-            let framed=PhotoProcessor.crop(small,factor:prefs.crop)
-            let c=before ? framed : PhotoProcessor.matrix(framed,recipe:recipe,preferences:prefs)
-            guard let cg=previewContext.createCGImage(c,from:c.extent) else {return}
-            let result=UIImage(cgImage:cg)
-            frames+=1
-            if frames%4==0 {sampleScene(small,motion:movement,now:now)}
-            if frames%8==0 {let thumb=small.transformed(by:CGAffineTransform(scaleX:0.20,y:0.20));if let cg=previewContext.createCGImage(thumb,from:thumb.extent) {let source=UIImage(cgImage:cg);publish {self.lookSource=source}}}
-            let iso=device?.iso ?? 0,time=device.map {CMTimeGetSeconds($0.exposureDuration)} ?? 0
-            publish {self.preview=result;self.liveISO=iso;self.liveTime=time}
+            let image = CIImage(cvPixelBuffer: buffer, options: [.colorSpace: PhotoProcessor.colourSpace])
+            deliverPreview(image, width: CVPixelBufferGetWidth(buffer), height: CVPixelBufferGetHeight(buffer), now: ProcessInfo.processInfo.systemUptime)
+        }
+    }
+    private func deliverPreview(_ image: CIImage, width: Int, height: Int, now: TimeInterval, analyze: Bool = true) {
+        lock.lock()
+        let grade = previewGrade, prefs = previewPrefs, movement = rotation, before = showPreviewOriginal, device = previewDevice
+        let thumbnails = thumbnailRequested, telemetry = proTelemetryRequested, epoch = previewEpoch
+        lock.unlock()
+        let framed = PhotoProcessor.crop(image, factor: prefs.crop)
+        previewPerformance.input(width: width, height: height, at: now)
+        previewFrames.offer(CameraPreviewFrame(image: before ? framed : grade.apply(framed), receivedAt: now))
+        if !announcedPreview { announcedPreview = true; publish { self.hasPreview = true } }
+        // Histogram/HDR statistics and thumbnails cannot block camera delivery or build a stale-frame queue.
+        if analyze && now - lastAnalysis >= 0.25 {
+            lastAnalysis = now
+            analysisWorker.submit(PreviewAnalysisRequest(image: image, motion: movement, uptime: now, epoch: epoch, histogram: telemetry))
+        }
+        if thumbnails && now - lastThumbnail >= 1 {
+            lastThumbnail = now; thumbnailWorker.submit(PreviewThumbnailRequest(image: image, epoch: epoch))
+        }
+        if telemetry && now - lastTelemetry >= 0.25 {
+            lastTelemetry = now
+            let iso = device?.iso ?? 0, time = device.map { CMTimeGetSeconds($0.exposureDuration) } ?? 0
+            publish { self.liveISO = iso; self.liveTime = time }
         }
     }
     #if DEBUG && targetEnvironment(simulator)
     var isShowingLensFixture: Bool { ProcessInfo.processInfo.arguments.contains("--ui-lens-fixture") }
+    var isShowingPreviewPattern: Bool { ProcessInfo.processInfo.arguments.contains("--ui-preview-pattern") }
+    private var previewPatternTimer: DispatchSourceTimer?
     private func installLensFixture() {
         let metadata: [CameraLensMetadata] = [
             CameraLensMetadata(id: "fixture-ultra", facing: .back, kind: .ultraWide),
@@ -382,6 +455,28 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
             if let route = self.routes.first(where: { $0.id == self.selectedID }) { self.capabilities = self.fixtureCapabilities(route) }
             self.liveISO = 100; self.liveTime = 0.01
             self.status = "Sample lens metadata · no camera feed"; self.ready = false
+            if self.isShowingPreviewPattern { self.startPreviewPattern() }
+        }
+    }
+    private func startPreviewPattern() {
+        previewQueue.async {
+            guard self.previewPatternTimer == nil else { return }
+            let size = CGRect(x: 0, y: 0, width: 240, height: 320)
+            var pattern = CIImage(color: .black).cropped(to: size)
+            for (rect, colour) in [
+                (CGRect(x: 0, y: 160, width: 120, height: 160), CIColor(red: 1, green: 0, blue: 0)),
+                (CGRect(x: 120, y: 160, width: 120, height: 160), CIColor(red: 0, green: 1, blue: 0)),
+                (CGRect(x: 0, y: 0, width: 120, height: 160), CIColor(red: 0, green: 0, blue: 1)),
+                (CGRect(x: 120, y: 0, width: 120, height: 160), CIColor(red: 1, green: 1, blue: 1))
+            ] { pattern = CIImage(color: colour).cropped(to: rect).composited(over: pattern) }
+            let image = pattern
+            let timer = DispatchSource.makeTimerSource(queue: self.previewQueue)
+            timer.schedule(deadline: .now(), repeating: .milliseconds(33), leeway: .milliseconds(2))
+            timer.setEventHandler { [weak self] in
+                guard let self else { return }
+                self.deliverPreview(image, width: 240, height: 320, now: ProcessInfo.processInfo.systemUptime, analyze: false)
+            }
+            self.previewPatternTimer = timer; timer.resume()
         }
     }
     private func fixtureCapabilities(_ route: CameraRoute) -> CameraCapabilities {
@@ -393,23 +488,30 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         return result
     }
     #endif
-    private func sampleScene(_ image:CIImage,motion:Double?,now:Double) {
+    private func sampleScene(_ image:CIImage,motion:Double?,now:Double,epoch:UInt64,histogram:Bool) {
         let w=96,h=128;let i=image.transformed(by:CGAffineTransform(scaleX:CGFloat(w)/image.extent.width,y:CGFloat(h)/image.extent.height))
         var rgba=[UInt8](repeating:0,count:w*h*4)
-        previewContext.render(i,toBitmap:&rgba,rowBytes:w*4,bounds:CGRect(x:0,y:0,width:w,height:h),format:.RGBA8,colorSpace:CGColorSpace(name:CGColorSpace.sRGB))
-        var luma=[UInt8](repeating:0,count:w*h),bins=[Int](repeating:0,count:256);var clipped=0,shadow=0
-        for p in luma.indices {
+        auxiliaryContext.render(i,toBitmap:&rgba,rowBytes:w*4,bounds:CGRect(x:0,y:0,width:w,height:h),format:.RGBA8,colorSpace:CGColorSpace(name:CGColorSpace.sRGB))
+        var bins=[Int](repeating:0,count:256);var clipped=0,shadow=0
+        for p in 0..<(w*h) {
             let red=Int(rgba[p*4]),green=Int(rgba[p*4+1]),blue=Int(rgba[p*4+2])
             let v=(red*54+green*183+blue*19+128)>>8
-            luma[p]=UInt8(v);bins[v]+=1
+            bins[v]+=1
             if max(red,max(green,blue))>=250 {clipped+=1}
             if v<50 {shadow+=1}
         }
         var cumulative=0,p98=255;for x in 0..<256 {cumulative+=bins[x];if Double(cumulative)>Double(w*h)*0.98 {p98=x;break}}
-        lock.lock();scene=SceneStats(clipped:Double(clipped)/Double(w*h),percentile:p98,shadows:Double(shadow)/Double(w*h),motion:motion,uptime:now);lastLuma=luma;lock.unlock()
+        lock.lock()
+        guard previewEpoch == epoch else { lock.unlock(); return }
+        scene=SceneStats(clipped:Double(clipped)/Double(w*h),percentile:p98,shadows:Double(shadow)/Double(w*h),motion:motion,uptime:now)
+        lock.unlock()
+        guard histogram else { return }
         let peak=max(1,(0..<32).map {bins[($0*8)..<($0*8+8)].reduce(0,+)}.max() ?? 1)
         let graph=(0..<32).map {Double(bins[($0*8)..<($0*8+8)].reduce(0,+))/Double(peak)}
-        publish {self.histogram=graph}
+        publish {
+            self.lock.lock(); let valid = self.previewEpoch == epoch && self.proTelemetryRequested; self.lock.unlock()
+            if valid { self.histogram = graph }
+        }
     }
 }
 private final class BurstTransaction {
@@ -440,3 +542,12 @@ private final class PhotoReceiver:NSObject,AVCapturePhotoCaptureDelegate {
         completion(.success(PhotoFrame(jpeg:jpeg,raw:raw,metadata:metadata,iso:iso,seconds:time,focal:focal,timestamp:date,requestID:id,warning:failure?.localizedDescription)))
     }
 }
+
+private struct PreviewAnalysisRequest {
+    let image: CIImage
+    let motion: Double?
+    let uptime: Double
+    let epoch: UInt64
+    let histogram: Bool
+}
+private struct PreviewThumbnailRequest { let image: CIImage; let epoch: UInt64 }

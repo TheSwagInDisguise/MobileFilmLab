@@ -1,0 +1,13 @@
+{
+  "reason": "Preview-only performance fix: preserve the beta 2 photo algorithms, save path and still/HDR transaction. Future deliberate photo changes must update this baseline explicitly.",
+  "source": "e68694956399d6dea9131c5b112de967a22dbbdd",
+  "sha256": {
+    "ios/MobileFilmLab/PhotoProcessor.swift": "275df2b176074ae7c81b54e8568a9b8aba1d5fe9d1dce6f5ccc6da3811eb3e75",
+    "ios/MobileFilmLab/JPEGHDRProcessor.swift": "9b34bb5fb0a20f3ff60eac704f558fdab9799692e45fd80f0e068339ecbde338",
+    "ios/MobileFilmLab/FilmLabStore.swift": "77c3023273ae122d3d0a55ea25f4e6ec96b4eb5f40df1baaef581f82d3980c6a",
+    "ios/Packages/FilmLabCore/Sources/FilmLabCore/Recipe.swift": "b4929dd8985f386d7089d17e406a828be723d18e8a27a4826c68c6fa077ce00e",
+    "ios/Packages/FilmLabCore/Sources/FilmLabCore/ColourMatrix.swift": "742066d08556f0feafbb221624d4a12b50663f61482830c6cffb7818b92173ec",
+    "ios/Packages/FilmLabCore/Sources/FilmLabCore/HDRMath.swift": "78f9e2eba253b8776489e649fa2ef1508ca2478ed35af42905e6b57326731402"
+  },
+  "capture_transaction_sha256": "9ef2e1b9dbf82dcd1dc20f875bc6d0bf6518bf92c6ee773ad0a11b3774dc9e9c"
+}

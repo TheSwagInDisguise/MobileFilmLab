@@ -42,6 +42,7 @@ struct CameraView: View {
         .sheet(isPresented: $styles) { StylePad().presentationDetents([.height(440)]).presentationDragIndicator(.visible) }
         .sheet(isPresented: $settings) { SettingsView() }
         .sheet(isPresented: $library) { LibraryView() }
+        .onChange(of: pro) { _, requested in camera.setProTelemetry(requested) }
         .onChange(of: controls) { _, value in camera.setControls(value) }
         .onChange(of: camera.selectedID) { _, _ in
             controls = ManualControls(); controls.focus = camera.capabilities.focusModes.first ?? "AF-C"; flash = .off
@@ -101,25 +102,25 @@ struct CameraView: View {
         GeometryReader { geometry in
             ZStack {
                 RoundedRectangle(cornerRadius: 20).fill(FilmTheme.panel)
-                if let image = camera.preview {
-                    Image(uiImage: image).resizable().scaledToFit()
-                        .overlay { if store.preferences.grid != "Off" { GridOverlay(mode: store.preferences.grid).stroke(.white.opacity(0.3), lineWidth: 0.6) } }
+                CameraPreviewSurface(frames: camera.previewFrames, performance: camera.previewPerformance)
+                        .opacity(camera.hasPreview ? 1 : 0)
+                        .overlay { if camera.hasPreview && store.preferences.grid != "Off" { GridOverlay(mode: store.preferences.grid).stroke(.white.opacity(0.3), lineWidth: 0.6) } }
                         .overlay {
-                            if store.preferences.level && camera.motionAvailable {
+                            if camera.hasPreview && store.preferences.level && camera.motionAvailable {
                                 Rectangle().fill(abs(camera.roll) < 1.5 ? FilmTheme.accent : .white.opacity(0.65))
                                     .frame(width: 68, height: 1.5).rotationEffect(.degrees(-camera.roll))
                             }
                         }
                         .overlay {
-                            if let point = camera.focusPoint {
+                            if camera.hasPreview, let point = camera.focusPoint {
                                 Rectangle().stroke(FilmTheme.accent, lineWidth: 1.5).frame(width: 52, height: 52)
                                     .position(x: geometry.size.width * point.x, y: geometry.size.height * point.y)
                             }
                         }
                         .contentShape(Rectangle()).onTapGesture { point in
-                            camera.focus(at: CGPoint(x: clamp(point.x / geometry.size.width, 0, 1), y: clamp(point.y / geometry.size.height, 0, 1)))
+                            if camera.hasPreview { camera.focus(at: CGPoint(x: clamp(point.x / geometry.size.width, 0, 1), y: clamp(point.y / geometry.size.height, 0, 1))) }
                         }
-                } else { cameraUnavailable }
+                if !camera.hasPreview { cameraUnavailable }
                 VStack {
                     HStack(alignment: .top) {
                         if store.preferences.format.writesRaw || store.preferences.pipeline != .original {
@@ -137,7 +138,7 @@ struct CameraView: View {
                     if store.countdown > 0 { Text("\(store.countdown)").font(.system(size: 64, weight: .light)).shadow(radius: 10); Spacer() }
                     #if DEBUG && targetEnvironment(simulator)
                     if camera.isShowingLensFixture {
-                        Text("SIMULATOR UI · SAMPLE LENS METADATA").font(.system(size: 8, weight: .medium, design: .monospaced))
+                        Text(camera.isShowingPreviewPattern ? "SIMULATOR · SYNTHETIC PREVIEW TEST" : "SIMULATOR UI · SAMPLE LENS METADATA").font(.system(size: 8, weight: .medium, design: .monospaced))
                             .foregroundStyle(FilmTheme.muted).padding(5).background(.black.opacity(0.5), in: Capsule())
                     }
                     #endif

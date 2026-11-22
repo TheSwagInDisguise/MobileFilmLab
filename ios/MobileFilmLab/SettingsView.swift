@@ -126,6 +126,9 @@ struct DiagnosticsView: View {
     var body: some View {
         NavigationStack {
             List {
+                Section("Live preview") {
+                    PreviewDiagnosticsRows(frames: camera.previewFrames, performance: camera.previewPerformance)
+                }
                 Section("Device / exposed APIs only") {
                     Text("\(UIDevice.current.model) · iOS \(UIDevice.current.systemVersion)")
                     Text("\(camera.routes.count) camera routes · \(camera.visibleLenses.count) in the active lens row")
@@ -155,6 +158,33 @@ struct DiagnosticsView: View {
                 }
                 Section("Last result") { Text(store.message ?? "No capture yet") }
             }.navigationTitle("Diagnostics").toolbar { Button("Done") { dismiss() } }
+        }
+    }
+}
+
+private struct PreviewDiagnosticsRows: View {
+    let frames: LatestFrameMailbox<CameraPreviewFrame>
+    let performance: PreviewPerformance
+    @State private var snapshot = PreviewPerformance.Snapshot()
+    @State private var pending = 0
+    @State private var replaced: UInt64 = 0
+    var body: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            LabeledContent("Renderer", value: snapshot.renderer)
+            LabeledContent("Input / rendered", value: "~\(snapshot.inputFPS) / ~\(snapshot.presentedFPS) per second")
+            LabeledContent("Input proxy", value: snapshot.inputSize)
+            LabeledContent("Display drawable", value: snapshot.drawableSize)
+            LabeledContent("Pending frames", value: "\(pending) / 1")
+            LabeledContent("Stale frames replaced", value: String(replaced))
+            LabeledContent("Render errors", value: String(snapshot.renderErrors))
+            Text("Approximate one-second input/completed-render counters, not a photo or physical-display FPS benchmark. One pending frame and at most two GPU renders are allowed. Low light, long manual exposures, thermal limits and still/HDR capture can reduce live input. No diagnostic data is uploaded.")
+                .font(.caption).foregroundStyle(.secondary)
+        }.task {
+            while !Task.isCancelled {
+                snapshot = performance.snapshot()
+                let statistics = frames.statistics; pending = statistics.pendingCount; replaced = statistics.replaced
+                do { try await Task.sleep(nanoseconds: 1_000_000_000) } catch { break }
+            }
         }
     }
 }
