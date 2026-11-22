@@ -1,6 +1,6 @@
-# Install and test MobileFilmLab iOS — beta 1 release
+# Install and test MobileFilmLab iOS — beta 2 · cleaner camera UI
 
-**Target:** iPhone 18 Pro Max, public iOS 27. **App:** MobileFilmLab, `com.mobilefilmlab.camera`, 0.1.0 (2). This is an experimental iOS release, not an App Store release or a certified camera-quality upgrade.
+**Target:** iPhone 18 Pro Max, public iOS 27. **App:** MobileFilmLab, `com.mobilefilmlab.camera`, 0.1.0 (3). This is an experimental iOS release, not an App Store release or a certified camera-quality upgrade.
 
 ## 1. Before installing
 
@@ -22,15 +22,17 @@ Official service information: [Signulous](https://www.signulous.com/). The assis
 ## 3. First launch / safe baseline
 
 - Allow **Camera** when asked. No microphone or location permission should appear. Motion powers the level / HDR guard. Photos add-only permission is requested only when saving there.
-- Start on the physical **Wide** route, **JPEG**, **Original**, **iPhone Natural (AVFoundation)**, no crop, no grain, Balanced off, enlargement off. Take a daylight still scene.
+- Start on the physical **Main (1×)** lens, **JPEG**, **Original**, **iPhone Natural (AVFoundation)**, no crop, no grain, Balanced off, enlargement off. Take a daylight still scene.
 - Confirm the app library shows a new capture; Share it to Files and open it independently. With optional Photos saving enabled, check the Photos copy. Deny Photos once and verify the app copy remains shareable.
-- Record Settings → Diagnostics routes, formats, exposure bounds and dimensions. A listed capability is not proof of request honouring.
+- Record Settings → Advanced → Camera routing → All camera routes & diagnostics: routes, formats, exposure bounds and dimensions. A listed capability is not proof of request honouring.
 
 ## 4. Capability and workflow checks
 
-- Switch each exposed physical / virtual route. Check framing and honest names; front preview may mirror while capture orientation differs. Do not expect a fixed UW/W/3×/10× layout or a particular telephoto count.
-- AUTO / PRO: move ISO/shutter/EV/WB sliders, reset to Auto, tap focus, try AF-S / AF-C and manual focus if exposed. Confirm exposure visibly responds; no claim of camera-vendor-equivalent ranges.
-- Tap the JPEG crop control to toggle 2×; hold it for **1× / 1.5× / 2× / 3×** framing, matching the Android choices. These are JPEG centre crops, not lenses. Compare dimensions; RAW must remain 1×. Maximum exposed dimensions and interpolated enlargement are separate settings.
+- Check that the normal rear row contains physical lenses only: **Main (1×)** and runtime-reported ratios, or **Ultra / Tele** if no valid ratio mapping is exposed. No camera IDs or duplicate Auto routes should fill that row. Do not expect fixed UW/W/3×/10× slots or a particular telephoto count.
+- Tap the camera-switch icon beside the shutter. Only the active front camera should remain in the lens row. Switch back and verify that the last rear lens is restored. Front preview may mirror while capture orientation differs.
+- Open Settings → Advanced → Camera routing → All camera routes & diagnostics. Select each automatic / alternate front route there, then close Settings. An explicitly selected rear automatic route should appear as **Auto**, not a numeric physical lens. Check you can return to a physical lens.
+- AUTO / PRO: technical exposure readouts and the histogram should be hidden in AUTO. In PRO, select ISO / Shutter / EV / WB / Focus; only the selected control is expanded. Move the supported slider, reset to Auto, tap focus and try AF-S / AF-C / manual focus where exposed. Confirm exposure visibly responds; no claim of camera-vendor-equivalent ranges.
+- Tap the separate **crop icon** for **1× / 1.5× / 2× / 3×** framing, matching the Android choices. An active selection must say **“× crop”**. These are JPEG centre crops, not lenses. Compare dimensions; RAW must remain 1×. Maximum exposed dimensions and interpolated enlargement are separate settings.
 - Open all 80 looks, favourite a look, adjust Tone/Colour, save a custom copy, quit/reopen and confirm persistence.
 - Export / import `.filmrecipe` to Android and back. Show QR on one device and import its image / payload on the other. Check name, tint and tone survive. Imported recipes become independent customs rather than overwriting built-ins.
 - Try timer, supported flash/torch, grids, level, histogram, hardware shutter events, live Original comparison, gallery sharing/deletion and saved-original comparison.
@@ -45,7 +47,7 @@ Official service information: [Signulous](https://www.signulous.com/). The assis
 
 ## 6. HDR A/B tests — do not start with people
 
-1. Enable **Keep Original JPEG companion** and choose a static daylight scene with a bright window / sky and dark interior. Hold still.
+1. Enable **Keep unedited JPEG** and choose a static daylight scene with a bright window / sky and dark interior. Hold still.
 2. Capture Original, then **Smart HDR**, then **Quality HDR**. Smart normally uses 3 or 5 short helpers; Quality uses 7 plus up to 2 longer helpers only when measured motion is quiet. A safety Original is taken first.
 3. Compare exported full-size crops, not preview thumbnails. Look for colour casts, clipped highlights, shadow noise, misalignment / repeated edges, painterly textures, soft detail, rotation errors or striped seams.
 4. Then test foliage / walking subjects / indoor low light. Some motion is deliberately rejected; HDR can fall back to Original. Read each capture's processing note to distinguish a merge from fallback.
@@ -58,6 +60,6 @@ The app uses conventional local alignment / robust JPEG merging. It cannot repro
 
 Software evidence may include complete-catalogue / colour-vector / JSON+QR tests, synthetic pixel tests, native simulator UI screenshots, arm64 compilation and IPA structure/encryption inspection. **None proves Signulous acceptance, installation, real camera request honouring, DNG editor compatibility, photo quality, latency, thermals, or saving on your phone.** Those boxes require your handset results.
 
-Software/UI/documentation were developed with AI assistance. Simulator UI captures have no handset camera feed; synthetic test pixels are never described as actual photographs.
+Software/UI/documentation were developed with AI assistance. Simulator UI captures have no handset camera feed; lens-layout checks use visibly labelled **sample metadata**, with capture disabled and no sensor access. Example numeric ratios are not target-phone measurements. Synthetic test pixels are never described as actual photographs.
 
 GPL-3.0-or-later and upstream notices remain in the app and matching source. Provided as-is without warranty to the extent permitted by law; non-excludable rights remain. Source: <https://github.com/TheSwagInDisguise/MobileFilmLab>.

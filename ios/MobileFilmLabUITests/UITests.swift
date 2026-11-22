@@ -1,29 +1,133 @@
 import XCTest
 
-final class UITests:XCTestCase {
+final class UITests: XCTestCase {
     @MainActor func testNativeScreensAndCompleteCatalogueAreAccessible() throws {
-        let app=XCUIApplication();app.launch()
-        addUIInterruptionMonitor(withDescription:"Camera permission") {alert in if alert.buttons["Allow"].exists {alert.buttons["Allow"].tap();return true};if alert.buttons["OK"].exists {alert.buttons["OK"].tap();return true};return false}
-        if app.alerts.firstMatch.waitForExistence(timeout:2) {let a=app.alerts.firstMatch;if a.buttons["Allow"].exists {a.buttons["Allow"].tap()} else if a.buttons["OK"].exists {a.buttons["OK"].tap()}}
-        XCTAssertTrue(app.buttons["openSettings"].waitForExistence(timeout:10));screenshot("SIMULATOR-no-handset-camera")
-        app.buttons["openSettings"].tap();XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout:5));XCTAssertTrue(app.staticTexts["Capture pipeline"].exists || app.staticTexts["CAPTURE PIPELINE"].exists);screenshot("SIMULATOR-settings")
-        app.buttons["Done"].firstMatch.tap()
-        let crop=app.buttons["jpegCrop"];XCTAssertTrue(crop.waitForExistence(timeout:5))
-        crop.press(forDuration:1.2)
-        XCTAssertTrue(app.buttons["1.5× JPEG crop"].waitForExistence(timeout:5))
+        let app = XCUIApplication(); app.launch()
+        addUIInterruptionMonitor(withDescription: "Camera permission") { alert in
+            if alert.buttons["Allow"].exists { alert.buttons["Allow"].tap(); return true }
+            if alert.buttons["OK"].exists { alert.buttons["OK"].tap(); return true }
+            return false
+        }
+        if app.alerts.firstMatch.waitForExistence(timeout: 2) {
+            let alert = app.alerts.firstMatch
+            if alert.buttons["Allow"].exists { alert.buttons["Allow"].tap() }
+            else if alert.buttons["OK"].exists { alert.buttons["OK"].tap() }
+        }
+        XCTAssertTrue(app.buttons["openSettings"].waitForExistence(timeout: 10))
+        selectJPEG(app)
+        screenshot("SIMULATOR-no-handset-camera")
+        app.buttons["openSettings"].tap()
+        XCTAssertTrue(app.navigationBars["Settings"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Capture pipeline"].exists || app.staticTexts["CAPTURE PIPELINE"].exists)
+        screenshot("SIMULATOR-settings")
+        app.navigationBars["Settings"].buttons["Done"].tap()
+        let crop = app.buttons["jpegCrop"]
+        XCTAssertTrue(crop.waitForExistence(timeout: 5)); crop.tap()
+        XCTAssertTrue(app.buttons["1.5× JPEG crop"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["2× JPEG crop"].exists)
         XCTAssertTrue(app.buttons["3× JPEG crop"].exists)
         screenshot("SIMULATOR-four-JPEG-crop-choices")
         app.buttons["1.5× JPEG crop"].tap()
-        XCTAssertTrue(app.staticTexts["1.5× JPEG CENTRE CROP · NOT A LENS"].waitForExistence(timeout:5))
-        crop.press(forDuration:1.2);app.buttons["1× · full frame"].tap()
-        app.buttons["openRecipes"].tap();XCTAssertTrue(app.navigationBars["The look library"].waitForExistence(timeout:5));screenshot("SIMULATOR-full-catalogue")
-        XCTAssertTrue(app.buttons.containing(NSPredicate(format:"label CONTAINS %@","All 80")).firstMatch.exists)
-        app.buttons["Import or export recipes"].tap()
-        app.buttons["Export current recipe"].tap()
-        let nativeShare=app.otherElements["mfl-share-sheet"]
-        XCTAssertTrue(nativeShare.waitForExistence(timeout:10) || app.buttons["Copy"].exists,"Recipe export must present above the recipe drawer")
-        screenshot("SIMULATOR-native-recipe-export")
-        app.terminate()
+        XCTAssertEqual(crop.value as? String, "1.5× JPEG crop")
+        XCTAssertTrue(app.staticTexts["1.5× crop"].exists)
+        crop.tap(); app.buttons["1× · full frame"].tap()
+        app.buttons["openRecipes"].tap()
+        XCTAssertTrue(app.navigationBars["The look library"].waitForExistence(timeout: 5))
+        screenshot("SIMULATOR-full-catalogue")
+        XCTAssertTrue(app.buttons.containing(NSPredicate(format: "label CONTAINS %@", "All 80")).firstMatch.exists)
+        app.buttons["Import or export recipes"].tap(); app.buttons["Export current recipe"].tap()
+        let nativeShare = app.otherElements["mfl-share-sheet"]
+        XCTAssertTrue(nativeShare.waitForExistence(timeout: 10) || app.buttons["Copy"].exists, "Recipe export must present above the recipe drawer")
+        screenshot("SIMULATOR-native-recipe-export"); app.terminate()
     }
-    @MainActor private func screenshot(_ name:String) {let attachment=XCTAttachment(screenshot:XCUIApplication().screenshot());attachment.name=name;attachment.lifetime = .keepAlways;add(attachment)}
+
+    @MainActor func testSamplePhysicalLensesFrontSwitchAndAdvancedRoutes() throws {
+        let app = fixtureApp(); defer { app.terminate() }
+        let rowButtons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "lens-"))
+        XCTAssertEqual(rowButtons.count, 3, "Only physical rear devices belong in the normal row")
+        XCTAssertEqual(app.buttons["lens-fixture-ultra"].label, "Ultra Wide, 0.5×")
+        XCTAssertEqual(app.buttons["lens-fixture-main"].label, "Main, 1×")
+        XCTAssertEqual(app.buttons["lens-fixture-tele"].label, "Telephoto, 5×")
+        XCTAssertFalse(app.buttons["lens-fixture-auto"].exists)
+        XCTAssertFalse(app.buttons["lens-fixture-front"].exists)
+        XCTAssertFalse(app.buttons["lens-fixture-dual"].exists)
+        XCTAssertFalse(app.buttons["shutter"].isEnabled, "The metadata fixture must not enable camera capture")
+        XCTAssertFalse(app.staticTexts["ISO 100 · 1/100s"].exists, "Technical readouts are not part of AUTO")
+        screenshot("SIMULATOR-sample-lenses-AUTO")
+        app.buttons["lens-fixture-tele"].tap()
+        XCTAssertEqual(app.buttons["lens-fixture-tele"].value as? String, "Selected")
+        app.buttons["flipCamera"].tap()
+        XCTAssertTrue(app.buttons["lens-fixture-front"].waitForExistence(timeout: 5))
+        XCTAssertEqual(rowButtons.count, 1)
+        XCTAssertFalse(app.buttons["lens-fixture-main"].exists)
+        screenshot("SIMULATOR-sample-front-camera")
+        app.buttons["flipCamera"].tap()
+        XCTAssertTrue(app.buttons["lens-fixture-tele"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["lens-fixture-tele"].value as? String, "Selected", "Flipping back remembers the physical rear lens")
+        app.buttons["openSettings"].tap()
+        let routing = app.buttons["Camera routing"]
+        reveal(routing, in: app); XCTAssertTrue(routing.exists); routing.tap()
+        let diagnostics = app.buttons["openDiagnostics"]
+        reveal(diagnostics, in: app); diagnostics.tap()
+        XCTAssertTrue(app.navigationBars["Diagnostics"].waitForExistence(timeout: 5))
+        let automatic = app.buttons["useRoute-fixture-auto"]
+        reveal(automatic, in: app); XCTAssertTrue(automatic.exists); automatic.tap()
+        app.navigationBars["Diagnostics"].buttons["Done"].tap()
+        app.navigationBars["Settings"].buttons["Done"].tap()
+        XCTAssertTrue(app.buttons["lens-fixture-auto"].waitForExistence(timeout: 5))
+        XCTAssertEqual(rowButtons.count, 4, "An explicitly selected automatic route stays visible and escapable")
+        XCTAssertEqual(app.buttons["lens-fixture-auto"].value as? String, "Selected")
+        screenshot("SIMULATOR-sample-advanced-route")
+    }
+
+    @MainActor func testProShowsOneSliderAtATimeAndAutoHidesTechnicalReadouts() throws {
+        let app = fixtureApp(); defer { app.terminate() }
+        XCTAssertEqual(app.sliders.count, 0)
+        app.buttons["cameraMode"].tap()
+        XCTAssertTrue(app.sliders["ISO"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.sliders.count, 1)
+        XCTAssertTrue(app.staticTexts["ISO 100 · 1/100s"].exists)
+        app.buttons["Adjust WB"].tap()
+        XCTAssertTrue(app.sliders["WB"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.sliders.count, 1)
+        screenshot("SIMULATOR-sample-lenses-PRO")
+        app.buttons["cameraMode"].tap()
+        XCTAssertEqual(app.sliders.count, 0)
+        XCTAssertFalse(app.staticTexts["ISO 100 · 1/100s"].exists)
+    }
+
+    @MainActor func testRawHidesCropAndFrontCameraFallsBackToJPEGInSampleMetadata() throws {
+        let app = fixtureApp(); defer { app.terminate() }
+        app.buttons["jpegCrop"].tap(); app.buttons["2× JPEG crop"].tap()
+        XCTAssertEqual(app.buttons["jpegCrop"].value as? String, "2× JPEG crop")
+        app.buttons["captureFormat"].tap(); app.buttons["RAW (Bayer DNG)"].tap()
+        XCTAssertEqual(app.buttons["captureFormat"].value as? String, "RAW (Bayer DNG)")
+        XCTAssertFalse(app.buttons["jpegCrop"].exists, "RAW must remain uncropped")
+        app.buttons["flipCamera"].tap()
+        XCTAssertTrue(app.buttons["lens-fixture-front"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["captureFormat"].value as? String, "JPEG", "Unavailable RAW must not stay selected on the front route")
+        XCTAssertTrue(app.buttons["jpegCrop"].waitForExistence(timeout: 5))
+        XCTAssertEqual(app.buttons["jpegCrop"].value as? String, "Full frame")
+    }
+
+    @MainActor private func fixtureApp() -> XCUIApplication {
+        let app = XCUIApplication(); app.launchArguments = ["--ui-lens-fixture"]; app.launch()
+        XCTAssertTrue(app.buttons["lens-fixture-main"].waitForExistence(timeout: 10))
+        selectJPEG(app)
+        return app
+    }
+    @MainActor private func selectJPEG(_ app: XCUIApplication) {
+        XCTAssertTrue(app.buttons["captureFormat"].waitForExistence(timeout: 5))
+        app.buttons["captureFormat"].tap(); app.buttons["JPEG"].tap()
+    }
+    @MainActor private func reveal(_ element: XCUIElement, in app: XCUIApplication) {
+        for _ in 0..<7 {
+            if element.exists && element.isHittable { return }
+            app.swipeUp()
+        }
+    }
+    @MainActor private func screenshot(_ name: String) {
+        let attachment = XCTAttachment(screenshot: XCUIApplication().screenshot())
+        attachment.name = name; attachment.lifetime = .keepAlways; add(attachment)
+    }
 }

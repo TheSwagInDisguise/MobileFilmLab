@@ -3,8 +3,16 @@ import AVFoundation
 import CoreImage
 import FilmLabCore
 
-struct CameraRoute: Identifiable,Equatable {
-    var id:String;var name:String;var detail:String;var virtual:Bool
+struct CameraRoute: Identifiable, Equatable {
+    var lens: PresentedCameraLens
+    var detail: String
+    var constituentCount: Int = 0
+    var id: String { lens.id }
+    var name: String { lens.name }
+    var shortName: String { lens.shortName }
+    var virtual: Bool { lens.virtual }
+    var facing: CameraFacing { lens.facing }
+    var kind: CameraLensKind { lens.kind }
 }
 struct CameraCapabilities {
     var cameraID="",name="No camera",bayer:UInt32?,proRAW:UInt32?

@@ -42,13 +42,15 @@ def validate(path,source=None):
   info=plistlib.loads(z.read(base+'Info.plist'))
   assert info['CFBundleIdentifier']=='com.mobilefilmlab.camera'
   assert info['CFBundleDisplayName']=='MobileFilmLab'
-  assert info['CFBundleShortVersionString']=='0.1.0' and info['CFBundleVersion']=='2'
+  assert info['CFBundleShortVersionString']=='0.1.0' and info['CFBundleVersion']=='3'
   assert info.get('NSCameraUsageDescription') and info.get('NSPhotoLibraryAddUsageDescription') and info.get('NSMotionUsageDescription')
   assert not info.get('UIBackgroundModes') and not info.get('NSMicrophoneUsageDescription')
   assert float(info['MinimumOSVersion'])<=27
   if source:assert info.get('MFLSourceSHA')==source,'Wrong source commit'
   assert not any(n.endswith(('.mobileprovision','.p12','.jks','.keystore')) for n in names),'Signing material/profile unexpectedly included'
-  binary=macho(z.read(base+info['CFBundleExecutable']))
+  executable=z.read(base+info['CFBundleExecutable'])
+  assert not any(marker in executable for marker in [b'--ui-lens-fixture',b'fixture-main',b'SIMULATOR SAMPLE METADATA']), 'Simulator-only lens fixture leaked into device IPA'
+  binary=macho(executable)
   for name in names:
    if name.endswith('/') or name==base+info['CFBundleExecutable']:continue
    content=z.read(name)

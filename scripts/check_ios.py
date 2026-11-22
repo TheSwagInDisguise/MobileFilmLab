@@ -20,5 +20,13 @@ def main():
  workflow=(ROOT/'.github/workflows/ios-test.yml').read_text();assert 'workflow_dispatch:' in workflow and 'contents: read' in workflow
  assert not any(k in workflow for k in ['gh release create','create-release','contents: write','APPLE_ID','SIGNULOUS_PASSWORD'])
  assert (ROOT/'ios/TESTING.md').is_file()
+ view=(ROOT/'ios/MobileFilmLab/CameraView.swift').read_text()
+ assert 'ForEach(camera.visibleLenses)' in view and 'ForEach(camera.routes)' not in view, 'Do not mix front/virtual routes into the physical rear lens row'
+ for control in ['jpegCrop','flipCamera','cameraMode','captureFormat','openSettings','openRecipes']:
+  assert 'accessibilityIdentifier("'+control+'")' in view, 'Missing accessible camera control: '+control
+ assert 'if pro { proPanel }' in view and 'if !store.preferences.format.writesRaw { framingMenu }' in view
+ controller=(ROOT/'ios/MobileFilmLab/CameraController.swift').read_text()
+ assert '#if DEBUG && targetEnvironment(simulator)' in controller and 'Sample lens metadata · no camera feed' in controller
+ assert (ROOT/'ios/Packages/FilmLabCore/Tests/FilmLabCoreTests/LensPresentationTests.swift').is_file()
  print(f'iOS source invariants passed: {len(swift)} Swift files, complete 80 recipes, unchanged Android/site baseline, GPL, no signing credentials or release writes in build workflow')
 if __name__=='__main__':main()

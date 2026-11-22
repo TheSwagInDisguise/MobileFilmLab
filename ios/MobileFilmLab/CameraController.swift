@@ -34,6 +34,26 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
     private var showPreviewOriginal=false
     private var scene:SceneStats?,lastLuma:[UInt8]?,rotation:Double?
     private var devices:[String:AVCaptureDevice]=[:],input:AVCaptureDeviceInput?
+    private var namedRoutes: [String: CameraRoute] = [:]
+    private var defaultRearID: String?
+    private var defaultFrontID: String?
+    private var rememberedRearID: String?
+    private var rememberedFrontID: String?
+    var selectedLens: CameraRoute? { routes.first { $0.id == selectedID } }
+    var canFlipCamera: Bool { routes.contains { $0.facing == .back } && routes.contains { $0.facing == .front } }
+    var visibleLenses: [CameraRoute] {
+        if let selectedLens, selectedLens.facing == .front { return [selectedLens] }
+        var visible = routes.filter { $0.facing == .back && !$0.virtual }
+        if let selectedLens, selectedLens.facing == .back && selectedLens.virtual { visible.append(selectedLens) }
+        if visible.isEmpty, let selectedLens { return [selectedLens] }
+        return visible
+    }
+    var automaticRearRoute: CameraRoute? {
+        routes.filter { $0.facing == .back && $0.virtual }.sorted {
+            if $0.constituentCount != $1.constituentCount { return $0.constituentCount > $1.constituentCount }
+            return $0.id < $1.id
+        }.first
+    }
     private var controls=ManualControls(),flash:FlashChoice = .off
     private var transaction:BurstTransaction?
     private var pending:[Int64:PhotoReceiver]=[:]
@@ -52,6 +72,9 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
     deinit {tokens.forEach {NotificationCenter.default.removeObserver($0)};motion.stopDeviceMotionUpdates()}
     private func publish(_ change:@escaping ()->Void) {DispatchQueue.main.async(execute:change)}
     func start() {
+        #if DEBUG && targetEnvironment(simulator)
+        if isShowingLensFixture { installLensFixture(); return }
+        #endif
         switch AVCaptureDevice.authorizationStatus(for:.video) {
         case .authorized:queue.async {[weak self] in self?.startAuthorized()}
         case .notDetermined:AVCaptureDevice.requestAccess(for:.video) {[weak self] allowed in if allowed {self?.start()} else {self?.publish {self?.status="Allow Camera access in iOS Settings"}}}
@@ -59,6 +82,9 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         }
     }
     func setForeground(_ active:Bool) {
+        #if DEBUG && targetEnvironment(simulator)
+        if isShowingLensFixture { return }
+        #endif
         queue.async {self.foreground=active
             if active {self.startAuthorized()} else {self.finish(error:FilmError.invalid("Capture cancelled when app left the foreground"));if self.session.isRunning {self.session.stopRunning()};self.motion.stopDeviceMotionUpdates();self.publish {self.ready=false}}
         }
@@ -69,10 +95,29 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
             if !configured {
                 let discovery=AVCaptureDevice.DiscoverySession(deviceTypes:[.builtInWideAngleCamera,.builtInUltraWideCamera,.builtInTelephotoCamera,.builtInDualCamera,.builtInDualWideCamera,.builtInTripleCamera,.builtInTrueDepthCamera],mediaType:.video,position:.unspecified)
                 devices=Dictionary(uniqueKeysWithValues:discovery.devices.map {($0.uniqueID,$0)})
-                let sorted=discovery.devices.sorted {a,b in if a.position != b.position {return a.position == .back};if a.isVirtualDevice != b.isVirtualDevice {return !a.isVirtualDevice};return a.activeFormat.videoFieldOfView>b.activeFormat.videoFieldOfView}
-                let routes=sorted.map {d in CameraRoute(id:d.uniqueID,name:self.name(d),detail:d.localizedName,virtual:d.isVirtualDevice)}
-                publish {self.routes=routes}
-                guard let initial=sorted.first(where:{$0.deviceType == .builtInWideAngleCamera && $0.position == .back}) ?? sorted.first else {throw FilmError.invalid("No camera exposed by AVFoundation")}
+                let metadata = discovery.devices.map { device -> CameraLensMetadata in
+                    let facing: CameraFacing = device.position == .back ? .back : device.position == .front ? .front : .other
+                    let kind: CameraLensKind
+                    switch device.deviceType {
+                    case .builtInUltraWideCamera: kind = .ultraWide
+                    case .builtInWideAngleCamera: kind = .wide
+                    case .builtInTelephotoCamera: kind = .telephoto
+                    case .builtInTrueDepthCamera: kind = .trueDepth
+                    default: kind = .other
+                    }
+                    return CameraLensMetadata(id: device.uniqueID, facing: facing, kind: kind, virtual: device.isVirtualDevice,
+                        constituents: device.constituentDevices.map(\.uniqueID), switchFactors: device.virtualDeviceSwitchOverVideoZoomFactors.map(\.doubleValue))
+                }
+                let labels = LensPresentation.lenses(metadata)
+                let routes = labels.compactMap { label -> CameraRoute? in
+                    guard let device = devices[label.id] else { return nil }
+                    return CameraRoute(lens: label, detail: device.localizedName, constituentCount: device.constituentDevices.count)
+                }
+                namedRoutes = Dictionary(uniqueKeysWithValues: routes.map { ($0.id, $0) })
+                defaultRearID = LensPresentation.preferredRearID(labels)
+                defaultFrontID = LensPresentation.preferredFrontID(labels)
+                publish { self.routes = routes }
+                guard let id = defaultRearID ?? labels.first?.id, let initial = devices[id] else { throw FilmError.invalid("No camera is available") }
                 session.beginConfiguration();session.sessionPreset = .photo
                 session.automaticallyConfiguresCaptureDeviceForWideColor=false
                 guard session.canAddOutput(output),session.canAddOutput(video) else {session.commitConfiguration();throw FilmError.invalid("Photo output unavailable")}
@@ -86,12 +131,35 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
             startMotion();publish {self.ready=true;self.status="Ready · genuine camera feed"}
         } catch {publish {self.ready=false;self.status=error.localizedDescription}}
     }
-    private func name(_ d:AVCaptureDevice)->String {
-        let side=d.position == .front ? "Front " : ""
-        if d.isVirtualDevice {return side+"Auto lenses"}
-        switch d.deviceType {case .builtInUltraWideCamera:return side+"Ultra wide";case .builtInTelephotoCamera:return side+"Telephoto";case .builtInWideAngleCamera:return side+"Wide";default:return side+d.localizedName}
+    private func name(_ d:AVCaptureDevice)->String { namedRoutes[d.uniqueID]?.name ?? "Camera" }
+    func select(_ id:String) {
+        #if DEBUG && targetEnvironment(simulator)
+        if isShowingLensFixture {
+            publish {
+                guard let route = self.routes.first(where: { $0.id == id }) else { return }
+                self.selectedID = id; self.capabilities = self.fixtureCapabilities(route)
+                if route.facing == .front { self.rememberedFrontID = id } else { self.rememberedRearID = id }
+            }
+            return
+        }
+        #endif
+        queue.async {guard self.transaction==nil,self.pending.isEmpty,let d=self.devices[id] else {return};do {try self.selectDevice(d)} catch {self.publish {self.status=error.localizedDescription}}}
     }
-    func select(_ id:String) {queue.async {guard self.transaction==nil,self.pending.isEmpty,let d=self.devices[id] else {return};do {try self.selectDevice(d)} catch {self.publish {self.status=error.localizedDescription}}}}
+    func flipCamera() {
+        #if DEBUG && targetEnvironment(simulator)
+        if isShowingLensFixture {
+            let target = selectedLens?.facing == .front ? (rememberedRearID ?? defaultRearID) : (rememberedFrontID ?? defaultFrontID)
+            if let target { select(target) }; return
+        }
+        #endif
+        queue.async {
+            guard self.transaction == nil, self.pending.isEmpty else { return }
+            let next = self.input?.device.position == .front
+                ? (self.rememberedRearID ?? self.defaultRearID) : (self.rememberedFrontID ?? self.defaultFrontID)
+            guard let next, let device = self.devices[next] else { return }
+            do { try self.selectDevice(device) } catch { self.publish { self.status = error.localizedDescription } }
+        }
+    }
     private func selectDevice(_ device:AVCaptureDevice) throws {
         let newInput=try AVCaptureDeviceInput(device:device)
         session.beginConfiguration()
@@ -132,6 +200,8 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
         c.responsive=output.isZeroShutterLagSupported || output.isResponsiveCaptureSupported
         c.dimensions=device.activeFormat.supportedMaxPhotoDimensions
         lock.lock();previewDevice=device;scene=nil;lastLuma=nil;lock.unlock()
+        if device.position == .front { rememberedFrontID = device.uniqueID }
+        else if device.position == .back { rememberedRearID = device.uniqueID }
         publish {self.selectedID=device.uniqueID;self.capabilities=c;self.status="Ready · \(c.name)"}
     }
     func updateLook(_ r:Recipe,_ p:CapturePreferences) {lock.lock();previewRecipe=r;previewPrefs=p;lock.unlock()}
@@ -291,6 +361,38 @@ final class CameraController:NSObject,ObservableObject,AVCaptureVideoDataOutputS
             publish {self.preview=result;self.liveISO=iso;self.liveTime=time}
         }
     }
+    #if DEBUG && targetEnvironment(simulator)
+    var isShowingLensFixture: Bool { ProcessInfo.processInfo.arguments.contains("--ui-lens-fixture") }
+    private func installLensFixture() {
+        let metadata: [CameraLensMetadata] = [
+            CameraLensMetadata(id: "fixture-ultra", facing: .back, kind: .ultraWide),
+            CameraLensMetadata(id: "fixture-main", facing: .back, kind: .wide),
+            CameraLensMetadata(id: "fixture-tele", facing: .back, kind: .telephoto),
+            CameraLensMetadata(id: "fixture-auto", facing: .back, kind: .other, virtual: true, constituents: ["fixture-ultra", "fixture-main", "fixture-tele"], switchFactors: [2, 10]),
+            CameraLensMetadata(id: "fixture-dual", facing: .back, kind: .other, virtual: true, constituents: ["fixture-main", "fixture-tele"], switchFactors: [5]),
+            CameraLensMetadata(id: "fixture-front-wide", facing: .front, kind: .wide),
+            CameraLensMetadata(id: "fixture-front", facing: .front, kind: .trueDepth, virtual: true)
+        ]
+        let labels = LensPresentation.lenses(metadata)
+        publish {
+            guard self.routes.isEmpty else { return }
+            self.routes = labels.map { CameraRoute(lens: $0, detail: "SIMULATOR SAMPLE METADATA", constituentCount: $0.id == "fixture-auto" ? 3 : 2) }
+            self.defaultRearID = LensPresentation.preferredRearID(labels); self.defaultFrontID = LensPresentation.preferredFrontID(labels)
+            self.selectedID = "fixture-main"; self.rememberedRearID = "fixture-main"
+            if let route = self.routes.first(where: { $0.id == self.selectedID }) { self.capabilities = self.fixtureCapabilities(route) }
+            self.liveISO = 100; self.liveTime = 0.01
+            self.status = "Sample lens metadata · no camera feed"; self.ready = false
+        }
+    }
+    private func fixtureCapabilities(_ route: CameraRoute) -> CameraCapabilities {
+        var result = CameraCapabilities(); result.cameraID = route.id; result.name = route.name
+        result.customExposure = true; result.manualWB = true; result.manualFocus = true
+        result.focusModes = ["AF-C", "AF-S", "MF"]
+        // Sentinel UI metadata only, never submitted to AVCapturePhotoOutput. Capture remains disabled.
+        if route.facing == .back && !route.virtual { result.bayer = 1; result.proRAW = 2 }
+        return result
+    }
+    #endif
     private func sampleScene(_ image:CIImage,motion:Double?,now:Double) {
         let w=96,h=128;let i=image.transformed(by:CGAffineTransform(scaleX:CGFloat(w)/image.extent.width,y:CGFloat(h)/image.extent.height))
         var rgba=[UInt8](repeating:0,count:w*h*4)
