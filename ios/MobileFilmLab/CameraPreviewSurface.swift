@@ -136,7 +136,7 @@ final class CameraPreviewHost: UIView {
         if let device = MTLCreateSystemDefaultDevice(), let renderer = MetalCameraPreviewRenderer(device: device, frames: frames, performance: performance) {
             let view = MTKView(frame: .zero, device: device)
             view.framebufferOnly = false; view.colorPixelFormat = .bgra8Unorm
-            view.colorspace = PhotoProcessor.colourSpace
+            (view.layer as? CAMetalLayer)?.colorspace = PhotoProcessor.colourSpace
             view.preferredFramesPerSecond = 60 // Display cadence only; sensor exposure and frame rate are not forced.
             view.autoResizeDrawable = false; view.enableSetNeedsDisplay = false; view.isPaused = true
             view.isAccessibilityElement = false; view.delegate = renderer
@@ -164,7 +164,7 @@ final class CameraPreviewHost: UIView {
     override func didMoveToWindow() { super.didMoveToWindow(); active = UIApplication.shared.applicationState == .active; updateActivity() }
     override func layoutSubviews() {
         super.layoutSubviews(); metalView?.frame = bounds; fallbackView?.frame = bounds
-        guard let pixels = PreviewSizing.drawable(width: bounds.width, height: bounds.height, screenScale: window?.screen.scale ?? UIScreen.main.scale) else { return }
+        guard let pixels = PreviewSizing.drawable(width: Double(bounds.width), height: Double(bounds.height), screenScale: Double(window?.screen.scale ?? UIScreen.main.scale)) else { return }
         let size = CGSize(width: pixels.width, height: pixels.height)
         if let metalView, metalView.drawableSize != size { metalView.drawableSize = size }
         performance.configure(renderer: renderer == nil ? "Core Image native fallback" : "Metal GPU", size: size)
@@ -177,7 +177,7 @@ final class CameraPreviewHost: UIView {
     deinit { tokens.forEach { NotificationCenter.default.removeObserver($0) }; fallbackLink?.invalidate() }
     fileprivate func drawFallback() {
         guard !fallbackBusy, active, window != nil, let context = fallbackContext,
-              let pixels = PreviewSizing.drawable(width: bounds.width, height: bounds.height, screenScale: window?.screen.scale ?? 2),
+              let pixels = PreviewSizing.drawable(width: Double(bounds.width), height: Double(bounds.height), screenScale: Double(window?.screen.scale ?? 2)),
               let frame = frames.takeLatest() else { return }
         fallbackBusy = true
         let size = CGSize(width: pixels.width, height: pixels.height)
@@ -196,7 +196,7 @@ final class CameraPreviewHost: UIView {
     }
 }
 
-@MainActor private final class MetalCameraPreviewRenderer: NSObject, @preconcurrency MTKViewDelegate {
+@MainActor private final class MetalCameraPreviewRenderer: NSObject, MTKViewDelegate {
     private let frames: LatestFrameMailbox<CameraPreviewFrame>
     private let performance: PreviewPerformance
     private let queue: MTLCommandQueue
