@@ -20,9 +20,14 @@ PY
 )
 xcrun simctl boot "$SIM" 2>/dev/null || true
 xcrun simctl bootstatus "$SIM" -b
+# Preserve UI screenshots/summary even when a regression fails, but never package a failed build.
+set +e
 xcodebuild -project MobileFilmLab.xcodeproj -scheme MobileFilmLab -configuration Debug -destination "platform=iOS Simulator,id=$SIM" -derivedDataPath DerivedData -resultBundlePath artifacts/SimulatorTests.xcresult CODE_SIGNING_ALLOWED=NO "MFL_SOURCE_SHA=$SOURCE_SHA" test-without-building 2>&1 | tee artifacts/simulator-tests.log
+TEST_STATUS=$?
+set -e
 xcrun xcresulttool get test-results summary --path artifacts/SimulatorTests.xcresult > artifacts/qa-summary.json
 xcrun xcresulttool export attachments --path artifacts/SimulatorTests.xcresult --output-path artifacts/screenshots
+test "$TEST_STATUS" -eq 0
 mkdir -p artifacts/package/Payload
 ditto DerivedData/Build/Products/Release-iphoneos/MobileFilmLab.app artifacts/package/Payload/MobileFilmLab.app
 (cd artifacts/package && /usr/bin/zip -qry ../MobileFilmLab-iOS-test-unsigned.ipa Payload)

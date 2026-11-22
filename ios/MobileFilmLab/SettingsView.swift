@@ -60,7 +60,7 @@ struct SettingsView: View {
                         Text("The viewfinder shows physical lenses for the current camera side only. Automatic multi-camera routes and alternate front cameras remain available in Diagnostics. A JPEG crop is never labelled as a lens.")
                             .font(.footnote).foregroundStyle(.secondary)
                         Button("All camera routes & diagnostics") { diagnostics = true }.accessibilityIdentifier("openDiagnostics")
-                    }.accessibilityIdentifier("cameraRouting")
+                    }
                     DisclosureGroup("Lens colour calibration") {
                         calibration("Red", value: $store.preferences.red)
                         calibration("Green", value: $store.preferences.green)
